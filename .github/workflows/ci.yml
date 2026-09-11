@@ -27,6 +27,7 @@ jobs:
       ULTRABRAIN_HOME: /home/runner/ultrabrain-test
       ULTRABRAIN_BUILD_JOBS: '2'
       ULTRABRAIN_DEBUG: '1'
+      ULTRABRAIN_TEST_ALLOW_WRITE: '1'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,6 +37,8 @@ jobs:
           bun-version: '1.3.13'
       - name: Build prerequisites
         run: sudo apt-get update && sudo apt-get install -y build-essential bison flex libssl-dev zlib1g-dev pkg-config
+      - name: Create private test home before restoring the runtime cache
+        run: install -d -m 0700 "$ULTRABRAIN_HOME"
       - uses: actions/cache@v4
         id: pg-cache
         with:
@@ -53,6 +56,16 @@ jobs:
         run: bun test/integration.mjs && bun test/bound-integration.mjs
       - name: Authenticated Streamable HTTP MCP
         run: bun test/http-integration.mjs
+      - name: Durable capture, project concurrency and execution evidence
+        run: bun test/reliability-integration.mjs
+      - name: Synthetic keyless retrieval regression (not semantic quality)
+        run: ULTRABRAIN_EVAL_OUTPUT="$RUNNER_TEMP/memory-eval.json" bun test/memory-eval.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: memory-eval-${{ github.sha }}
+          path: ${{ runner.temp }}/memory-eval.json
+          retention-days: 30
+          if-no-files-found: error
       - name: Managed runtime health
         run: bun src/cli.mjs health
       - name: Database backup and isolated restoration

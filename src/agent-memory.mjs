@@ -41,7 +41,8 @@ export class AgentMemory {
    * dedicated, authorized source. world does NOT bypass source grants.
    */
   constructor({ client, rootUri, sessionId, capture = false, visibility: access = 'private',
-    budgetBytes = 16000, timeoutMs = 30000, maxPending = 32 } = {}) {
+    budgetBytes = 16000, timeoutMs = 30000, maxPending = 32, projectId = null,
+    outbox = null, principalId, serverId, captureFilter = value => value } = {}) {
     requireThat(client && typeof client.callTool === 'function', 'invalid_params', 'A connected MCP client is required');
     requireThat(typeof capture === 'boolean', 'invalid_params', 'capture must be boolean');
     this.client = client;
@@ -53,6 +54,14 @@ export class AgentMemory {
     this.timeoutMs = integer(timeoutMs, 30000, 10, 120000);
     this.maxPending = integer(maxPending, 32, 1, 256);
     this.pending = new Map();
+    this.projectId = projectId === null ? null : identifier(projectId, 'projectId');
+    requireThat(typeof captureFilter === 'function', 'invalid_params', 'captureFilter must be a function');
+    this.captureFilter = captureFilter;
+    this.outbox = outbox;
+    if (outbox) requireThat(typeof outbox.enqueue === 'function' && typeof outbox.flush === 'function' &&
+      outbox.binding?.root_uri === this.root.uri && outbox.binding?.principal === principalId &&
+      outbox.binding?.server === serverId, 'outbox_binding_mismatch',
+      'Bind the outbox to this configured server, source/root and authenticated stable principal');
   }
 
   async invoke(name, args, signal) {
@@ -104,6 +113,11 @@ export class AgentMemory {
     text(transcript, 'transcript', 65536);
     visibility(access);
     requireThat(typeof retry === 'boolean', 'invalid_params', 'retry must be boolean');
+    // Filtering precedes disk AND network. Returning null explicitly excludes a turn.
+    const filtered = this.captureFilter(transcript);
+    transcript = filtered && typeof filtered.then === 'function' ? await filtered : filtered;
+    if (transcript === null) return { state: 'excluded', storage: 'not_stored' };
+    text(transcript, 'filtered transcript', 65536);
     const digest = sha256(JSON.stringify([transcript, access]));
     const active = this.pending.get(eventId);
     if (active) {
@@ -111,12 +125,38 @@ export class AgentMemory {
       return active.promise;
     }
     requireThat(this.pending.size < this.maxPending, 'busy', 'Too many session submissions are in flight');
-    const promise = this.invoke('ultra_commit_session', {
-      session_id: this.sessionId, event_id: eventId, transcript, visibility: access, retry,
-    }, signal);
+    const payload = { session_id: this.sessionId, event_id: eventId, transcript, visibility: access };
+    const queued = this.outbox?.enqueue(payload);
+    if (queued?.acknowledged) return queued.receipt;
+    const promise = (async () => {
+      try {
+        const receipt = await this.invoke('ultra_commit_session', { ...payload, retry }, signal);
+        if (queued) this.outbox.acknowledge(queued.key, sha256(JSON.stringify(payload)), receipt);
+        return receipt;
+      } catch (e) {
+        const error = e instanceof UltraError ? e : new UltraError('transport_error','Memory submission failed');
+        error.durablyQueued = !!queued;
+        throw error;
+      }
+    })();
     this.pending.set(eventId, { digest, promise });
     try { return await promise; }
     finally { this.pending.delete(eventId); }
+  }
+
+  async flushOutbox(options = {}) {
+    requireThat(this.capture, 'capture_disabled', 'Capture must remain enabled to drain consented events');
+    requireThat(this.outbox, 'invalid_params', 'No durable outbox configured');
+    return this.outbox.flush((payload, signal) => this.invoke('ultra_commit_session', payload, signal), options);
+  }
+
+  async resumeProject(query, { signal } = {}) {
+    requireThat(this.projectId, 'invalid_params', 'No projectId configured');
+    const result = await this.invoke('ultra_project_resume', { project_id: this.projectId, query }, signal);
+    requireThat(result.source_id === this.root.source && result.project_id === this.projectId,
+      'scope_denied', 'Project context belongs to another source or project');
+    text(result.retrieval_query, 'retrieval_query', 4096);
+    return result;
   }
 
   /**
@@ -128,23 +168,36 @@ export class AgentMemory {
     text(input, 'input', 49152);
     requireThat(typeof generate === 'function', 'invalid_params', 'generate must be an async callback');
     if (this.capture) identifier(eventId, 'eventId');
-    const searchQuery = query === undefined ? clip(input, 4096) : text(query, 'query', 4096);
+    // Draining uses stable event IDs; it never reruns the previous model response.
+    if (this.outbox && this.capture) await this.flushOutbox({ limit: 8, signal });
+    let searchQuery = query === undefined ? clip(input, 4096) : text(query, 'query', 4096);
+    const queryTruncated = query === undefined && searchQuery !== input;
+    let projectContext = null;
+    if (this.projectId) {
+      const project = await this.resumeProject(searchQuery, { signal });
+      searchQuery = project.retrieval_query;
+      const original = JSON.stringify({ project_id: project.project_id, revision: project.revision, state: project.state });
+      const content = clip(original, 4096);
+      projectContext = { content, bytes: Buffer.byteLength(content), truncated: content !== original,
+        format: 'JSON text excerpt; truncated excerpts are not parseable JSON', trust: 'untrusted-memory-data' };
+    }
     const evidence = await this.beforeTurn(searchQuery, { signal });
     if (signal?.aborted) throw new UltraError('cancelled', 'Turn cancelled before model invocation');
-    const output = await generate({ input, evidence, signal });
+    const output = await generate({ input, evidence, projectContext, signal });
     requireThat(typeof output === 'string', 'invalid_result', 'generate must return the assistant response as text');
-    if (!this.capture) return { output, evidence, capture: { enabled: false }, query_truncated: searchQuery !== input && query === undefined };
+    if (!this.capture) return { output, evidence, projectContext, capture: { enabled: false }, query_truncated: queryTruncated, query_enriched: this.projectId !== null };
     const transcript = JSON.stringify({ user: input, assistant: output });
     let capture;
     try {
       const receipt = await this.afterTurn({ eventId, transcript, signal });
-      capture = { enabled: true, confirmed: true, receipt };
+      capture = { enabled: true, confirmed: receipt.storage !== 'not_stored', receipt };
     } catch (error) {
       capture = { enabled: true, confirmed: false, event_id: eventId,
-        state: Buffer.byteLength(transcript) > 65536 ? 'not_submitted' : 'unconfirmed',
+        state: error.durablyQueued ? 'queued' : Buffer.byteLength(transcript) > 65536 ? 'not_submitted' : 'unconfirmed',
+        durably_queued: error.durablyQueued === true,
         error: error instanceof UltraError ? error.code : 'transport_error',
         recovery: 'Retry afterTurn with the same eventId and identical JSON.stringify({user: input, assistant: output}); do not rerun the model merely to retry persistence.' };
     }
-    return { output, evidence, capture, query_truncated: searchQuery !== input && query === undefined };
+    return { output, evidence, projectContext, capture, query_truncated: queryTruncated, query_enriched: this.projectId !== null };
   }
 }

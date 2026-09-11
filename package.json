@@ -1,6 +1,6 @@
 {
   "name": "ultrabrain",
-  "version": "0.2.0-alpha.1",
+  "version": "0.3.0-alpha.1",
   "private": true,
   "type": "module",
   "description": "Linux-native PostgreSQL agent memory with GBrain compatibility and hierarchical context",
@@ -17,6 +17,8 @@
     "upstream:check": "python3 scripts/upstreams.py check",
     "upstream:verify": "python3 scripts/upstreams.py verify",
     "test:ops": "python3 -m unittest discover -s test -p 'test_*.py'",
-    "test:http": "bun test/http-integration.mjs"
+    "test:http": "bun test/http-integration.mjs",
+    "test:reliability": "bun test/reliability-integration.mjs",
+    "eval:memory": "bun test/memory-eval.mjs"
   }
 }

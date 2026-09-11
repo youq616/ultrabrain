@@ -24,6 +24,7 @@ test('keyless session is needs_model, never fake completed extraction', async ()
 test('receipt replay does not call extraction twice', async () => {
   const store=mock(); await commitSession(store,payload);
   const result=await commitSession(store,payload); assert.equal(result.replayed,true);assert.equal(store.calls.length,2);
+  assert.equal(result.storage,'stored');assert.equal(typeof result.uri,'string');
 });
 test('event id collision rejects changed content', async () => {
   const store=mock();await commitSession(store,payload);

@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { requireThat } from './core.mjs';
 import { registerPlugin } from './plugin.mjs';
 import { SESSION_SCHEMA } from './sessions.mjs';
+import { PROJECT_SCHEMA } from './projects.mjs';
+import { registerProjectPlugin } from './project-plugin.mjs';
 export const ROOT = fileURLToPath(new URL('../', import.meta.url));
 export const HOME = resolve(process.env.ULTRABRAIN_HOME ?? join(homedir(), '.local/share/ultrabrain'));
 function privatePath(path, kind) {
@@ -69,6 +71,7 @@ export async function installPlugin() {
   // Session extraction may touch entity pages; never grant it to prefix-bound clients.
   context.CLIENT_FENCED_WRITE_OPS.add('ultra_write');
   context.CLIENT_FENCED_WRITE_OPS.add('ultra_delete');
+  registered = [...registered, ...registerProjectPlugin(operations, { OperationError })];
   return registered;
 }
 export async function connect({ migrate = false } = {}) {
@@ -82,10 +85,13 @@ export async function connect({ migrate = false } = {}) {
   const engine = await createEngine(cfg);
   try {
     await engine.connect(cfg);
+    const [schemaPath] = await engine.executeRaw('SELECT current_schema() AS schema');
+    requireThat(schemaPath.schema === 'public', 'unsafe_search_path',
+      'Run db init to pin the native schema to public; reconcile any shadow tables before migrating');
     if (migrate) {
       await engine.initSchema();
       await engine.transaction(async tx => {
-        for (const statement of SESSION_SCHEMA.split(';').filter(s => s.trim())) await tx.executeRaw(statement);
+        for (const statement of (SESSION_SCHEMA + PROJECT_SCHEMA).split(';').filter(s => s.trim())) await tx.executeRaw(statement);
       });
     }
     return engine;

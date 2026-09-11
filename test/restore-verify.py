@@ -8,6 +8,10 @@ name = sys.argv[1] if len(sys.argv) == 2 else 'ub_restore_ci'
 if not name.startswith('ub_restore_'):
     raise SystemExit('Only isolated restoration targets are accepted')
 queries = {
+    'projects': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(state::text, ',' ORDER BY source_id,project_id)),'empty') FROM ultrabrain.projects",
+    'project_history': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(request_hash, ',' ORDER BY source_id,project_id,revision)),'empty') FROM ultrabrain.project_revisions",
+    'execution_evidence': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(subject_hash || ':' || exit_code::text, ',' ORDER BY receipt_id)),'empty') FROM ultrabrain.verification_receipts",
+    'forgotten_projects': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(source_id || ':' || project_id, ',' ORDER BY source_id,project_id)),'empty') FROM ultrabrain.project_tombstones",
     'pages': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(id::text || ':' || coalesce(content_hash,''), ',' ORDER BY id)),'empty') FROM pages",
     'receipts': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(content_hash || ':' || state, ',' ORDER BY source_id,actor,session_id,event_id)),'empty') FROM ultrabrain.session_receipts",
     'schema': "SELECT value FROM config WHERE key='version'",

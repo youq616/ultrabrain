@@ -1,5 +1,9 @@
 # 功能覆盖与完成标准
 
+## 0.3.0-alpha.1 增量
+
+新增持久化客户端 outbox、项目 checkpoint 的 CAS/版本历史/重放保护、换会话项目上下文、host-only 执行回执和项目遗忘 tombstone；新增可复用检索评测器与 5 项真实数据库合成词法 fixture。详见 [RELIABILITY.md](RELIABILITY.md) 和 [ROADMAP.md](ROADMAP.md)。以下原生/分层能力边界仍然适用；语义摘要与完整多模态并未在本增量完成。
+
 Ultrabrain 以锁定版本的 GBrain 业务引擎为运行基础，新增自己的产品层。OpenViking 目前作为锁定的参考上游，**不是同时运行的第二套记忆服务，也不是已经完成全功能移植**。
 
 ## 状态用语

@@ -22,3 +22,9 @@ Linux-first agent memory, built around GBrain's PostgreSQL-native business engin
 - PostgreSQL: https://github.com/postgres/postgres
 
 上游保留各自许可证与署名。OpenViking 当前主项目使用 AGPLv3，GBrain 使用 MIT，PostgreSQL 使用 PostgreSQL License。合并或分发时必须保留对应许可证与完整来源记录。
+
+## 0.3.0-alpha.1 可靠性增量
+
+新增客户端持久化 outbox、带乐观并发控制的项目检查点、换会话项目续接、主机执行证据与检索回归评测。修复 JSONB 回执双编码及 PostgreSQL 同名 schema 搜索路径问题。
+
+详见 [可靠性接入](docs/RELIABILITY.md)、[完整产品计划](docs/ROADMAP.md) 和 [本版验收方法](docs/VALIDATION-P0.md)。版本仍是 alpha；真实语义摘要、多模态、完整上游兼容与目标服务器部署不因这些增量而被宣布完成。

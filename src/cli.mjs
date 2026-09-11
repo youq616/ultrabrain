@@ -5,9 +5,10 @@ const args = process.argv.slice(2);
 const [command, ...rest] = args;
 try {
   if (!command || ['help','--help','-h'].includes(command)) {
-    console.log(`ultrabrain 0.2.0-alpha.1 — Linux / managed PostgreSQL
+    console.log(`ultrabrain 0.3.0-alpha.1 — Linux / managed PostgreSQL
   db init|start|stop|status|backup|restore-new   Manage local PostgreSQL
   db activate-runtime                        Switch a stopped cluster to reviewed same-major binaries
+  verify --project ID --task ID -- command    Host-only execution evidence (no remote executor)
   health                                     Read-only managed-runtime diagnostics (JSON)
   migrate                                    Apply native and ultrabrain schemas
   mcp                                        Native MCP stdio, all tools including ultra_*
@@ -23,6 +24,12 @@ Upstream-dependent features require their original providers/configuration.`);
     const p = spawnSync('python3', [`${ROOT}/scripts/${script}`, ...rest], { stdio: 'inherit' });
     if (p.error) throw p.error;
     process.exitCode = p.status ?? 1;
+  } else if (command === 'verify') {
+    const engine = await connect();
+    try {
+      const { verifyCLI } = await import('./verify-run.mjs');
+      process.exitCode = await verifyCLI(rest, engine);
+    } finally { await engine.disconnect(); }
   } else if (command === 'health') {
     const { health } = await import('./health.mjs');
     const report = await health();

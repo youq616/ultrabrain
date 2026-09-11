@@ -23,7 +23,7 @@ const mint = async (name, scopes, sourceId) => {
   const label = `http-test-${suffix}-${name}`;
   tokenNames.push(label);
   await engine.executeRaw(`INSERT INTO access_tokens (name,token_hash,scopes,permissions)
-    VALUES ($1,$2,$3::text[],$4::jsonb)`, [label,createHash('sha256').update(token).digest('hex'),
+    VALUES ($1,$2,$3::text[],$4::text::jsonb)`, [label,createHash('sha256').update(token).digest('hex'),
     `{${scopes.join(',')}}`, JSON.stringify({source_id:sourceId,takes_holders:['world']})]);
   return token;
 };
@@ -89,6 +89,13 @@ try {
   const privateUri=`ultra://${source}/private/${suffix}`;
   result(await call(writer,'ultra_write',{uri:privateUri,content:'---\ntype: note\nvisibility: private\n---\nHost private canary'}));
   await denied(call(writer,'ultra_read',{uri:privateUri,level:'L2'}));
+  const project_id=`http-project-${suffix}`;
+  const state={goal:'HTTP project scope test',tasks:[]};
+  result(await call(writer,'ultra_project_save',{project_id,state,expected_revision:0,event_id:'create'})); proof();
+  assert.equal(result(await call(reader,'ultra_project_load',{project_id})).state.goal,state.goal); proof();
+  await denied(call(reader,'ultra_project_save',{project_id,state,expected_revision:1,event_id:'forbidden'}));
+  await denied(call(foreign,'ultra_project_load',{project_id}));
+  assert.ok(!writerCatalog.tools.some(t=>t.name==='ultra_verify_run')); proof();
   // Same live client and credentials: revocation must take effect on the next HTTP request.
   await engine.executeRaw('UPDATE access_tokens SET revoked_at=now() WHERE name=$1',[tokenNames[0]]);
   await denied(call(writer,'ultra_ls',{uri:`ultra://${source}/`}));

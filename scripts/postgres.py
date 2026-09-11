@@ -177,6 +177,16 @@ def init(port):
     pg('psql', '-X', '-v', 'ON_ERROR_STOP=1', '-c', 'ALTER ROLE ultrabrain BYPASSRLS')
     exists = pg('psql', '-X', '-tAc', "SELECT 1 FROM pg_database WHERE datname='ultrabrain'").stdout.strip()
     if not exists: pg('createdb', '-O', 'ultrabrain', 'ultrabrain')
+    # PostgreSQL's default "$user", public search path would select our metadata
+    # schema once the role and schema are both named ultrabrain. Never silently
+    # switch an existing split installation away from its data.
+    shadow = pg('psql', '-X', '-tAc',
+        "SELECT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='ultrabrain' AND c.relname IN ('pages','sources','config','facts'))",
+        '-d', 'ultrabrain').stdout.strip()
+    if shadow == 't':
+        raise RuntimeError('Shadow native tables detected in ultrabrain schema; back up and reconcile before changing search_path. No tables were moved or deleted.')
+    pg('psql', '-X', '-v', 'ON_ERROR_STOP=1', '-c',
+        'ALTER ROLE ultrabrain SET search_path TO public; ALTER DATABASE ultrabrain SET search_path TO public;')
     pg('psql', '-X', '-v', 'ON_ERROR_STOP=1', '-d', 'ultrabrain', '-c',
         'CREATE EXTENSION IF NOT EXISTS vector; CREATE EXTENSION IF NOT EXISTS pg_trgm; CREATE EXTENSION IF NOT EXISTS pgcrypto;')
     pg('psql', '-X', '-v', 'ON_ERROR_STOP=1', '-d', 'ultrabrain', '-f', ROOT / 'scripts/admin-bootstrap.sql')
@@ -227,6 +237,7 @@ def restore_new(directory, database):
         raise RuntimeError('Cannot restore a newer PostgreSQL major into an older runtime')
     # createdb fails if a database exists. Never DROP, overwrite or switch the running brain.
     pg('createdb', '-O', 'ultrabrain', database)
+    pg('psql', '-X', '-v', 'ON_ERROR_STOP=1', '-c', f'ALTER DATABASE {database} SET search_path TO public')
     pg('psql', '-X', '-v', 'ON_ERROR_STOP=1', '-d', database, '-c',
         'CREATE EXTENSION IF NOT EXISTS vector; CREATE EXTENSION IF NOT EXISTS pg_trgm; CREATE EXTENSION IF NOT EXISTS pgcrypto;')
     # Event triggers are superuser-only. Restore application objects as the app role,

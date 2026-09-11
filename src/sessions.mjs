@@ -4,13 +4,17 @@ import { text, sourceId, sha256, requireThat, uri } from './core.mjs';
 export const SESSION_SCHEMA = `
 CREATE SCHEMA IF NOT EXISTS ultrabrain;
 CREATE TABLE IF NOT EXISTS ultrabrain.session_receipts (
-  source_id text NOT NULL REFERENCES sources(id), actor text NOT NULL,
+  source_id text NOT NULL REFERENCES public.sources(id), actor text NOT NULL,
   session_id text NOT NULL, event_id text NOT NULL, content_hash text NOT NULL,
   state text NOT NULL CHECK (state IN ('processing','completed','needs_model','failed')),
   lease_id uuid, lease_until timestamptz, result jsonb,
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (source_id, actor, session_id, event_id)
 );
+UPDATE ultrabrain.session_receipts SET result =
+ CASE WHEN jsonb_typeof(result)='string' AND (result #>> '{}') IS JSON OBJECT
+ THEN (result #>> '{}')::jsonb ELSE result END
+ WHERE jsonb_typeof(result)='string';
 `;
 export async function commitSession(store, p) {
   const source = sourceId(store.source);
@@ -57,11 +61,12 @@ export async function commitSession(store, p) {
     });
     const state = !extracted.skipped ? 'completed' :
       ['extraction_unavailable', 'extraction_disabled'].includes(extracted.skipped) ? 'needs_model' : 'failed';
-    const result = { uri: uri(source, slug), state, extraction: extracted,
+    const result = { uri: uri(source, slug), state, storage: 'stored',
+      extraction_state: state, extraction: extracted,
       delivery: 'at-least-once; native fact deduplication; not transactional exactly-once',
       visibility_note: 'private is host-private under native policy; remote recall sees world within its source grant' };
     const updated = await store.sql(`UPDATE ultrabrain.session_receipts SET
-      state=$5,result=$6::jsonb,lease_until=NULL,updated_at=now()
+      state=$5,result=$6::text::jsonb,lease_until=NULL,updated_at=now()
       WHERE source_id=$1 AND actor=$2 AND session_id=$3 AND event_id=$4 AND lease_id=$7 RETURNING state`,
     [...keys, state, JSON.stringify(result), lease]);
     requireThat(updated.length === 1, 'lease_lost', 'Lease changed; inspect the receipt before retrying');
