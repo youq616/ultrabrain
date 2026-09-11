@@ -8,6 +8,16 @@ import { resolve, join, dirname, parse } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { requireThat, text, integer, sha256, parseUri, UltraError } from './core.mjs';
 
+// 64 KiB of legal control characters can occupy six times as much in JSON.
+// One shared envelope limit is enforced on BOTH write and read paths.
+export const MAX_RECORD_BYTES = 512 * 1024;
+const isolatedErrors = new Set(['outbox_corrupt', 'insecure_outbox', 'ELOOP']);
+function encodeRecord(value) {
+  const encoded = JSON.stringify(value);
+  requireThat(typeof encoded === 'string' && Buffer.byteLength(encoded) <= MAX_RECORD_BYTES,
+    'outbox_record_too_large', 'Serialized journal record exceeds the envelope limit');
+  return encoded;
+}
 function id(value) {
   requireThat(typeof value === 'string' && /^[A-Za-z0-9_-]{1,96}$/.test(value), 'invalid_params', 'Invalid event/session id');
   return value;
@@ -33,8 +43,9 @@ function readPrivate(path) {
     const st = fstatSync(fd);
     requireThat(st.isFile() && st.uid === process.getuid() && !(st.mode & 0o077),
       'insecure_outbox', 'Outbox records must be private regular files');
-    requireThat(st.size <= 131072, 'outbox_corrupt', 'Oversized journal record');
-    return JSON.parse(readFileSync(fd, 'utf8'));
+    requireThat(st.size <= MAX_RECORD_BYTES, 'outbox_corrupt', 'Oversized journal record');
+    try { return JSON.parse(readFileSync(fd, 'utf8')); }
+    catch (e) { if (e instanceof SyntaxError) throw new UltraError('outbox_corrupt', 'Invalid journal JSON'); throw e; }
   } finally { if (fd !== undefined) closeSync(fd); }
 }
 function syncDirectory(path) {
@@ -42,14 +53,19 @@ function syncDirectory(path) {
   try { fsyncSync(fd); } finally { closeSync(fd); }
 }
 function createImmutable(path, value) {
+  const encoded = encodeRecord(value); // reject before creating any file
   const temp = join(dirname(path), `.pending-${randomUUID()}`);
-  const fd = openSync(temp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
-  try { writeFileSync(fd, JSON.stringify(value)); fsyncSync(fd); }
-  finally { closeSync(fd); }
+  let fd;
   try {
+    fd = openSync(temp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+    writeFileSync(fd, encoded); fsyncSync(fd); closeSync(fd); fd = undefined;
     try { linkSync(temp, path); syncDirectory(dirname(path)); return true; }
     catch (e) { if (e.code === 'EEXIST') return false; throw e; }
-  } finally { unlinkSync(temp); syncDirectory(dirname(path)); }
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+    try { unlinkSync(temp); syncDirectory(dirname(path)); }
+    catch (e) { if (e.code !== 'ENOENT') throw e; }
+  }
 }
 function replacePrivate(path, value) {
   const temp = join(dirname(path), `.retry-${randomUUID()}`);
@@ -72,7 +88,11 @@ export class DurableOutbox {
       'outbox_binding_mismatch', 'Use a separate outbox for each server, source/root and stable principal');
   }
   key(event) { return sha256(JSON.stringify([this.binding, id(event.session_id), id(event.event_id)])); }
-  path(key, kind) { return join(this.directory, `${key}.${kind}.json`); }
+  path(key, kind) {
+    requireThat(/^[a-f0-9]{64}$/.test(key) && ['event','ack','retry','quarantine'].includes(kind),
+      'invalid_params', 'Invalid journal record address');
+    return join(this.directory, `${key}.${kind}.json`);
+  }
   optional(key, kind) {
     try { return readPrivate(this.path(key, kind)); } catch (e) { if (e.code === 'ENOENT') return null; throw e; }
   }
@@ -82,6 +102,7 @@ export class DurableOutbox {
     const payload = { session_id: input.session_id, event_id: input.event_id,
       transcript: input.transcript, visibility: input.visibility };
     const key = this.key(payload), digest = sha256(JSON.stringify(payload));
+    requireThat(!this.isQuarantined(key), 'outbox_quarantined', 'Review the quarantined record before reusing this event');
     const ack = this.optional(key, 'ack');
     if (ack) {
       requireThat(ack.digest === digest, 'conflict', 'Event id already acknowledged with different content');
@@ -100,15 +121,66 @@ export class DurableOutbox {
     return readdirSync(this.directory).filter(n => /^[a-f0-9]{64}\.event\.json$/.test(n))
       .map(n => n.slice(0,64)).sort();
   }
+  isQuarantined(key) {
+    // Existence alone is fail-closed, even if the marker is corrupt or a symlink.
+    try { lstatSync(this.path(key,'quarantine')); return true; }
+    catch(e) { if(e.code === 'ENOENT') return false; throw e; }
+  }
+  quarantine(key, error) {
+    if (!isolatedErrors.has(error.code)) throw error;
+    createImmutable(this.path(key,'quarantine'), {format:1,key,state:'quarantined',
+      error:safeCode(error),detected_at:new Date().toISOString()});
+    // Preserve all original files in place for operator inspection. No raw contents
+    // or exception messages leave the journal, and no record is sent after isolation.
+    return {key,state:'quarantined',error:safeCode(error)};
+  }
+  validatedEvent(key) {
+    const event = this.optional(key,'event');
+    if (!event) return null;
+    let valid = false;
+    try {
+      valid = event.format === 1 && event.key === key &&
+        event.digest === sha256(JSON.stringify(event.payload)) && this.key(event.payload) === key &&
+        ['private','world'].includes(event.payload.visibility) &&
+        !!text(event.payload.transcript,'transcript',65536);
+    } catch {}
+    requireThat(valid,'outbox_corrupt','Invalid event structure or digest');
+    return event;
+  }
+  validatedAck(key, digest) {
+    const ack = this.optional(key,'ack');
+    if (!ack) return null;
+    let valid = false;
+    try { valid = ack.key === key && ack.digest === digest &&
+      ['completed','needs_model'].includes(ack.state) &&
+      parseUri(ack.uri).source === parseUri(this.binding.root_uri).source; } catch {}
+    requireThat(valid,'outbox_corrupt','Invalid ACK structure, digest or source');
+    return ack;
+  }
+  validatedRetry(key) {
+    const retry = this.optional(key,'retry');
+    requireThat(!retry || (Number.isInteger(retry.attempts) && retry.attempts >= 0 &&
+      typeof retry.blocked === 'boolean' && Number.isFinite(retry.next_at) &&
+      typeof retry.error === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(retry.error)),
+      'outbox_corrupt','Invalid retry record');
+    return retry;
+  }
   inspect() {
     const items = [];
     for (const key of this.keys()) {
-      const event = this.optional(key,'event'); if (!event) continue;
-      const ack = this.optional(key,'ack'), retry = this.optional(key,'retry');
-      items.push({ key, session_id: event.payload.session_id, event_id: event.payload.event_id,
-        state: ack ? ack.state : 'pending', retry, enqueued_at: event.enqueued_at });
+      if (this.isQuarantined(key)) {items.push({key,state:'quarantined'});continue;}
+      try {
+        const event = this.validatedEvent(key); if (!event) continue;
+        const ack = this.validatedAck(key,event.digest), retry = this.validatedRetry(key);
+        items.push({key,session_id:event.payload.session_id,event_id:event.payload.event_id,
+          state:ack ? ack.state : 'pending',retry,enqueued_at:event.enqueued_at});
+      } catch(e) {
+        if (!isolatedErrors.has(e.code)) throw e;
+        items.push({key,state:'corrupt',error:safeCode(e)}); // read-only, no mutation
+      }
     }
-    return { binding: this.binding, pending: items.filter(x => x.state === 'pending').length, items };
+    return {binding:this.binding,pending:items.filter(x=>x.state==='pending').length,
+      quarantined:items.filter(x=>['quarantined','corrupt'].includes(x.state)).length,items};
   }
   acknowledge(key, digest, receipt) {
     requireThat(['completed','needs_model'].includes(receipt?.state) && typeof receipt.uri === 'string',
@@ -128,31 +200,30 @@ export class DurableOutbox {
     requireThat(typeof send === 'function', 'invalid_params', 'A bound send callback is required');
     integer(limit, 32, 1, 1000);
     integer(maxAttempts,10,1,100);
-    const results = []; let deferred = 0;
+    const results = []; let deferred = 0, quarantined = 0;
     for (const key of this.keys()) {
-      if (results.length >= limit) break;
-      if (signal?.aborted) break;
-      const event = this.optional(key,'event'); if (!event) continue;
-      requireThat(event.key === key && event.digest === sha256(JSON.stringify(event.payload)) && this.key(event.payload) === key,
-        'outbox_corrupt', 'Outbox content hash mismatch');
-      const ack = this.optional(key,'ack');
-      if (ack) { this.acknowledge(key,event.digest,ack); results.push({ key, state: ack.state, replayed: true }); continue; }
-      const retry = this.optional(key,'retry');
-      if (!force && retry && (retry.blocked || retry.next_at > Date.now())) { deferred++; continue; }
+      if (results.length >= limit || signal?.aborted) break;
+      if (this.isQuarantined(key)) {quarantined++;continue;}
       try {
-        const receipt = await send({ ...event.payload, retry: true }, signal);
-        this.acknowledge(key,event.digest,receipt);
-        results.push({ key, state: receipt.state, storage: 'stored' });
-      } catch (e) {
-        const code = safeCode(e);
-        const attempts = (force ? 0 : retry?.attempts ?? 0) + 1;
-        const blocked = !transient.has(code) || attempts >= maxAttempts;
-        replacePrivate(this.path(key,'retry'), { attempts, blocked, error: code,
-          next_at: Date.now() + Math.min(300000, 1000 * 2 ** Math.min(attempts,9)) });
-        // No exception message, transcript, credentials or provider response in telemetry.
-        results.push({ key, state: 'pending', error: code, retryable: transient.has(code) });
-      }
+        const event = this.validatedEvent(key); if (!event) continue;
+        const ack = this.validatedAck(key,event.digest);
+        if (ack) { this.acknowledge(key,event.digest,ack); results.push({key,state:ack.state,replayed:true}); continue; }
+        const retry = this.validatedRetry(key);
+        if (!force && retry && (retry.blocked || retry.next_at > Date.now())) { deferred++; continue; }
+        try {
+          const receipt = await send({...event.payload,retry:true}, signal);
+          this.acknowledge(key,event.digest,receipt);
+          results.push({key,state:receipt.state,storage:'stored'});
+        } catch(e) {
+          if (isolatedErrors.has(e.code)) throw e;
+          const code = safeCode(e), attempts = (force ? 0 : retry?.attempts ?? 0) + 1;
+          const blocked = !transient.has(code) || attempts >= maxAttempts;
+          replacePrivate(this.path(key,'retry'), {attempts,blocked,error:code,
+            next_at:Date.now()+Math.min(300000,1000*2**Math.min(attempts,9))});
+          results.push({key,state:'pending',error:code,retryable:transient.has(code)});
+        }
+      } catch(e) { results.push(this.quarantine(key,e)); quarantined++; }
     }
-    return { results, deferred, delivery: 'at-least-once', retry_policy: 'explicit drain or next runTurn' };
+    return {results,deferred,quarantined,delivery:'at-least-once',retry_policy:'explicit drain or next runTurn'};
   }
 }

@@ -28,3 +28,7 @@ Linux-first agent memory, built around GBrain's PostgreSQL-native business engin
 新增客户端持久化 outbox、带乐观并发控制的项目检查点、换会话项目续接、主机执行证据与检索回归评测。修复 JSONB 回执双编码及 PostgreSQL 同名 schema 搜索路径问题。
 
 详见 [可靠性接入](docs/RELIABILITY.md)、[完整产品计划](docs/ROADMAP.md) 和 [本版验收方法](docs/VALIDATION-P0.md)。版本仍是 alpha；真实语义摘要、多模态、完整上游兼容与目标服务器部署不因这些增量而被宣布完成。
+
+## 0.3.1-alpha.1 升级工程
+
+队列边界修复、损坏隔离、原生接口合同、迁移账本、真实旧应用升级演练和上游候选 PR 流程见 [升级工程说明](docs/UPGRADE-ENGINEERING.md)。本版本没有改变上游锁定提交，不将词法回归称为语义质量证明；候选和数据库升级都不自动发布到生产。

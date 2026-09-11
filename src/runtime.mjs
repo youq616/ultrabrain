@@ -4,8 +4,8 @@ import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { requireThat } from './core.mjs';
 import { registerPlugin } from './plugin.mjs';
-import { SESSION_SCHEMA } from './sessions.mjs';
-import { PROJECT_SCHEMA } from './projects.mjs';
+import { applyMigrations, migrationStatus } from './migrations.mjs';
+import { loadNative as load, nativeBindings } from './adapters/gbrain.mjs';
 import { registerProjectPlugin } from './project-plugin.mjs';
 export const ROOT = fileURLToPath(new URL('../', import.meta.url));
 export const HOME = resolve(process.env.ULTRABRAIN_HOME ?? join(homedir(), '.local/share/ultrabrain'));
@@ -47,24 +47,11 @@ export function prepareEnvironment() {
   process.env.GBRAIN_DATABASE_URL = config.database_url;
   return config;
 }
-const load = async path => {
-  const modulePath = join(ROOT, 'vendor/gbrain', path);
-  requireThat(existsSync(modulePath), 'upstream_file_missing', `Pinned runtime file missing: ${path}`);
-  return import(modulePath);
-};
 let registered;
 export async function installPlugin() {
   if (registered) return registered;
   requireThat(typeof Bun !== 'undefined', 'bun_required', 'Runtime requires Bun >=1.3.11; pure tests run on Node');
-  const { operations } = await load('src/core/operations.ts');
-  const { validateParams } = await load('src/mcp/dispatch.ts');
-  const { OperationError } = await load('src/core/ops/contract.ts');
-  const context = await load('src/core/ops/context.ts');
-  // Private helper imports are confined to this adapter and covered by contract tests.
-  requireThat(typeof context.enforceClientSlugFence === 'function', 'upstream_contract_changed', 'Missing write fence');
-  requireThat(context.CLIENT_FENCED_WRITE_OPS instanceof Set &&
-    context.CLIENT_FENCED_WRITE_OPS.has('put_page') && context.CLIENT_FENCED_WRITE_OPS.has('delete_page'),
-    'upstream_contract_changed', 'Native fenced-operation registry changed');
+  const {operations,validateParams,OperationError,context} = await nativeBindings();
   registered = registerPlugin(operations, { validateParams, OperationError,
     enforceClientSlugFence: context.enforceClientSlugFence });
   // Only these two wrappers delegate exclusively to the corresponding fenced native write.
@@ -90,10 +77,10 @@ export async function connect({ migrate = false } = {}) {
       'Run db init to pin the native schema to public; reconcile any shadow tables before migrating');
     if (migrate) {
       await engine.initSchema();
-      await engine.transaction(async tx => {
-        for (const statement of (SESSION_SCHEMA + PROJECT_SCHEMA).split(';').filter(s => s.trim())) await tx.executeRaw(statement);
-      });
+      await applyMigrations(engine);
     }
+    const status = await migrationStatus(engine);
+    requireThat(status.pending.length === 0, 'pending_migrations', 'Run migrate before serving this release');
     return engine;
   } catch (e) { await engine.disconnect(); throw e; }
 }

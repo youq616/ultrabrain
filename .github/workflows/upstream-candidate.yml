@@ -1,0 +1,57 @@
+name: Prepare upstream candidate
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        type: choice
+        options: [gbrain, openviking, postgres, pgvector]
+        required: true
+      ref:
+        description: Full refs/heads/... or stable refs/tags/...
+        required: true
+        type: string
+      use_upstream_source:
+        description: Change installer source from fork to original upstream after verification
+        type: boolean
+        default: false
+      accept_license_change:
+        description: I have reviewed any changed license files (not an automatic compatibility decision)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: candidate-${{ inputs.project }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Prepare source-only candidate (never run upstream code with write credentials)
+        env:
+          PROJECT: ${{ inputs.project }}
+          TARGET_REF: ${{ inputs.ref }}
+          USE_UPSTREAM: ${{ inputs.use_upstream_source }}
+          ACCEPT_LICENSE: ${{ inputs.accept_license_change }}
+        run: |
+          git config core.hooksPath /dev/null
+          git submodule update --init --depth 1 "vendor/$PROJECT"
+          args=()
+          if [[ "$USE_UPSTREAM" == true ]]; then args+=(--use-upstream-source); fi
+          if [[ "$ACCEPT_LICENSE" == true ]]; then args+=(--accept-license-change); fi
+          python3 scripts/upstreams.py prepare "$PROJECT" --ref "$TARGET_REF" "${args[@]}"
+      - name: Create draft PR and explicitly dispatch read-only CI
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const publish = require('./scripts/candidate-pr.cjs');
+            await publish({github,context,core});

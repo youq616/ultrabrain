@@ -80,4 +80,52 @@ class OperationsTests(unittest.TestCase):
     def test_service_escapes_specifiers(self):
         self.assertEqual(service.exec_quote('/a/%i/$HOME'),'"/a/%%i/$$HOME"')
         self.assertEqual(service.quote('/a/%i/$HOME'),'"/a/%%i/$HOME"')
+
+class UpstreamSafetyTests(unittest.TestCase):
+    def test_project_checks_are_independent(self):
+        import io
+        def response(repo, pattern):
+            if repo=='youq616/gbrain': raise OSError('offline')
+            return {pattern:'b'*40}
+        with patch.object(upstream,'refs',side_effect=response),patch('sys.stdout',new_callable=io.StringIO) as output:
+            with self.assertRaises(SystemExit): upstream.check('gbrain')
+            report=json.loads(output.getvalue());self.assertEqual(set(report['projects']),{'gbrain'})
+            p=report['projects']['gbrain'];self.assertTrue(p['origins']['garrytan/gbrain']['changed'])
+            self.assertFalse(p['origins']['youq616/gbrain']['checked'])
+    def test_tracking_ref_is_not_changed_with_release_pin(self):
+        import io
+        p={'gbrain':dict(upstream.projects()['gbrain'],ref='refs/tags/v1',tracking_ref='refs/heads/master')}
+        with patch.object(upstream,'projects',return_value=p),patch.object(upstream,'refs',return_value={'refs/heads/master':'b'*40}) as refs,patch('sys.stdout',new_callable=io.StringIO):
+            upstream.check('gbrain')
+            self.assertTrue(all(c.args[1]=='refs/heads/master' for c in refs.call_args_list))
+    def test_install_source_probe_uses_fresh_bare_repo_without_checkout(self):
+        sha='a'*40
+        with patch.object(upstream,'run',side_effect=['','',sha]) as run:
+            self.assertTrue(upstream.prove_install_source('https://github.com/youq616/gbrain.git',sha))
+            commands=[c.args for c in run.call_args_list]
+            self.assertIn('--bare',commands[0]);self.assertIn('--depth=1',commands[1]);self.assertNotIn('checkout',str(commands))
+    def test_install_source_probe_rejects_local_paths_and_wrong_resolution(self):
+        for url in ['/local/repo','file:///tmp/repo','https://attacker.example/repo']:
+            with self.assertRaises(RuntimeError):upstream.prove_install_source(url,'a'*40)
+        with patch.object(upstream,'run',side_effect=['','','b'*40]):
+            with self.assertRaises(RuntimeError):upstream.prove_install_source('https://github.com/x/y','a'*40)
+    def test_risk_routing_never_labels_unknown_changes_safe(self):
+        flags=upstream.classify_changes('gbrain',['src/auth/policy.ts','src/migrate.ts','LICENSE'])
+        self.assertIn('authorization-review',flags);self.assertIn('data-migration-review',flags);self.assertIn('license-review',flags)
+        self.assertIn('source-review-required',upstream.classify_changes('gbrain',['unrecognized/file']))
+    def test_candidate_workflow_does_not_build_with_write_credentials(self):
+        text=(ROOT/'.github/workflows/upstream-candidate.yml').read_text()
+        self.assertIn('persist-credentials: false',text);self.assertIn('github.event.repository.default_branch',text)
+        self.assertNotIn('bun install',text);self.assertNotIn('pull_request_target:',text)
+
+class MappingTests(unittest.TestCase):
+    def test_mapping_paths_and_baselines_exist(self):
+        data=json.loads((ROOT/'compat/upstream-features.json').read_text())
+        for feature in data['features']:
+            self.assertEqual(len(feature['baseline']),40)
+            for path in feature['local_files']+feature['tests']:self.assertTrue((ROOT/path).is_file(),path)
+    def test_changed_paths_route_to_local_features(self):
+        self.assertIn('hierarchical-retrieval',upstream.affected_features('openviking',['openviking/retrieve/hierarchical_retriever.py']))
+        self.assertEqual(upstream.affected_features('gbrain',['unrecognized/file']),[])
+
 if __name__=='__main__': unittest.main()
