@@ -1,7 +1,7 @@
 /** Retrieval evaluation, not an LLM judge. Never mistakes missing expectations for a pass. */
 import {performance} from 'node:perf_hooks';
-import {requireThat,text} from './core.mjs';
-export async function evaluateRetrieval(cases,retrieve) {
+import {requireThat,text,sha256} from './core.mjs';
+export async function evaluateRetrieval(cases,retrieve,{corpusFingerprint=null,evaluationKind=null}={}) {
   requireThat(Array.isArray(cases)&&cases.length>0&&typeof retrieve==='function','invalid_params','Nonempty cases and retrieve callback required');
   const rows=[];
   for(const sample of cases) {
@@ -21,7 +21,7 @@ export async function evaluateRetrieval(cases,retrieve) {
   }
   const positive=rows.filter(r=>r.expected>0),negative=rows.filter(r=>r.expected_empty);
   const mean=xs=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;
-  return {format:1,evaluated_cases:rows.length,all_passed:rows.every(r=>r.passed),
+  return {format:1,dataset_sha256:sha256(JSON.stringify(cases)),corpus_fingerprint:corpusFingerprint,evaluation_kind:evaluationKind,evaluated_cases:rows.length,all_passed:rows.every(r=>r.passed),
     recall_at_returned_k:mean(positive.map(r=>r.recall)),mrr:mean(positive.map(r=>r.reciprocal_rank)),
     empty_evidence_accuracy:mean(negative.map(r=>r.empty?1:0)),forbidden_hits:rows.reduce((n,r)=>n+r.forbidden_hits,0),
     average_latency_ms:mean(rows.map(r=>r.latency_ms)),rows,

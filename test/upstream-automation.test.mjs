@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url),publishIssue=require('../scripts/upstream-issue.cjs'),publishPR=require('../scripts/candidate-pr.cjs');
+test('partial failure still publishes known candidates and explicit failure without claiming no update',async t=>{
+  const dir=mkdtempSync(join(tmpdir(),'ub-report-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
+  const path=join(dir,'report.json'),made=[];
+  writeFileSync(path,JSON.stringify({projects:{gbrain:{locked:'a'.repeat(40),origins:{upstream:{changed:true,revision:'b'.repeat(40),ref:'refs/heads/master'},fork:{checked:false,error:'OSError'}}}}}));
+  const github={paginate:async()=>[],rest:{issues:{listForRepo(){},create:async p=>made.push(p)}}};
+  await publishIssue({github,context:{repo:{owner:'o',repo:'r'}},core:{}},path);
+  assert.equal(made.length,1);assert.match(made[0].body,/Candidate: upstream/);assert.match(made[0].body,/CHECK FAILED/);
+  github.paginate=async()=>[{body:made[0].body}];await publishIssue({github,context:{repo:{}},core:{}},path);
+  assert.equal(made.length,1);
+});
+test('candidate publisher uses a draft, exact gitlink and separate CI dispatch without auto merge',async t=>{
+  const cwd=process.cwd(),dir=mkdtempSync(join(tmpdir(),'ub-pr-'));process.chdir(dir);
+  t.after(()=>{process.chdir(cwd);rmSync(dir,{recursive:true,force:true});});
+  const sha='b'.repeat(40),p={project:'gbrain',candidate:sha,gitlink_path:'vendor/gbrain',branch:`upstream/gbrain-${sha.slice(0,12)}`,fresh_fetch_verified:true,risk_flags:['source-review-required']};
+  writeFileSync('upgrade-candidate.json',JSON.stringify(p));writeFileSync('.gitmodules','reviewed source');writeFileSync('upstreams.lock.json','{}');
+  const calls=[];const fn=name=>async args=>{calls.push([name,args]);if(name==='getRef')throw {status:404};if(name==='getCommit')return {data:{tree:{sha:'base-tree'}}};return {data:{sha:`${name}-sha`,number:1}};};
+  const github={rest:{git:Object.fromEntries(['getRef','getCommit','createTree','createCommit','createRef'].map(n=>[n,fn(n)])),pulls:{create:fn('pull')},actions:{createWorkflowDispatch:fn('dispatch')}}};
+  await publishPR({github,context:{sha:'a'.repeat(40),repo:{owner:'o',repo:'r'},payload:{repository:{default_branch:'main'}}},core:{info(){}}});
+  const tree=calls.find(c=>c[0]==='createTree')[1].tree;
+  assert.equal(tree.find(x=>x.path==='vendor/gbrain').sha,sha);assert.equal(tree.length,4);
+  assert.equal(calls.find(c=>c[0]==='pull')[1].draft,true);assert.equal(calls.at(-1)[0],'dispatch');
+  p.gitlink_path='src/cli.mjs';writeFileSync('upgrade-candidate.json',JSON.stringify(p));
+  await assert.rejects(publishPR({github,context:{},core:{}}),/Invalid candidate/);
+});

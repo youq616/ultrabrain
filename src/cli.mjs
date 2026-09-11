@@ -5,10 +5,11 @@ const args = process.argv.slice(2);
 const [command, ...rest] = args;
 try {
   if (!command || ['help','--help','-h'].includes(command)) {
-    console.log(`ultrabrain 0.3.0-alpha.1 — Linux / managed PostgreSQL
+    console.log(`ultrabrain 0.3.1-alpha.1 — Linux / managed PostgreSQL
   db init|start|stop|status|backup|restore-new   Manage local PostgreSQL
   db activate-runtime                        Switch a stopped cluster to reviewed same-major binaries
   verify --project ID --task ID -- command    Host-only execution evidence (no remote executor)
+  compat                                     Check native catalog compatibility without a database
   health                                     Read-only managed-runtime diagnostics (JSON)
   migrate                                    Apply native and ultrabrain schemas
   mcp                                        Native MCP stdio, all tools including ultra_*
@@ -30,6 +31,11 @@ Upstream-dependent features require their original providers/configuration.`);
       const { verifyCLI } = await import('./verify-run.mjs');
       process.exitCode = await verifyCLI(rest, engine);
     } finally { await engine.disconnect(); }
+  } else if (command === 'compat') {
+    const {compatibilityReport} = await import('./adapters/gbrain.mjs');
+    const report = await compatibilityReport();
+    console.log(JSON.stringify(report,null,2));
+    process.exitCode = report.compatible ? 0 : 1;
   } else if (command === 'health') {
     const { health } = await import('./health.mjs');
     const report = await health();

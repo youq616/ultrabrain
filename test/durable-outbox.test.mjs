@@ -61,7 +61,9 @@ test('corrupt event fails closed before sending',async t=>{
   const {box,directory}=fixture(t);const {key}=box.enqueue(payload);
   const path=join(directory,`${key}.event.json`);const value=JSON.parse(readFileSync(path,'utf8'));
   value.payload.transcript='tampered';writeFileSync(path,JSON.stringify(value));
-  await assert.rejects(box.flush(async()=>{throw new Error('should not send');}),{code:'outbox_corrupt'});
+  const result=await box.flush(async()=>{assert.fail('should not send');});
+  assert.equal(result.results[0].state,'quarantined');
+  assert.equal(box.inspect().quarantined,1);
 });
 test('symlink and non-private journal paths are rejected',t=>{
   const {directory,config}=fixture(t);
@@ -93,4 +95,40 @@ test('pending capture is not submitted while opt-in is disabled',async t=>{
   const memory=new AgentMemory({client:{callTool(){throw new Error('not permitted');}},rootUri:'ultra://default/',sessionId:'s1',
     outbox:box,principalId:'actor1',serverId:'server1'});
   await assert.rejects(memory.flushOutbox(),{code:'capture_disabled'});
+});
+
+for (const ch of ['"','\\','\n','\u0001']) test(`64 KiB escaped payload round-trips after restart: ${JSON.stringify(ch)}`,async t=>{
+  const {box,config}=fixture(t), transcript='x'+ch.repeat(65535);
+  assert.equal(Buffer.byteLength(transcript),65536);
+  box.enqueue({...payload,transcript});
+  const next=new DurableOutbox(config); let sent=0;
+  await next.flush(async p=>{assert.equal(p.transcript,transcript);sent++;return receipt;});
+  assert.equal(sent,1);assert.equal(next.inspect().pending,0);
+});
+test('one corrupt event is isolated without blocking healthy records or force-replaying it',async t=>{
+  const {box,directory}=fixture(t), bad=box.enqueue(payload);
+  box.enqueue({...payload,event_id:'healthy'});
+  writeFileSync(join(directory,`${bad.key}.event.json`),'not-json');
+  const seen=[]; const send=async p=>{seen.push(p.event_id);return receipt;};
+  const r=await box.flush(send);assert.equal(r.quarantined,1);assert.deepEqual(seen,['healthy']);
+  assert.equal(readFileSync(join(directory,`${bad.key}.event.json`),'utf8'),'not-json');
+  await box.flush(send,{force:true});assert.deepEqual(seen,['healthy']);
+  assert.throws(()=>box.enqueue(payload),{code:'outbox_quarantined'});
+});
+test('oversized, symlinked and corrupt ACK records never cause unsafe delivery',async t=>{
+  const {box,directory}=fixture(t);const a=box.enqueue(payload),b=box.enqueue({...payload,event_id:'second'});
+  writeFileSync(join(directory,`${a.key}.ack.json`),'{');chmodSync(join(directory,`${a.key}.ack.json`),0o600);
+  const r=await box.flush(async p=>{assert.equal(p.event_id,'second');return receipt;});
+  assert.equal(r.quarantined,1);
+  const c=box.enqueue({...payload,event_id:'third'});
+  writeFileSync(join(directory,`${c.key}.event.json`),'a'.repeat(524289));
+  const r2=await box.flush(async()=>assert.fail('oversized sent'));assert.equal(r2.results[0].state,'quarantined');
+});
+
+test('symlinked event is quarantined without following or altering its target',async t=>{
+  const {box,directory}=fixture(t);const {key}=box.enqueue(payload);
+  const target=join(directory,'external-secret');writeFileSync(target,'DO NOT READ');
+  rmSync(join(directory,`${key}.event.json`));symlinkSync(target,join(directory,`${key}.event.json`));
+  const result=await box.flush(async()=>assert.fail('symlink sent'));
+  assert.equal(result.results[0].state,'quarantined');assert.equal(readFileSync(target,'utf8'),'DO NOT READ');
 });
