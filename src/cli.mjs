@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
 import { ROOT, prepareEnvironment, installPlugin, connect, loadNative } from './runtime.mjs';
 const args = process.argv.slice(2);
 const [command, ...rest] = args;
@@ -27,13 +27,25 @@ Upstream-dependent features require their original providers/configuration.`);
     console.log('Native and ultrabrain schemas ready.');
   } else {
     const forwarded = command === 'native' ? rest : command === 'mcp' ? ['serve','--surface','full', ...rest] : args;
-    if (['self-update','update','upgrade','init'].includes(forwarded[0])) {
+    if (['self-update','self-upgrade','update','upgrade','init','reinit-pglite','pglite-repair','post-upgrade'].includes(forwarded[0])) {
       throw new Error('Use managed db init + migrate, or upstream prepare. Native self-update/init could bypass pins or replace PostgreSQL with PGLite.');
     }
     prepareEnvironment();
-    await installPlugin();
-    process.argv = [process.execPath, `${ROOT}/vendor/gbrain/src/cli.ts`, ...forwarded];
-    await loadNative('src/cli.ts');
+    // Importing cli.ts is intentionally inert upstream. Use its real entrypoint,
+    // with a preload so our operation registrations exist before catalog creation.
+    const child = spawn(process.execPath, ['--preload', `${ROOT}/src/preload.mjs`,
+      `${ROOT}/vendor/gbrain/src/cli.ts`, ...forwarded], { stdio: 'inherit', env: process.env });
+    const forwardTerm = () => child.kill('SIGTERM');
+    const forwardInt = () => child.kill('SIGINT');
+    process.on('SIGTERM', forwardTerm); process.on('SIGINT', forwardInt);
+    try {
+      process.exitCode = await new Promise((resolve, reject) => {
+        child.once('error', reject);
+        child.once('exit', (code, signal) => resolve(code ?? (signal === 'SIGINT' ? 130 : 143)));
+      });
+    } finally {
+      process.off('SIGTERM', forwardTerm); process.off('SIGINT', forwardInt);
+    }
   }
 } catch (error) {
   // Native paths have their own redaction; do not print a connection URL or raw provider response here.

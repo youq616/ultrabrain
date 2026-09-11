@@ -17,7 +17,7 @@ let checks=0;
 try {
   const [role] = await engine.executeRaw('SELECT rolsuper FROM pg_roles WHERE rolname=current_user');
   assert.equal(role.rolsuper,false); checks++;
-  await run('ultra_write',{uri:`ultra://default/resources/${id}`,content:`---\ntype: note\ntitle: ${id}\n---\nUltrabrain integration memory ${id}. 中文检索。`}); checks++;
+  await run('ultra_write',{uri:`ultra://default/resources/${id}`,content:`---\ntype: note\ntitle: ${id}\nvisibility: world\n---\nUltrabrain integration memory ${id}. 中文检索。`}); checks++;
   const read = await run('ultra_read',{uri:`ultra://default/resources/${id}`,level:'L2'});
   assert.ok(read.content.includes(id)); checks++;
   const overview = await run('ultra_read',{uri:`ultra://default/resources/${id}`,level:'L0'});

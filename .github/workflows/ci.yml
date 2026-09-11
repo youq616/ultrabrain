@@ -36,29 +36,37 @@ jobs:
       - name: Build prerequisites
         run: sudo apt-get update && sudo apt-get install -y build-essential bison flex libssl-dev zlib1g-dev pkg-config
       - uses: actions/cache@v4
+        id: pg-cache
         with:
           path: /home/runner/ultrabrain-test/runtime
           key: native-ubuntu24-v1-${{ hashFiles('upstreams.lock.json', 'scripts/build-postgres.sh') }}
       - name: Bootstrap exact pinned sources
         run: bash scripts/bootstrap-linux.sh
+      - name: Save successfully built runtime independently of later tests
+        if: steps.pg-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /home/runner/ultrabrain-test/runtime
+          key: native-ubuntu24-v1-${{ hashFiles('upstreams.lock.json', 'scripts/build-postgres.sh') }}
       - name: Native PostgreSQL, ACL, receipt and MCP wire contract
         run: bun test/integration.mjs
       - name: Database backup and isolated restoration
         run: |
           bun src/cli.mjs db backup --destination "$RUNNER_TEMP/ub-backup"
           bun src/cli.mjs db restore-new "$RUNNER_TEMP/ub-backup" --database ub_restore_ci
+          python3 test/restore-verify.py ub_restore_ci
       - name: Stop private database
         if: always()
         run: bun src/cli.mjs db stop || true
       - name: Export source-only diagnostic fixture
-        if: always()
+        if: failure()
         run: |
           mkdir -p "$RUNNER_TEMP/ub-fixture/bin"
           cp "$(command -v bun)" "$RUNNER_TEMP/ub-fixture/bin/bun"
           tar --exclude=.git -czf "$RUNNER_TEMP/ub-fixture/gbrain.tgz" -C vendor/gbrain .
           tar -czf "$RUNNER_TEMP/ub-fixture/postgres-runtime.tgz" -C "$ULTRABRAIN_HOME/runtime" .
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: failure()
         with:
           name: diagnostic-runtime-${{ github.sha }}
           path: ${{ runner.temp }}/ub-fixture/

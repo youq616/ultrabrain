@@ -54,7 +54,7 @@ def pg(name, *args, admin=True, capture=True):
     s = state()
     role = 'ultrabrain_admin' if admin else 'ultrabrain'
     password = s['admin_password' if admin else 'app_password']
-    env = dict(os.environ, PGHOST='127.0.0.1', PGPORT=str(s['port']), PGUSER=role,
+    env = dict({k:v for k,v in os.environ.items() if k not in ('PGSERVICE','PGSERVICEFILE','PGOPTIONS')}, PGHOST='127.0.0.1', PGHOSTADDR='127.0.0.1', PGPORT=str(s['port']), PGUSER=role,
         PGDATABASE='postgres' if admin else 'ultrabrain', PGPASSWORD=password, PGCONNECT_TIMEOUT='10')
     # No connection URL/password in arguments, process logs or printed commands.
     return subprocess.run([binary(name), *map(str, args)], env=env,
@@ -104,15 +104,19 @@ def init(port):
     exists = pg('psql', '-X', '-tAc', "SELECT 1 FROM pg_roles WHERE rolname='ultrabrain'").stdout.strip()
     if not exists:
         # Password is generated locally and passed via stdin, never an SQL command-line argument.
-        env = dict(os.environ, PGHOST='127.0.0.1', PGPORT=str(s['port']), PGUSER='ultrabrain_admin',
+        env = dict({k:v for k,v in os.environ.items() if k not in ('PGSERVICE','PGSERVICEFILE','PGOPTIONS')}, PGHOST='127.0.0.1', PGHOSTADDR='127.0.0.1', PGPORT=str(s['port']), PGUSER='ultrabrain_admin',
             PGDATABASE='postgres', PGPASSWORD=s['admin_password'])
         sql = f"CREATE ROLE ultrabrain LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD '{s['app_password']}';"
         subprocess.run([binary('psql'), '-X', '-v', 'ON_ERROR_STOP=1'], input=sql, env=env,
             text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    # Native GBrain migrations require BYPASSRLS. The application remains non-superuser;
+    # client/source isolation is enforced by its operation layer, not per-client PG roles.
+    pg('psql', '-X', '-v', 'ON_ERROR_STOP=1', '-c', 'ALTER ROLE ultrabrain BYPASSRLS')
     exists = pg('psql', '-X', '-tAc', "SELECT 1 FROM pg_database WHERE datname='ultrabrain'").stdout.strip()
     if not exists: pg('createdb', '-O', 'ultrabrain', 'ultrabrain')
     pg('psql', '-X', '-v', 'ON_ERROR_STOP=1', '-d', 'ultrabrain', '-c',
         'CREATE EXTENSION IF NOT EXISTS vector; CREATE EXTENSION IF NOT EXISTS pg_trgm; CREATE EXTENSION IF NOT EXISTS pgcrypto;')
+    pg('psql', '-X', '-v', 'ON_ERROR_STOP=1', '-d', 'ultrabrain', '-f', ROOT / 'scripts/admin-bootstrap.sql')
     config_path = HOME / 'gbrain/config.json'
     url = f"postgresql://ultrabrain:{quote(s['app_password'], safe='')}@127.0.0.1:{s['port']}/ultrabrain"
     if config_path.exists():
@@ -152,8 +156,18 @@ def restore_new(directory, database):
     pg('createdb', '-O', 'ultrabrain', database)
     pg('psql', '-X', '-v', 'ON_ERROR_STOP=1', '-d', database, '-c',
         'CREATE EXTENSION IF NOT EXISTS vector; CREATE EXTENSION IF NOT EXISTS pg_trgm; CREATE EXTENSION IF NOT EXISTS pgcrypto;')
-    pg('pg_restore', '--exit-on-error', '--no-owner', '--no-acl', '--no-comments', '--role=ultrabrain',
-        '-d', database, path / 'database.dump')
+    # Event triggers are superuser-only. Restore application objects as the app role,
+    # then recreate the one pinned administrative trigger from reviewed source.
+    listing = pg('pg_restore', '--list', path / 'database.dump').stdout
+    selected = '\n'.join(line for line in listing.splitlines() if ' EVENT TRIGGER ' not in line) + '\n'
+    toc = HOME / 'postgres' / ('restore-toc-' + secrets.token_hex(6))
+    private_write(toc, selected)
+    try:
+        pg('pg_restore', '--exit-on-error', '--no-owner', '--no-acl', '--no-comments', '--role=ultrabrain',
+            '--use-list', toc, '-d', database, path / 'database.dump')
+        pg('psql', '-X', '-v', 'ON_ERROR_STOP=1', '-d', database, '-f', ROOT / 'scripts/admin-bootstrap.sql')
+    finally:
+        toc.unlink(missing_ok=True)
     print(f'Restored into {database}. Original database and application config are unchanged.')
 
 def main():

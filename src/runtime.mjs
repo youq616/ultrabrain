@@ -12,6 +12,7 @@ export function prepareEnvironment() {
   requireThat((statSync(HOME).mode & 0o077) === 0, 'insecure_home', 'ULTRABRAIN_HOME must have mode 0700');
   // Deliberately never inherit a pre-existing ~/.gbrain or ambient external database URL.
   process.env.GBRAIN_HOME = join(HOME, 'gbrain');
+  process.env.GBRAIN_SELF_UPGRADE_MODE = 'off';
   delete process.env.DATABASE_URL;
   delete process.env.GBRAIN_DATABASE_URL;
   const path = join(HOME, 'gbrain/config.json');
@@ -25,7 +26,7 @@ export function prepareEnvironment() {
   return config;
 }
 const load = async path => {
-  const modulePath = fileURLToPath(new URL(`../vendor/gbrain/${path}`, import.meta.url));
+  const modulePath = join(ROOT, 'vendor/gbrain', path);
   requireThat(existsSync(modulePath), 'upstream_file_missing', `Pinned runtime file missing: ${path}`);
   return import(modulePath);
 };
