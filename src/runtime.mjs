@@ -1,4 +1,4 @@
-import { readFileSync, mkdirSync, statSync } from 'node:fs';
+import { readFileSync, mkdirSync, statSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,15 +24,19 @@ export function prepareEnvironment() {
   process.env.GBRAIN_DATABASE_URL = config.database_url;
   return config;
 }
-const load = path => import(new URL(`../vendor/gbrain/${path}`, import.meta.url));
+const load = async path => {
+  const modulePath = fileURLToPath(new URL(`../vendor/gbrain/${path}`, import.meta.url));
+  requireThat(existsSync(modulePath), 'upstream_file_missing', `Pinned runtime file missing: ${path}`);
+  return import(modulePath);
+};
 let registered;
 export async function installPlugin() {
   if (registered) return registered;
   requireThat(typeof Bun !== 'undefined', 'bun_required', 'Runtime requires Bun >=1.3.11; pure tests run on Node');
-  const [{ operations }, { validateParams }, { OperationError }, context] = await Promise.all([
-    load('src/core/operations.ts'), load('src/mcp/validate-params.ts'),
-    load('src/core/ops/contract.ts'), load('src/core/ops/context.ts'),
-  ]);
+  const { operations } = await load('src/core/operations.ts');
+  const { validateParams } = await load('src/mcp/dispatch.ts');
+  const { OperationError } = await load('src/core/ops/contract.ts');
+  const context = await load('src/core/ops/context.ts');
   // Private helper imports are confined to this adapter and covered by contract tests.
   requireThat(typeof context.enforceClientSlugFence === 'function', 'upstream_contract_changed', 'Missing write fence');
   registered = registerPlugin(operations, { validateParams, OperationError,
