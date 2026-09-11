@@ -83,6 +83,9 @@ jobs:
         run: |
           python3 scripts/install-service.py --output "$RUNNER_TEMP/ub-units"
           systemd-analyze verify "$RUNNER_TEMP/ub-units/ultrabrain-postgres.service" "$RUNNER_TEMP/ub-units/ultrabrain-mcp.service"
+      - name: Privacy-preserving database crash diagnostics
+        if: failure()
+        run: python3 scripts/pg-diagnostics.py
       - name: Stop private database
         if: always()
         run: bun src/cli.mjs db stop || true

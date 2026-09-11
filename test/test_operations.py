@@ -11,9 +11,18 @@ ROOT=Path(__file__).resolve().parents[1]
 def module(name):
     spec=importlib.util.spec_from_file_location(name,ROOT/'scripts'/f'{name}.py')
     value=importlib.util.module_from_spec(spec); spec.loader.exec_module(value); return value
-pg=module('postgres'); upstream=module('upstreams'); service=module('install-service')
+pg=module('postgres'); upstream=module('upstreams'); service=module('install-service'); diagnostics=module('pg-diagnostics')
 
 class OperationsTests(unittest.TestCase):
+    def test_portable_extension_build_profile_is_explicit(self):
+        self.assertTrue(pg.EXPECTED['directory'].endswith('-portable-v1'))
+        self.assertIn('OPTFLAGS=""', (ROOT/'scripts/build-postgres.sh').read_text())
+    def test_crash_diagnostics_never_print_log_contents(self):
+        result=diagnostics.classify('server process was terminated by signal 4: Illegal instruction\nDETAIL: secret password in SQL\nautomatic recovery in progress')
+        self.assertEqual(result['backend_termination_signals'],[4])
+        self.assertEqual(result['recovery_restarts'],1)
+        self.assertNotIn('secret',json.dumps(result))
+
     def test_annotated_tag_uses_peeled_commit(self):
         lines='a'*40+'\trefs/tags/v1.0.0\n'+'b'*40+'\trefs/tags/v1.0.0^{}\n'
         with patch.object(upstream,'run',return_value=lines):

@@ -19,7 +19,7 @@ PG = LOCK['postgres']
 VECTOR = LOCK['pgvector']
 EXPECTED = {'version': PG['version'], 'postgres_revision': PG['revision'],
     'pgvector_revision': VECTOR['revision'],
-    'directory': f"postgres-{PG['version']}-{PG['revision'][:12]}-pgvector-{VECTOR['revision'][:12]}"}
+    'directory': f"postgres-{PG['version']}-{PG['revision'][:12]}-pgvector-{VECTOR['revision'][:12]}-portable-v1"}
 RUNTIME_STATE = HOME / 'postgres/runtime.json'
 DATA = HOME / 'postgres/data'
 STATE = HOME / 'postgres/state.json'
@@ -64,7 +64,8 @@ def read_runtime():
         re.fullmatch(r'[a-f0-9]{40}',value[k]) for k in ('postgres_revision','pgvector_revision')):
         raise RuntimeError('Invalid runtime binding')
     base = f"postgres-{value['version']}-{value['postgres_revision'][:12]}"
-    if value['directory'] not in (base,base+'-pgvector-'+value['pgvector_revision'][:12]):
+    if value['directory'] not in (base,base+'-pgvector-'+value['pgvector_revision'][:12],
+        base+'-pgvector-'+value['pgvector_revision'][:12]+'-portable-v1'):
         raise RuntimeError('Invalid runtime directory')
     return value
 

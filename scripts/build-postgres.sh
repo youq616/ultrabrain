@@ -10,8 +10,8 @@ mapfile -t paths < <(python3 - <<'PY'
 import json,os
 from pathlib import Path
 p=json.load(open('upstreams.lock.json'))['projects']; h=Path(os.environ['ULTRABRAIN_HOME']).resolve()
-print(h/'runtime'/f"postgres-{p['postgres']['version']}-{p['postgres']['revision'][:12]}-pgvector-{p['pgvector']['revision'][:12]}")
-print(h/'build'/f"postgres-{p['postgres']['revision'][:12]}-{p['pgvector']['revision'][:12]}")
+print(h/'runtime'/f"postgres-{p['postgres']['version']}-{p['postgres']['revision'][:12]}-pgvector-{p['pgvector']['revision'][:12]}-portable-v1")
+print(h/'build'/f"postgres-{p['postgres']['revision'][:12]}-{p['pgvector']['revision'][:12]}-portable-v1")
 print(p['postgres']['revision']+':'+p['pgvector']['revision'])
 PY
 )
@@ -35,13 +35,15 @@ cd "$BUILD/postgres"
 make -j "$JOBS" world-bin
 make install-world-bin
 # Build extensions in a private copy, not by modifying the tracked upstream source.
+# pgvector defaults to -march=native on x86. Shared CI/server runtimes must be portable;
+# otherwise a different CPU can crash a backend with an illegal instruction.
 python3 - "$ROOT/vendor/pgvector" "$BUILD/pgvector" <<'PY'
 import shutil,sys
 shutil.copytree(sys.argv[1],sys.argv[2],dirs_exist_ok=True,ignore=shutil.ignore_patterns('.git'))
 PY
 cd "$BUILD/pgvector"
 make clean PG_CONFIG="$PREFIX/bin/pg_config"
-make -j "$JOBS" PG_CONFIG="$PREFIX/bin/pg_config"
-make install PG_CONFIG="$PREFIX/bin/pg_config"
+make -j "$JOBS" OPTFLAGS="" PG_CONFIG="$PREFIX/bin/pg_config"
+make install OPTFLAGS="" PG_CONFIG="$PREFIX/bin/pg_config"
 printf '%s\n' "$MARKER" > "$PREFIX/.ultrabrain-build"
 echo 'Pinned native PostgreSQL and pgvector build completed.'
