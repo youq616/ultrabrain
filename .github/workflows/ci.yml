@@ -1,0 +1,47 @@
+name: Validate ultrabrain
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test test/*.test.mjs
+      - run: python3 -m py_compile scripts/*.py
+      - run: bash -n scripts/*.sh
+  native-integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      ULTRABRAIN_HOME: /home/runner/ultrabrain-test
+      ULTRABRAIN_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Build prerequisites
+        run: sudo apt-get update && sudo apt-get install -y build-essential bison flex libssl-dev zlib1g-dev pkg-config
+      - name: Bootstrap exact pinned sources
+        run: bash scripts/bootstrap-linux.sh
+      - name: Native PostgreSQL, ACL, receipt and MCP wire contract
+        run: bun test/integration.mjs
+      - name: Database backup and isolated restoration
+        run: |
+          bun src/cli.mjs db backup --destination "$RUNNER_TEMP/ub-backup"
+          bun src/cli.mjs db restore-new "$RUNNER_TEMP/ub-backup" --database ub_restore_ci
+      - name: Stop private database
+        if: always()
+        run: bun src/cli.mjs db stop || true

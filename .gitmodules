@@ -1,0 +1,12 @@
+[submodule "vendor/gbrain"]
+	path = vendor/gbrain
+	url = https://github.com/youq616/gbrain.git
+[submodule "vendor/openviking"]
+	path = vendor/openviking
+	url = https://github.com/youq616/OpenViking.git
+[submodule "vendor/postgres"]
+	path = vendor/postgres
+	url = https://github.com/postgres/postgres.git
+[submodule "vendor/pgvector"]
+	path = vendor/pgvector
+	url = https://github.com/pgvector/pgvector.git
