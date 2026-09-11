@@ -10,7 +10,7 @@ mapfile -t paths < <(python3 - <<'PY'
 import json,os
 from pathlib import Path
 p=json.load(open('upstreams.lock.json'))['projects']; h=Path(os.environ['ULTRABRAIN_HOME']).resolve()
-print(h/'runtime'/f"postgres-{p['postgres']['version']}-{p['postgres']['revision'][:12]}")
+print(h/'runtime'/f"postgres-{p['postgres']['version']}-{p['postgres']['revision'][:12]}-pgvector-{p['pgvector']['revision'][:12]}")
 print(h/'build'/f"postgres-{p['postgres']['revision'][:12]}-{p['pgvector']['revision'][:12]}")
 print(p['postgres']['revision']+':'+p['pgvector']['revision'])
 PY
@@ -19,6 +19,14 @@ PREFIX="${paths[0]}"; BUILD="${paths[1]}"; MARKER="${paths[2]}"
 if [[ -f "$PREFIX/.ultrabrain-build" ]] && [[ "$(cat "$PREFIX/.ultrabrain-build")" == "$MARKER" ]]; then
   echo 'Pinned PostgreSQL and pgvector already built.'; exit 0
 fi
+# Never reinstall shared libraries into a running release, even after a damaged marker.
+python3 - "$ULTRABRAIN_HOME/postgres/runtime.json" "$(basename "$PREFIX")" <<'PYBOUND'
+import json,sys
+from pathlib import Path
+p=Path(sys.argv[1])
+if p.exists() and json.loads(p.read_text()).get('directory') == sys.argv[2]:
+    raise SystemExit('Refusing to overwrite the active runtime. Build a new pinned release in a different directory.')
+PYBOUND
 JOBS="${ULTRABRAIN_BUILD_JOBS:-2}"
 [[ "$JOBS" =~ ^[1-9][0-9]?$ ]] || { echo 'ULTRABRAIN_BUILD_JOBS must be 1..99' >&2; exit 1; }
 mkdir -p "$BUILD/postgres" "$PREFIX"

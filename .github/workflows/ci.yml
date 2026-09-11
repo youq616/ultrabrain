@@ -18,6 +18,7 @@ jobs:
           node-version: '22'
       - run: node --test test/*.test.mjs
       - run: python3 -m py_compile scripts/*.py
+      - run: python3 -m unittest discover -s test -p 'test_*.py' -v
       - run: bash -n scripts/*.sh
   native-integration:
     runs-on: ubuntu-24.04
@@ -49,12 +50,26 @@ jobs:
           path: /home/runner/ultrabrain-test/runtime
           key: native-ubuntu24-v1-${{ hashFiles('upstreams.lock.json', 'scripts/build-postgres.sh') }}
       - name: Native PostgreSQL, ACL, receipt and MCP wire contract
-        run: bun test/integration.mjs
+        run: bun test/integration.mjs && bun test/bound-integration.mjs
+      - name: Authenticated Streamable HTTP MCP
+        run: bun test/http-integration.mjs
+      - name: Managed runtime health
+        run: bun src/cli.mjs health
       - name: Database backup and isolated restoration
         run: |
           bun src/cli.mjs db backup --destination "$RUNNER_TEMP/ub-backup"
           bun src/cli.mjs db restore-new "$RUNNER_TEMP/ub-backup" --database ub_restore_ci
           python3 test/restore-verify.py ub_restore_ci
+      - name: Runtime restart and safe same-major activation
+        run: |
+          bun src/cli.mjs db stop
+          bun src/cli.mjs db activate-runtime
+          bun src/cli.mjs db start
+          bun src/cli.mjs health
+      - name: Verify service unit syntax without enabling a service
+        run: |
+          python3 scripts/install-service.py --output "$RUNNER_TEMP/ub-units"
+          systemd-analyze verify "$RUNNER_TEMP/ub-units/ultrabrain-postgres.service" "$RUNNER_TEMP/ub-units/ultrabrain-mcp.service"
       - name: Stop private database
         if: always()
         run: bun src/cli.mjs db stop || true

@@ -26,8 +26,8 @@ export function sourceId(value) {
 }
 function segment(value) {
   requireThat(value && value !== '.' && value !== '..' &&
-    !/[\x00-\x1f\x7f\\/%?#]/u.test(value), 'invalid_uri', 'Unsafe URI segment');
-  return value.normalize('NFC');
+    !/[\x00-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069\\/%?#]/u.test(value), 'invalid_uri', 'Unsafe URI segment');
+  return value.normalize('NFC').toLowerCase();
 }
 export function uri(source, slug = '') {
   sourceId(source);
@@ -95,11 +95,27 @@ export function rankHierarchy(hits, prefix = '', limit = 10) {
 }
 /** Bounds the entire serialized evidence array, including metadata and citations. */
 export function pack(items, maxBytes) {
+  integer(maxBytes, undefined, 2, 1048576);
   const selected = [];
+  const fits = item => Buffer.byteLength(JSON.stringify([...selected, item])) <= maxBytes;
+  let shortened = 0;
   for (const item of items) {
-    if (Buffer.byteLength(JSON.stringify([...selected, item])) <= maxBytes) selected.push(item);
+    if (fits(item)) { selected.push(item); continue; }
+    if (typeof item.content !== 'string') continue;
+    // Keep higher-ranked evidence when its metadata plus a readable prefix fits.
+    // Binary search counts the ACTUAL escaped JSON, not just raw content bytes.
+    let lo = 0, hi = Buffer.byteLength(item.content), best = null;
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      const content = clip(item.content, mid);
+      const candidate = { ...item, content, bytes: Buffer.byteLength(content),
+        truncated: true, budget_truncated: true };
+      if (fits(candidate)) { best = candidate; lo = mid + 1; } else hi = mid - 1;
+    }
+    if (best?.content) { selected.push(best); shortened++; }
   }
   return { items: selected, evidence_bytes: Buffer.byteLength(JSON.stringify(selected)),
     evidence_budget_bytes: maxBytes, dropped: items.length - selected.length,
+    budget_truncated_items: shortened,
     budget_unit: 'UTF-8 bytes; response envelope excluded; not model tokens' };
 }

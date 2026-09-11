@@ -1,0 +1,57 @@
+name: Review upstream updates
+on:
+  schedule:
+    - cron: '37 6 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: upstream-review
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare original upstreams and forks without changing production
+        run: python3 scripts/upstreams.py check > "$RUNNER_TEMP/upstream-report.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upstream-review-${{ github.run_id }}
+          path: ${{ runner.temp }}/upstream-report.json
+          retention-days: 30
+      - name: Open a review issue only for a new candidate set
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const crypto = require('node:crypto');
+            const report = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/upstream-report.json','utf8'));
+            const candidates = Object.entries(report.projects).filter(([name,p]) =>
+              Object.values(p.origins).some(o => o.changed) ||
+              (p.latest_stable && p.latest_stable.revision !== p.locked));
+            if (!candidates.length) { core.info('No upstream changes detected.'); return; }
+            const digest = crypto.createHash('sha256').update(JSON.stringify(candidates)).digest('hex').slice(0,16);
+            const marker = '<!-- ultrabrain-upstream-review:' + digest + ' -->';
+            const issues = await github.paginate(github.rest.issues.listForRepo, {...context.repo,state:'all',per_page:100});
+            if (issues.some(i => !i.pull_request && i.body?.includes(marker))) {
+              core.info('This candidate set already has a review issue.'); return;
+            }
+            const sections = candidates.map(([name,p]) => {
+              const lines = ['## '+name, 'Locked commit: `'+p.locked+'`'];
+              for (const [repo,o] of Object.entries(p.origins)) {
+                if (o.changed) lines.push('- '+repo+': ['+o.ref+']('+o.compare+')');
+              }
+              if (p.latest_same_major) lines.push('- Same-major release candidate: `'+p.latest_same_major.ref+'`');
+              if (p.latest_stable) lines.push('- Latest stable candidate: `'+p.latest_stable.ref+'`');
+              if (p.major_migration_required) lines.push('- PostgreSQL major migration requires a separate migration rehearsal.');
+              return lines.join('\n');
+            });
+            await github.rest.issues.create({...context.repo,
+              title:'Upstream review: '+candidates.map(c=>c[0]).join(', ')+' ['+digest+']',
+              body:marker+'\n\nThese are review candidates, not approved upgrades. No code, database or service was updated.\n\n'+
+                sections.join('\n\n')+'\n\nReview functionality and licenses, update the feature matrix, prepare a candidate branch, run CI and rehearse backup/restore before release. See docs/UPGRADES.md.'});

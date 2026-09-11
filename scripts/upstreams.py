@@ -32,8 +32,16 @@ def verify(names=None):
     return True
 
 def refs(repo, pattern):
-    out = run('git', 'ls-remote', '--refs', f'https://github.com/{repo}.git', pattern)
-    return {line.split()[1]: line.split()[0] for line in out.splitlines() if line.strip()}
+    out = run('git', 'ls-remote', f'https://github.com/{repo}.git', pattern, pattern + '^{}')
+    result = {}
+    peeled = {}
+    for line in out.splitlines():
+        if not line.strip(): continue
+        sha, ref = line.split()
+        if ref.endswith('^{}'): peeled[ref[:-3]] = sha
+        else: result[ref] = sha
+    result.update(peeled)  # Annotated tags pin the commit, never the tag object.
+    return result
 
 def check():
     report = {'policy': 'review-only; no local files or running services changed', 'projects': {}}
@@ -43,6 +51,7 @@ def check():
             try:
                 reference = p['ref']
                 current = refs(repo, reference).get(reference)
+                if current is None: raise RuntimeError('Tracked reference was not found')
                 item['origins'][repo] = {'ref': reference, 'revision': current,
                     'changed': current != p['revision'],
                     'compare': f"https://github.com/{repo}/compare/{p['revision']}...{current}" if current else None}
@@ -63,7 +72,7 @@ def check():
                                 v, t, r = max(same)
                                 item['latest_same_major'] = {'version': '.'.join(map(str, v)), 'ref': t, 'revision': r}
                             item['major_migration_required'] = version[0] != major
-            except (subprocess.SubprocessError, OSError) as e:
+            except (subprocess.SubprocessError, OSError, RuntimeError) as e:
                 item['origins'][repo] = {'error': type(e).__name__, 'checked': False}
         report['projects'][name] = item
     print(json.dumps(report, indent=2, ensure_ascii=False))

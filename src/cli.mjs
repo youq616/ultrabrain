@@ -1,12 +1,14 @@
 #!/usr/bin/env bun
 import { spawnSync, spawn } from 'node:child_process';
-import { ROOT, prepareEnvironment, installPlugin, connect, loadNative } from './runtime.mjs';
+import { ROOT, prepareEnvironment, connect } from './runtime.mjs';
 const args = process.argv.slice(2);
 const [command, ...rest] = args;
 try {
   if (!command || ['help','--help','-h'].includes(command)) {
-    console.log(`ultrabrain 0.1.0 — Linux / managed PostgreSQL
+    console.log(`ultrabrain 0.2.0-alpha.1 — Linux / managed PostgreSQL
   db init|start|stop|status|backup|restore-new   Manage local PostgreSQL
+  db activate-runtime                        Switch a stopped cluster to reviewed same-major binaries
+  health                                     Read-only managed-runtime diagnostics (JSON)
   migrate                                    Apply native and ultrabrain schemas
   mcp                                        Native MCP stdio, all tools including ultra_*
   native <gbrain arguments>                   Full pinned upstream CLI
@@ -21,6 +23,11 @@ Upstream-dependent features require their original providers/configuration.`);
     const p = spawnSync('python3', [`${ROOT}/scripts/${script}`, ...rest], { stdio: 'inherit' });
     if (p.error) throw p.error;
     process.exitCode = p.status ?? 1;
+  } else if (command === 'health') {
+    const { health } = await import('./health.mjs');
+    const report = await health();
+    console.log(JSON.stringify(report, null, 2));
+    process.exitCode = report.ok ? 0 : 1;
   } else if (command === 'migrate') {
     const engine = await connect({ migrate: true });
     await engine.disconnect();

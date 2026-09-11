@@ -16,6 +16,8 @@ export function registerPlugin(operations, native) {
     actor: `${ctx.auth?.principal?.kind ?? ctx.transport ?? 'local'}:${ctx.auth?.principal?.id ?? ctx.auth?.clientId ?? 'owner'}:${ctx.subagentId ?? ''}`,
     async assertWrite(slug) {
       requireThat(!ctx.viaSubagent, 'scope_denied', 'Session receipts are not exposed to delegated subagents');
+      requireThat(!ctx.auth?.boundSlugPrefixes && !ctx.auth?.fenceProjectionDegraded,
+        'scope_denied', 'Session extraction is unavailable to prefix-bound clients');
       requireThat(ctx.engine.kind === 'postgres', 'unsupported_engine', 'ultrabrain requires native PostgreSQL');
       requireThat(!ctx.auth?.sourceId || ctx.auth.sourceId === ctx.sourceId, 'scope_denied', 'Source authority mismatch');
       native.enforceClientSlugFence(ctx, slug, 'put_page');
