@@ -19,6 +19,7 @@ function summary(source,actor,row) {
     canonical_state:row.result?.canonical_state ?? 'pending',
     uri:uri(source,deferredSlug(actor,row.session_id,row.event_id)),
     last_error:row.result?.error ?? null,
+    ...(row.result?.evidence_binding?{evidence_binding:row.result.evidence_binding}:{}),
     retryable:['needs_model','failed'].includes(row.state)&&row.attempts<MAX_ATTEMPTS,
     delivery:'at-least-once',
     note:'The raw event is durable in PostgreSQL; canonical search availability and extraction are separate states.'};
@@ -94,7 +95,7 @@ export async function processSessions(store,p={}) {
     if(!row) break;
     attempted.push(`${row.session_id}:${row.event_id}`);
     const keys=[source,actor,row.session_id,row.event_id,lease];
-    let state='failed',reason=null,canonical=row.result?.canonical_state??'pending';
+    let state='failed',reason=null,binding=row.result?.evidence_binding??null,canonical=row.result?.canonical_state??'pending';
     try {
       const payload=row.pending_payload;
       text(payload?.transcript,'transcript',65536);
@@ -110,6 +111,7 @@ export async function processSessions(store,p={}) {
       const extracted=await store.call('extract_facts',{turn_text:payload.transcript,
         session_id:row.session_id,source_slug:slug,visibility:payload.visibility});
       requireThat(extracted&&typeof extracted==='object','upstream_contract_changed','Invalid extraction response');
+      binding=extracted.evidence_binding??null;
       state=!extracted.skipped?'completed':['extraction_disabled','extraction_unavailable'].includes(extracted.skipped)?'needs_model':'failed';
       if(state!=='completed') reason=state==='needs_model'?'model_unavailable':'extraction_failed';
     } catch(error) {
@@ -119,7 +121,7 @@ export async function processSessions(store,p={}) {
       pending_payload=CASE WHEN $6='completed' THEN NULL ELSE pending_payload END,
       lease_until=NULL,next_attempt_at=now()+interval '5 seconds',updated_at=now()
       WHERE source_id=$1 AND actor=$2 AND session_id=$3 AND event_id=$4 AND lease_id=$5::uuid
-      RETURNING session_id,event_id,state,result,attempts`,[...keys,state,JSON.stringify({canonical_state:canonical,error:reason})]);
+      RETURNING session_id,event_id,state,result,attempts`,[...keys,state,JSON.stringify({canonical_state:canonical,error:reason,...(binding?{evidence_binding:binding}:{})})]);
     requireThat(saved,'lease_lost','Processing lease changed; use status before retrying');
     results.push(summary(source,actor,saved));
   }

@@ -37,3 +37,7 @@ Ultrabrain 使用锁定的 GBrain 业务引擎与本机托管原生 PostgreSQL�
 读取、检索、目录和出处工具支持 current / reviewed / history；原文变化使审核失效。替代关系只在权限、请求范围及内容 hash 均满足时有界跟随。默认 current 仍允许未审核老资源，但明确标注 unreviewed。
 
 ultra_identity 和通用生命周期桥用实际认证返回绑定 outbox；同进程凭据快照避免身份/交付间换主体。不读取未接入应用，不执行事件命令，不默认采集。多平台原生 Hooks 和完整事实时态治理依然在后续范围内。
+
+## 0.7.0 原生事实接入
+
+三个新工具 ultra_fact_inspect / ultra_fact_bind / ultra_recall 复用 public.facts；关联表不复制正文或向量。新事实 current 选择要求当前可核验来源，reviewed 再要求来源审核。旧数据不会自动获得绑定；直接原生接口行为不变。AgentMemory 可通过 factRecall 配置、事件桥可通过 --facts 加入事实与页面组合证据。边界见 GOVERNED-FACTS.md。

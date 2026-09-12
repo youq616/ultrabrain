@@ -193,6 +193,33 @@
         "Direct native tools remain historical and need their own governance",
         "No source quotation can prove truth or entailment"
       ]
+    },
+    {
+      "id": "governed-native-facts",
+      "upstream": "gbrain",
+      "baseline": "a6be012a3bcfac42e279630aedec5cda4a450e29",
+      "watch_prefixes": [
+        "src/core/ops/facts.ts",
+        "src/core/facts/",
+        "src/core/verbs.ts",
+        "src/core/engine.ts",
+        "src/core/migrate.ts"
+      ],
+      "status": "explicit-source-binding-native-fact-selection",
+      "local_files": [
+        "src/fact-evidence.mjs",
+        "src/fact-plugin.mjs"
+      ],
+      "tests": [
+        "test/fact-evidence.test.mjs",
+        "test/fact-evidence-integration.mjs"
+      ],
+      "review": [
+        "Native ID precision and fact projection",
+        "Source visibility and provenance semantics",
+        "No inferred legacy binding or automatic truth claim",
+        "Raw native recall remains a separate surface"
+      ]
     }
   ]
 }

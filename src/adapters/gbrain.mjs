@@ -50,7 +50,9 @@ export async function nativeBindings({enforce=true}={}) {
   report.compatible=report.compatible&&report.fences_compatible;
   if(enforce) requireThat(report.compatible,'upstream_contract_changed',
     'Native operation catalog changed; run compat and review the adapter contract before serving');
-  return {operations,validateParams,OperationError,context,report,actual,fences};
+  const {AUDIT_ROW_SOURCES:auditSources}=await loadNative('src/core/facts/audit-sources.ts');
+  requireThat(Array.isArray(auditSources)&&auditSources.length>0&&auditSources.every(x=>typeof x==='string'),'upstream_contract_changed','Audit source exclusions changed');
+  return {operations,validateParams,OperationError,context,report,actual,fences,auditSources};
 }
 export async function compatibilityReport() {
   const {report,actual}=await nativeBindings({enforce:false});

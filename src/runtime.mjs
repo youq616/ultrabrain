@@ -6,6 +6,7 @@ import { requireThat } from './core.mjs';
 import { registerPlugin } from './plugin.mjs';
 import { applyMigrations, migrationStatus } from './migrations.mjs';
 import { loadNative as load, nativeBindings } from './adapters/gbrain.mjs';
+import { factAdapter } from './fact-plugin.mjs';
 import { registerProjectPlugin } from './project-plugin.mjs';
 export const ROOT = fileURLToPath(new URL('../', import.meta.url));
 export const HOME = resolve(process.env.ULTRABRAIN_HOME ?? join(homedir(), '.local/share/ultrabrain'));
@@ -52,14 +53,15 @@ let registered;
 export async function installPlugin() {
   if (registered) return registered;
   requireThat(typeof Bun !== 'undefined', 'bun_required', 'Runtime requires Bun >=1.3.11; pure tests run on Node');
-  const {operations,validateParams,OperationError,context} = await nativeBindings();
+  const {operations,validateParams,OperationError,context,auditSources} = await nativeBindings();
+  const facts=factAdapter(operations,{validateParams,OperationError,auditSources});
   registered = registerPlugin(operations, { validateParams, OperationError,
-    enforceClientSlugFence: context.enforceClientSlugFence });
+    enforceClientSlugFence: context.enforceClientSlugFence, extractWithEvidence:facts.extract });
   // Only these two wrappers delegate exclusively to the corresponding fenced native write.
   // Session extraction may touch entity pages; never grant it to prefix-bound clients.
   context.CLIENT_FENCED_WRITE_OPS.add('ultra_write');
   context.CLIENT_FENCED_WRITE_OPS.add('ultra_delete');
-  registered = [...registered, ...registerProjectPlugin(operations, { OperationError })];
+  registered = [...registered, ...facts.register(), ...registerProjectPlugin(operations, { OperationError })];
   return registered;
 }
 export async function connect({ migrate = false } = {}) {

@@ -53,3 +53,7 @@ stdout 包含用户所请求的记忆内容，不是脱敏运维日志。调用�
 任意能调用本机进程并通过 stdin 传 JSON 的框架可接这份事件合同。不要把用户 query/transcript 直接拼接进 shell 命令；使用 subprocess/execFile 的参数数组和 stdin，命令路径由主机配置固定。JS 框架也可直接使用 bindBridge 或 AgentMemory，无需每个回合创建新进程。
 
 这提供通用接入基元，**并不等于已安装和验收 Codex、Claude Code、OpenClaw、Hermes、zcode、Grok CLI、OpenCode 或 n8n 的全部原生 Hooks**。各客户端的自动事件捕获、隐私授权、恢复语义和配置写入仍需对应适配及真实客户端验收。已有通用 MCP 接入不受影响。
+
+## 0.7.0 可选原生事实
+
+启动参数添加 --facts 可在 before_turn 返回的 context 中加入来源受治理 facts；--fact-entity NAME 可限定实体。默认关闭，避免给既有客户端偷偷增加新的工具权限和成本。事实使用原生过滤/最近排序，不以事件 query 冒充语义事实搜索。页面和事实采用共同字节预算，详见 GOVERNED-FACTS.md。

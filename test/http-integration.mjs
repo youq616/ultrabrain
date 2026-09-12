@@ -123,6 +123,15 @@ try {
   assert.equal(result(await call(writer,'ultra_summary_status',{uri:summaryUri})).state,'not_cached_or_stale');proof();
   assert.ok(writerCatalog.tools.some(t=>t.name==='ultra_excerpt'));proof();
 
+  // Native facts are source-bound before they enter the governed current read path.
+  const fact=result(await call(writer,'remember',{fact:'HTTP governed fact canary',provenance:'Controlled HTTP fixture',visibility:'world'}));
+  const factView=result(await call(writer,'ultra_fact_inspect',{fact_id:fact.id}));
+  assert.equal(result(await call(reader,'ultra_recall',{uri:`ultra://${source}/`})).facts.length,0);proof();
+  const binding={fact_id:fact.id,fact_sha256:factView.fact_sha256,evidence_uri:summaryUri,content_sha256:original.content_sha256,expected_revision:0,event_id:'http-fact-binding'};
+  result(await call(writer,'ultra_fact_bind',binding));
+  assert.equal(result(await call(reader,'ultra_recall',{uri:`ultra://${source}/`})).facts[0].fact_id,fact.id);proof();
+  await denied(call(reader,'ultra_fact_bind',{...binding,event_id:'read-only-bind',expected_revision:1}));
+  await denied(call(foreign,'ultra_recall',{uri:`ultra://${source}/`}));
   // Authenticated lifecycle process: identity binding, context, opt-in capture and recovery.
   const ownIdentity=result(await call(writer,'ultra_identity',{}));
   assert.equal(ownIdentity.source_id,source);assert.match(ownIdentity.actor_key,/^[a-f0-9]{64}$/);proof();
@@ -136,8 +145,9 @@ try {
     proc.stdin.end(JSON.stringify(event));const [code]=await once(proc,'close');clearTimeout(deadline);
     assert.ok(!output.includes(writerToken));return {code,response:JSON.parse(output),errors};
   };
-  const before=await runBridge({event:'before_turn',session_id:'bridge-session',query:'HTTP',project_id});
+  const before=await runBridge({event:'before_turn',session_id:'bridge-session',query:'HTTP',project_id},['--facts']);
   assert.equal(before.code,0,before.errors);assert.ok(before.response.result.context);proof();
+  assert.equal(before.response.result.context.facts[0].fact_id,fact.id);proof();
   const withoutConsent=await runBridge({event:'after_turn',session_id:'bridge-session',event_id:'turn',transcript:'consented bridge fixture'});
   assert.equal(withoutConsent.code,1);assert.equal(withoutConsent.response.error,'capture_disabled');proof();
   const bridgeCapture={event:'after_turn',session_id:'bridge-session',event_id:'turn',transcript:'consented bridge fixture'};
@@ -149,6 +159,8 @@ try {
   const sourceView=result(await call(writer,'ultra_memory_inspect',{uri:summaryUri}));
   result(await call(writer,'ultra_memory_review',{uri:summaryUri,event_id:'http-review',expected_revision:0,content_sha256:sourceView.content_sha256,
     status:'retracted',assertion_kind:'attributed',reason:'HTTP retirement',provenance:'Fixture review'}));proof();
+  assert.equal(result(await call(reader,'ultra_recall',{uri:`ultra://${source}/`})).facts.length,0);proof();
+  assert.equal(result(await call(reader,'ultra_recall',{uri:`ultra://${source}/`,memory_policy:'history'})).facts[0].fact_id,fact.id);proof();
   await denied(call(reader,'ultra_read',{uri:summaryUri}));
   assert.equal(result(await call(reader,'ultra_read',{uri:summaryUri,memory_policy:'history',level:'L2'})).memory.status,'retracted');proof();
   await denied(call(reader,'ultra_memory_review',{uri:summaryUri,event_id:'read-only',expected_revision:1,content_sha256:sourceView.content_sha256,

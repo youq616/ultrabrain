@@ -23,7 +23,7 @@ export async function health() {
       pgvector_version:extensions.some(x=>x.extname==='vector'&&x.extversion===pins.pgvector.version),
       native_schema_present:Number(schema?.value)>0,session_schema_present:receipts.available===true,
       project_schema_present:projectSchema.present,native_schema_pinned:projectSchema.native_public&&projectSchema.no_shadow,
-      custom_tools_registered:['ultra_identity','ultra_memory_inspect','ultra_memory_review','ultra_memory_supersede','ultra_memory_history','ultra_read','ultra_ls','ultra_retrieve','ultra_write','ultra_delete','ultra_commit_session','ultra_process_sessions','ultra_session_status','ultra_summarize','ultra_summary_status','ultra_summary_forget','ultra_excerpt',...PROJECT_TOOL_NAMES].every(name=>operations.some(x=>x.name===name))};
+      custom_tools_registered:['ultra_recall','ultra_fact_inspect','ultra_fact_bind','ultra_identity','ultra_memory_inspect','ultra_memory_review','ultra_memory_supersede','ultra_memory_history','ultra_read','ultra_ls','ultra_retrieve','ultra_write','ultra_delete','ultra_commit_session','ultra_process_sessions','ultra_session_status','ultra_summarize','ultra_summary_status','ultra_summary_forget','ultra_excerpt',...PROJECT_TOOL_NAMES].every(name=>operations.some(x=>x.name===name))};
     return {ok:Object.values(checks).every(Boolean),checks,database:{engine:'native-postgresql',version:server.version,bypassrls:role.rolbypassrls,schema_version:Number(schema?.value)},
       runtime,extensions,registered_operations:operations.length,
       client_isolation:'native operation-layer authorization; not PostgreSQL per-client RLS',model_calls:'not performed; use native doctor for provider configuration diagnostics'};

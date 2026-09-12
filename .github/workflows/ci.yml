@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        upgrade_base: [38e0e6657561e17ba85c71d0783d604242a054e8, d7be484b445a893112d3a132c30f42282865a41a, 31f43aa1ff1343bb649e39cf44ca57203ce0ebac, 225fef02de4c3aa33d655c4b2dfde9f246571329, 32f97e8d45b312980ce6ab1784cf316feddd698e]
+        upgrade_base: [38e0e6657561e17ba85c71d0783d604242a054e8, d7be484b445a893112d3a132c30f42282865a41a, 31f43aa1ff1343bb649e39cf44ca57203ce0ebac, 225fef02de4c3aa33d655c4b2dfde9f246571329, 32f97e8d45b312980ce6ab1784cf316feddd698e, b46c067f0ef110900af7fe8bb2334b4a9c509c3c]
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
@@ -76,6 +76,8 @@ jobs:
         run: bun test/semantic-integration.mjs
       - name: Resource correction, time validity and current/history separation
         run: bun test/memory-policy-integration.mjs && bun test/review-dependencies-integration.mjs
+      - name: Source-bound native facts and lifecycle evidence
+        run: bun test/fact-evidence-integration.mjs
       - name: Explicit pgvector SQL upgrade with rollback and crash recovery
         run: python3 test/vector-upgrade-integration.py
       - name: Synthetic keyless retrieval regression (not semantic quality)

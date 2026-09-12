@@ -48,6 +48,7 @@ export function registerPlugin(operations, native, configureSummaries=configured
       const op = base.get(name);
       const error = native.validateParams(op, params);
       requireThat(!error, 'upstream_contract_changed', error ?? 'Native parameter mismatch');
+      if(name==='extract_facts'&&native.extractWithEvidence)return native.extractWithEvidence(ctx,params,()=>op.handler(ctx,params));
       return op.handler(ctx, params);
     },
   });

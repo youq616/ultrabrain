@@ -14,16 +14,19 @@ function unpack(r) {
  requireThat(value&&typeof value==='object','mcp_contract_changed','Invalid MCP identity');return value;
 }
 export function bridgeOptions(args) {
- const options={capture:false,memoryPolicy:'current'};const seen=new Set();
+ const options={capture:false,memoryPolicy:'current',factRecall:null};const seen=new Set();
  for(let n=0;n<args.length;n++) {
   const key=args[n];requireThat(!seen.has(key),'invalid_params','Duplicate bridge option');seen.add(key);
   if(key==='--capture'){options.capture=true;continue;}
-  requireThat(['--url','--token-file','--root','--outbox','--memory-policy','--visibility'].includes(key)&&n+1<args.length,'invalid_params','Unknown or incomplete bridge option');
+  if(key==='--facts'){options.factRecall={};continue;}
+  requireThat(['--url','--token-file','--root','--outbox','--memory-policy','--visibility','--fact-entity'].includes(key)&&n+1<args.length,'invalid_params','Unknown or incomplete bridge option');
   options[key.slice(2)]=args[++n];
  }
  const native=clientOptions(['--url',options.url,'--token-file',options['token-file'],'--tool','ultra_identity']);
  const root=parseUri(options.root);
  options.memoryPolicy=memoryMode(options['memory-policy']??'current');
+ requireThat(options['fact-entity']===undefined||options.factRecall!==null,'invalid_params','--fact-entity requires --facts');
+ if(options['fact-entity']!==undefined)options.factRecall={entity:text(options['fact-entity'],'fact entity',2048)};
  options.visibility=options.visibility??'private';
  requireThat(['private','world'].includes(options.visibility),'invalid_params','Invalid visibility');
  requireThat(!options.capture||typeof options.outbox==='string','invalid_params','Durable outbox required when capture is enabled');
@@ -44,7 +47,7 @@ export async function bindBridge(client,options,signal) {
    identifier(event.session_id,'session_id');
    if(event.project_id!==undefined)identifier(event.project_id,'project_id');
    const memory=new AgentMemory({client,rootUri:options.rootUri,sessionId:event.session_id,projectId:event.project_id??null,
-    capture:options.capture,deferExtraction:true,visibility:options.visibility,memoryPolicy:options.memoryPolicy,
+    capture:options.capture,deferExtraction:true,visibility:options.visibility,memoryPolicy:options.memoryPolicy,factRecall:options.factRecall??null,
     outbox,principalId:identity.actor_key,serverId:identity.instance_id});
    // Recheck identity before any event can deliver a pending payload: token rotations
    // that change principal or server must not redirect an existing durable journal.

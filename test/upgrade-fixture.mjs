@@ -23,6 +23,7 @@ const call=async(name,args,extra={})=>{
 const fingerprint=async()=>{
   const out={};
   for(const [name,sql] of Object.entries({
+    native_facts:"SELECT md5(string_agg(id::text||':'||fact||':'||visibility,',' ORDER BY id)) AS value FROM public.facts WHERE source_id=$1",
     pages:"SELECT md5(string_agg(id::text||':'||content_hash,',' ORDER BY id)) AS value FROM pages WHERE source_id=$1",
     project:"SELECT md5(state::text||':'||revision::text) AS value FROM ultrabrain.projects WHERE source_id=$1",
     history:"SELECT md5(string_agg(state::text||':'||revision::text,',' ORDER BY revision)) AS value FROM ultrabrain.project_revisions WHERE source_id=$1",
@@ -43,6 +44,8 @@ try {
     await call('put_page',{slug:'private/preserved',content:'---\ntype: note\nvisibility: private\n---\nprivate-upgrade-canary'});
     await call('ultra_project_save',{project_id:project,event_id:'checkpoint',expected_revision:0,state:{goal:'Preserve old data',tasks:[],next_actions:['Resume work']}});
     await call('ultra_commit_session',{session_id:'s1',event_id:'e1',transcript:'Consented upgrade fixture transcript',visibility:'private'});
+    const fact=await call('remember',{fact:'Legacy native fact without a source binding',provenance:'Upgrade fixture',visibility:'world'});
+    writeFileSync(join(directory,'native-fact.json'),JSON.stringify(fact),{mode:0o600});
     const box=new DurableOutbox(boxOptions);
     box.enqueue({session_id:'s2',event_id:'escaped',transcript:'x'+'"'.repeat(65535),visibility:'private'});
     const [policies]=await engine.executeRaw("SELECT to_regclass('ultrabrain.memory_policies') IS NOT NULL AS present");
@@ -52,17 +55,23 @@ try {
       await call('ultra_memory_review',{uri:reference.uri,content_sha256:reference.content_sha256,expected_revision:0,
         event_id:'legacy-review',status:'active',assertion_kind:'source_quote',reason:'Legacy quote fixture',provenance:'Synthetic',
         evidence:{uri:reference.uri,content_sha256:reference.content_sha256,start:0,end:10}});
-      writeFileSync(join(directory,'legacy-quote.json'),JSON.stringify(reference),{mode:0o600});
+      const [dependencies]=await engine.executeRaw("SELECT to_regclass('ultrabrain.review_dependencies') IS NOT NULL AS present");
+      writeFileSync(join(directory,'legacy-quote.json'),JSON.stringify({...reference,dependencies_present:dependencies.present}),{mode:0o600});
     }
     writeFileSync(join(directory,'fingerprints.json'),JSON.stringify(await fingerprint()),{mode:0o600});
     writeFileSync(join(directory,'baseline-eval.json'),JSON.stringify(await evaluate()),{mode:0o600});
     console.log('PASS old-source seed: pages, privacy, project/history, session receipt, legacy oversized queue record');
   } else {
+    const legacy=JSON.parse(readFileSync(join(directory,'native-fact.json'),'utf8'));
+    assert.equal((await call('ultra_fact_inspect',{fact_id:legacy.id})).evidence.status,'unlinked');
+    assert.equal((await call('ultra_recall',{uri:`ultra://${source}/`})).facts.length,0);
+    assert.ok((await call('ultra_recall',{uri:`ultra://${source}/`,memory_policy:'history'})).facts.some(f=>f.fact_id===legacy.id));
     assert.deepEqual(await fingerprint(),JSON.parse(readFileSync(join(directory,'fingerprints.json'),'utf8')));
     if(existsSync(join(directory,'legacy-quote.json'))) {
       const reference=JSON.parse(readFileSync(join(directory,'legacy-quote.json'),'utf8'));
       const current=await call('ultra_memory_inspect',{uri:reference.uri});
-      assert.equal(current.memory.status,'review_required');assert.equal(current.memory.revision,2);
+      assert.equal(current.memory.status,reference.dependencies_present?'active':'review_required');
+      assert.equal(current.memory.revision,reference.dependencies_present?1:2);
       assert.equal(current.content_sha256,reference.content_sha256);
     }
     assert.equal((await call('ultra_project_load',{project_id:project})).revision,1);
