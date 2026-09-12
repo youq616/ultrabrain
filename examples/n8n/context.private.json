@@ -1,0 +1,55 @@
+{
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  },
+  "pinData": {},
+  "name": "Ultrabrain Context (configure credential before use)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "before_turn",
+        "sessionId": "demo-session",
+        "query": "继续当前项目的工作",
+        "projectId": "",
+        "memoryPolicy": "current",
+        "includeFacts": false
+      },
+      "id": "ultrabrain",
+      "name": "Ultrabrain Context",
+      "type": "CUSTOM.ultrabrain",
+      "typeVersion": 1,
+      "position": [
+        300,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Ultrabrain Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

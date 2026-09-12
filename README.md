@@ -45,8 +45,12 @@ PostgreSQL 随项目在本机安装和管理，不要求外部数据库，不是
 
 详见 [引用治理](docs/MEMORY-GOVERNANCE.md)、[pgvector SQL 升级](docs/VECTOR-UPGRADES.md) 和 [验收范围](docs/VALIDATION-0.6.1.md)。本版没有改变上游锁定提交，不宣称语义质量认证或 PostgreSQL 跨主版本自动迁移。
 
-## 当前增量：0.7.0-alpha.1
+## 历史增量：0.7.0-alpha.1
 
 新增原生事实来源版本关联、受治理的事实召回及 Agent 页面/事实组合证据。旧原生事实保留，不猜测来源；current 事实需要可用关联，history 显式选择。会话提取可对可核验的返回 ID 建立关联，不覆盖旧关联，不将模型结果当作真值。
 
 详见 [受治理事实](docs/GOVERNED-FACTS.md) 与 [本版验收](docs/VALIDATION-0.7.md)。原生直接 recall/context_pack 等保持兼容行为；完整事实迁移与语义质量仍需独立验收。
+
+## 当前增量：0.8.0-alpha.1
+
+提供可构建安装的自托管 n8n 私有节点，复用 AgentMemory 与官方 MCP SDK，支持上下文读取、显式采集、状态查询和项目续接。固定连接身份、双层采集许可、稳定事件重试及逐项错误边界见 [n8n 接入](docs/N8N-INTEGRATION.md)；测试范围见 [0.8 验收](docs/VALIDATION-0.8.md)。包未发布到 npm/Cloud，不自动修改用户工作流或部署服务。原有事实/资源存储和上游锁保持不变。

@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        upgrade_base: [38e0e6657561e17ba85c71d0783d604242a054e8, d7be484b445a893112d3a132c30f42282865a41a, 31f43aa1ff1343bb649e39cf44ca57203ce0ebac, 225fef02de4c3aa33d655c4b2dfde9f246571329, 32f97e8d45b312980ce6ab1784cf316feddd698e, b46c067f0ef110900af7fe8bb2334b4a9c509c3c]
+        upgrade_base: [38e0e6657561e17ba85c71d0783d604242a054e8, d7be484b445a893112d3a132c30f42282865a41a, 31f43aa1ff1343bb649e39cf44ca57203ce0ebac, 225fef02de4c3aa33d655c4b2dfde9f246571329, 32f97e8d45b312980ce6ab1784cf316feddd698e, b46c067f0ef110900af7fe8bb2334b4a9c509c3c, fb397f0f3a8ba12253f9e993bba93c387e6de57a]
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
@@ -88,6 +88,11 @@ jobs:
           path: ${{ runner.temp }}/memory-eval.json
           retention-days: 30
           if-no-files-found: error
+      - name: Packaged n8n client against real MCP (context fixture)
+        run: |
+          ln -s "$GITHUB_WORKSPACE/vendor/gbrain/node_modules" packages/n8n-nodes-ultrabrain/node_modules
+          bun scripts/build-n8n.mjs
+          bun test/n8n-integration.mjs
       - name: Managed runtime health
         run: bun src/cli.mjs health
       - name: Database backup and isolated restoration
@@ -125,3 +130,55 @@ jobs:
           path: ${{ runner.temp }}/ub-fixture/
           retention-days: 3
           if-no-files-found: warn
+
+  n8n-engine:
+    needs: unit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      ULTRABRAIN_HOME: /home/runner/ultrabrain-test
+      ULTRABRAIN_TEST_ALLOW_WRITE: '1'
+      ULTRABRAIN_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Native build prerequisites
+        run: sudo apt-get update && sudo apt-get install -y build-essential bison flex libssl-dev zlib1g-dev pkg-config
+      - run: install -d -m 0700 "$ULTRABRAIN_HOME"
+      - uses: actions/cache@v4
+        with:
+          path: /home/runner/ultrabrain-test/runtime
+          key: native-ubuntu24-v1-${{ hashFiles('upstreams.lock.json', 'scripts/build-postgres.sh') }}
+      - name: Bootstrap isolated native server
+        run: bash scripts/bootstrap-linux.sh
+      - name: Build reviewed local node package
+        run: bash scripts/package-n8n.sh "$RUNNER_TEMP/n8n-package"
+      - name: Install pinned n8n host and this exact local tgz
+        run: |
+          npm install --prefix "$RUNNER_TEMP/n8n-host" --no-audit --no-fund n8n@2.38.7 n8n-workflow@2.38.1 "$RUNNER_TEMP/n8n-package/n8n-nodes-ultrabrain-0.8.0-alpha.1.tgz"
+          ln -s "$RUNNER_TEMP/n8n-host/node_modules" packages/n8n-nodes-ultrabrain/node_modules
+      - name: Actual n8n CLI, credential and workflow execution
+        env:
+          ULTRABRAIN_N8N_BIN: ${{ runner.temp }}/n8n-host/node_modules/n8n/bin/n8n
+          ULTRABRAIN_N8N_INSTALLED: ${{ runner.temp }}/n8n-host/node_modules/n8n-nodes-ultrabrain
+          ULTRABRAIN_N8N_REPORT: ${{ runner.temp }}/n8n-engine-report.json
+        run: bun test/n8n-integration.mjs --engine
+      - uses: actions/upload-artifact@v4
+        with:
+          name: n8n-private-adapter-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/n8n-package/*.tgz
+            ${{ runner.temp }}/n8n-package/*.sha256
+            ${{ runner.temp }}/n8n-engine-report.json
+          retention-days: 14
+          if-no-files-found: error
+      - name: Stop isolated server
+        if: always()
+        run: bun src/cli.mjs db stop || true

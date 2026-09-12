@@ -1,4 +1,4 @@
-import {mode as memoryMode,policyAllows} from './memory-policy.mjs';
+import {mode as memoryMode,policyAllows} from './memory-selection.mjs';
 /** Agent lifecycle hooks over authenticated MCP. Evidence is data, never execution authority. */
 import { parseUri, within, text, integer, clip, sha256, requireThat, UltraError } from './core.mjs';
 function identifier(value, name) {

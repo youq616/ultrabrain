@@ -4,6 +4,8 @@
  */
 import {parseUri,uri,sha256,text,integer,requireThat} from './core.mjs';
 import {authorizeProjects,identifier} from './projects.mjs';
+import {mode,policyAllows} from './memory-selection.mjs';
+export {mode,policyAllows} from './memory-selection.mjs';
 
 const states=['active','retracted','superseded','review_required'];
 const assertionKinds=['attributed','source_quote','inference'];
@@ -14,10 +16,6 @@ export function utcInstant(value,name) {
   const canonical=value.includes('.')?value.replace(/\.(\d{1,3})Z$/,(_,s)=>'.'+s.padEnd(3,'0')+'Z'):value.replace('Z','.000Z');
   requireThat(Number.isFinite(Date.parse(value))&&new Date(value).toISOString()===canonical,'invalid_params',`Invalid ${name}`);
   return canonical;
-}
-export function mode(value='current') {
-  requireThat(['current','reviewed','history'].includes(value),'invalid_params','memory_policy must be current, reviewed or history');
-  return value;
 }
 export function normalizeReview(p) {
   requireThat(['active','retracted'].includes(p.status),'invalid_params','Review status must be active or retracted');
@@ -45,10 +43,6 @@ export function effectivePolicy(row,contentHash,now) {
     eligible:status==='active',has_replacement:!!row.replacement_slug,
     assurance:row.assertion_kind==='source_quote'?'Exact quotation located at review time; not truth or entailment proof':
       row.assertion_kind==='inference'?'Explicitly labeled inference, not a confirmed fact':'Attributed assertion, not independently verified truth'};
-}
-export function policyAllows(policy,selection='current') {
-  mode(selection);
-  return selection==='history'||(selection==='reviewed'?policy.status==='active':policy.eligible===true);
 }
 export function authorizeMemory(ctx,write=false) {
   authorizeProjects(ctx);

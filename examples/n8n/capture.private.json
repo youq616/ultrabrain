@@ -1,0 +1,55 @@
+{
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  },
+  "pinData": {},
+  "name": "Ultrabrain Capture (configure credential before use)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "after_turn",
+        "sessionId": "demo-session",
+        "eventId": "demo-turn-001",
+        "transcript": "This is a demonstration. Replace with explicitly consented, redacted text.",
+        "captureConsent": false,
+        "visibility": "private"
+      },
+      "id": "ultrabrain",
+      "name": "Ultrabrain Capture",
+      "type": "CUSTOM.ultrabrain",
+      "typeVersion": 1,
+      "position": [
+        300,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Ultrabrain Capture",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -9,3 +9,8 @@ coverage/
 upstream-report.json
 upgrade-candidate.json
 .validation/
+
+# Generated private integration packages
+packages/*/dist/
+dist/
+*.tgz
