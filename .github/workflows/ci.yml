@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        upgrade_base: [38e0e6657561e17ba85c71d0783d604242a054e8, d7be484b445a893112d3a132c30f42282865a41a]
+        upgrade_base: [38e0e6657561e17ba85c71d0783d604242a054e8, d7be484b445a893112d3a132c30f42282865a41a, 31f43aa1ff1343bb649e39cf44ca57203ce0ebac]
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
@@ -72,6 +72,8 @@ jobs:
         run: bun test/http-integration.mjs
       - name: Durable capture, project concurrency and execution evidence
         run: bun test/reliability-integration.mjs && bun test/revision-evidence-integration.mjs && bun test/deferred-integration.mjs
+      - name: Grounded summary cache and source citations (controlled model fixture)
+        run: bun test/semantic-integration.mjs
       - name: Synthetic keyless retrieval regression (not semantic quality)
         run: ULTRABRAIN_EVAL_OUTPUT="$RUNNER_TEMP/memory-eval.json" bun test/memory-eval.mjs
       - uses: actions/upload-artifact@v4

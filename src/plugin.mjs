@@ -1,3 +1,6 @@
+import { semanticCache } from './semantic-cache.mjs';
+import { configuredSummaryModel } from './adapters/summary-model.mjs';
+import { sha256 } from './core.mjs';
 import { contextTools } from './context.mjs';
 import { processSessions, sessionStatus } from './deferred-sessions.mjs';
 import { authorizeProjects } from './projects.mjs';
@@ -6,7 +9,7 @@ import { UltraError, requireThat } from './core.mjs';
 const string = (description, required = false) => ({ type: 'string', description, required });
 const number = description => ({ type: 'number', description });
 const URI = string('Canonical ultra://source/path. Root: ultra://default/', true);
-export function registerPlugin(operations, native) {
+export function registerPlugin(operations, native, configureSummaries=configuredSummaryModel) {
   const names = new Set(operations.map(op => op.name));
   const base = new Map(operations.map(op => [op.name, op]));
   for (const name of ['get_page', 'put_page', 'delete_page', 'list_pages', 'search', 'extract_facts']) {
@@ -15,6 +18,12 @@ export function registerPlugin(operations, native) {
   const makeStore = ctx => ({
     source: ctx.sourceId, dryRun: ctx.dryRun,
     transaction: fn => ctx.engine.transaction(fn),
+    async assertSummaryAccess(mutating) {
+      authorizeProjects(ctx);
+      requireThat(!ctx.auth?.grantProjectionDegraded,'permission_denied','Grant projection is degraded');
+      if(ctx.auth) requireThat(ctx.auth.scopes?.includes('admin')||ctx.auth.scopes?.includes(mutating?'write':'read'),'permission_denied','Missing summary scope');
+    },
+    readerKey:sha256(JSON.stringify([ctx.remote===false?'local':'remote',ctx.auth?.principal??ctx.auth?.clientId??'owner'])),
     async assertSessionAccess(mutating) {
       authorizeProjects(ctx);
       requireThat(!ctx.auth?.grantProjectionDegraded, 'permission_denied', 'Grant projection is degraded');
@@ -38,12 +47,13 @@ export function registerPlugin(operations, native) {
     },
   });
   const definitions = [
-    ['ultra_read', 'read', 'Read L0 abstract, L1 overview or L2 canonical context. L0/L1 are explicitly extractive, not AI summaries.',
-      { uri: URI, level: { ...string('L0, L1 or L2'), enum: ['L0','L1','L2'] }, max_bytes: number('128..262144; default 65536') }],
+    ['ultra_read', 'read', 'Read L0/L1 from a current source-grounded summary cache when available, otherwise explicit extractive fallback. L2 is canonical. Reading never generates summaries.',
+      { uri: URI, level: { ...string('L0, L1 or L2'), enum: ['L0','L1','L2'] }, max_bytes: number('128..262144; default 65536'), summary:{...string('Cache policy; never generates a summary'),enum:['prefer','require','off']} }],
     ['ultra_ls', 'list', 'Explore a virtual context directory through native ACL-filtered page listings. Bounded, live pagination; inspect coverage.',
       { uri: URI, limit: number('1..100'), offset: number('Native source-page offset'), scan_limit: number('1..2000') }],
     ['ultra_retrieve', 'retrieve', 'Native hybrid candidates plus directory-assisted reranking, progressive loading, byte-budgeted evidence and retrieval trace.',
       { uri: URI, query: string('Search query', true), level: { ...string('L0, L1 or L2'), enum: ['L0','L1','L2'] },
+        scope_scan_limit:number('0..500; opt-in source enumeration, filter directory before content reads'),scan_read_limit:number('1..100 supplemental content reads, default 50'),types:{type:'array',items:{type:'string'}},summary:{...string('Summary cache preference'),enum:['prefer','require','off']},
         limit: number('1..30'), candidate_limit: number('1..100'), budget_bytes: number('512..131072 UTF-8 evidence bytes') }],
     ['ultra_write', 'write', 'Replace a canonical resource. Read L2 first; preserves native versions and write-through. Not a partial or compare-and-swap edit.',
       { uri: URI, content: string('Complete markdown with frontmatter', true) }, true],
@@ -58,6 +68,10 @@ export function registerPlugin(operations, native) {
       {expected_source:string('Must equal authenticated source; cannot select a different grant',true),limit:number('1..8, default 1'),retry:{type:'boolean',description:'Explicitly retry failed or missing-model events'}},true],
     ['ultra_session_status','status','Read deferred delivery/extraction state for this actor. Never returns transcript text.',
       {session_id:string('Session id',true),event_id:string('Event id',true)}],
+    ['ultra_excerpt','excerpt','Read an exact source interval after current ACL and SHA-256 checks; reject stale citations. At most 16 KiB.',{uri:URI,content_sha256:string('Canonical content SHA-256',true),start:{type:'number',required:true},end:{type:'number',required:true}}],
+    ['ultra_summarize','summarize','Generate a cited L0/L1 summary of the entire bounded authorized page. Requires host model configuration and allow_model_call:true; may use paid model calls.',{uri:URI,allow_model_call:{type:'boolean'}},true],
+    ['ultra_summary_status','summary_status','Check whether this reader has a current summary. No model call and no raw transcript response.',{uri:URI}],
+    ['ultra_summary_forget','summary_forget','Remove only this reader derived cache; originals and backups are unchanged.',{uri:URI},true],
   ];
   for (const [name, method, description, params, mutating] of definitions) {
     requireThat(!names.has(name), 'upstream_contract_changed', `Operation collision: ${name}`);
@@ -65,6 +79,16 @@ export function registerPlugin(operations, native) {
       area: 'ultrabrain', async handler(ctx, p) {
         try {
           const store = makeStore(ctx);
+          if(['read','retrieve','summarize','summary_status','summary_forget'].includes(method)) {
+            const configured=await configureSummaries();
+            Object.assign(store,configured);
+            if(ctx.viaSubagent||ctx.auth?.boundSlugPrefixes||ctx.auth?.fenceProjectionDegraded||ctx.auth?.grantProjectionDegraded)store.readerKey=null;
+            const summaries=semanticCache(store);
+            store.render=summaries.render;
+            if(method==='summarize')return await summaries.refresh(p);
+            if(method==='summary_status')return await summaries.status(p);
+            if(method==='summary_forget')return await summaries.forget(p);
+          }
           if (method === 'session') return await commitSession(store,p);
           if (method === 'process') return await processSessions(store,p);
           if (method === 'status') return await sessionStatus(store,p);

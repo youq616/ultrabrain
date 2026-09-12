@@ -29,9 +29,11 @@ function decode(result) {
 export class AgentMemory {
   constructor({ client, rootUri, sessionId, capture = false, visibility: access = 'private',
     budgetBytes = 16000, timeoutMs = 30000, maxPending = 32, projectId = null,
-    outbox = null, principalId, serverId, captureFilter = value => value, deferExtraction = false } = {}) {
+    outbox = null, principalId, serverId, captureFilter = value => value, deferExtraction = false, summary='prefer', scopeScanLimit=0 } = {}) {
     requireThat(client && typeof client.callTool === 'function', 'invalid_params', 'A connected MCP client is required');
     requireThat(typeof capture === 'boolean', 'invalid_params', 'capture must be boolean');
+    requireThat(['prefer','require','off'].includes(summary),'invalid_params','Invalid summary preference');
+    this.summary=summary;this.scopeScanLimit=integer(scopeScanLimit,0,0,500);
     this.client = client;
     this.root = parseUri(rootUri);
     this.sessionId = identifier(sessionId, 'sessionId');
@@ -71,11 +73,14 @@ export class AgentMemory {
       signal?.removeEventListener('abort', onAbort);
     }
   }
-  async beforeTurn(query, { signal, level = 'L1' } = {}) {
+  async beforeTurn(query, { signal, level = 'L1', summary=this.summary, scopeScanLimit=this.scopeScanLimit } = {}) {
     text(query, 'query', 4096);
+    requireThat(['prefer','require','off'].includes(summary),'invalid_params','Invalid summary preference');
+    integer(scopeScanLimit,0,0,500);
     requireThat(['L0', 'L1', 'L2'].includes(level), 'invalid_params', 'Invalid context level');
     const result = await this.invoke('ultra_retrieve', {
-      uri: this.root.uri, query, level, budget_bytes: this.budgetBytes,
+      uri: this.root.uri, query, level, budget_bytes: this.budgetBytes, summary,
+      ...(scopeScanLimit ? {scope_scan_limit:scopeScanLimit} : {}),
     }, signal);
     requireThat(Array.isArray(result.items), 'mcp_contract_changed', 'Retrieval result has no evidence array');
     for (const item of result.items) {
@@ -136,6 +141,22 @@ export class AgentMemory {
   async sessionStatus(eventId,{signal}={}) {
     identifier(eventId,'eventId');
     return this.invoke('ultra_session_status',{session_id:this.sessionId,event_id:eventId},signal);
+  }
+  async sourceExcerpt(citation,{signal}={}) {
+    const target=parseUri(citation?.uri);
+    requireThat(target.source===this.root.source&&within(target.slug,this.root.slug),'scope_denied','Citation is outside this memory root');
+    const result=await this.invoke('ultra_excerpt',{uri:target.uri,content_sha256:citation.content_sha256,start:citation.start,end:citation.end},signal);
+    const resolved=parseUri(result.uri);
+    requireThat(resolved.source===this.root.source&&within(resolved.slug,this.root.slug),'scope_denied','Source result is outside this memory root');
+    requireThat(result.content_sha256===citation.content_sha256&&result.content===citation.quote,
+      'mcp_contract_changed','Source excerpt did not match the requested citation');
+    return result;
+  }
+  async summarizeResource(value,{allowModelCall=false,signal}={}) {
+    const target=parseUri(value);
+    requireThat(target.source===this.root.source&&within(target.slug,this.root.slug),'scope_denied','Summary target is outside this memory root');
+    requireThat(typeof allowModelCall==='boolean','invalid_params','allowModelCall must be boolean');
+    return this.invoke('ultra_summarize',{uri:target.uri,allow_model_call:allowModelCall},signal);
   }
   async resumeProject(query, { signal } = {}) {
     requireThat(this.projectId, 'invalid_params', 'No projectId configured');

@@ -10,7 +10,7 @@ PostgreSQL 随项目在本机安装和管理，不要求外部数据库，不是
 
 上游完整 SHA 锁定，更新检查、候选验证与生产升级分离。不自动合并上游变更，不修改独立 Windows 项目 youq616/qbrain。
 
-## 当前增量：0.4.0-alpha.1
+## 历史增量：0.4.0-alpha.1
 
 新增可选的代码版本绑定任务、只读执行回执查询、会话原始持久化与模型整理分离，以及使用当前 MCP 身份的独立整理客户端。旧回执不会自动成为代码认证，旧同步采集行为不默认改变。
 
@@ -26,3 +26,9 @@ PostgreSQL 随项目在本机安装和管理，不要求外部数据库，不是
 - pgvector: https://github.com/pgvector/pgvector
 
 各上游保留自身许可证及署名。锁定的 OpenViking 主项目为 AGPLv3、GBrain 为 MIT、PostgreSQL/pgvector 使用各自 PostgreSQL License 文件。引入具体代码或分发时需保留完整来源并审查相应许可证，参考源码指针不代表已完成代码移植。
+
+## 当前增量：0.5.0-alpha.1
+
+新增需明确模型授权的全文分层摘要、精确原文引用、按主体/视图/模型配置隔离的缓存及原文修改/删除失效。普通读取不触发摘要生成；无缓存时提供查询相关原文片段，可选择目录前置补查。新增出处展开工具与通用 JSON/MCP 客户端。
+
+真实模型质量未在本版认证；摘要与检索边界见 [语义记忆](docs/SEMANTIC-MEMORY.md)。本版还修复了历史 native config 路径问题，并保留既有数据库 embedding 身份，升级必读 [配置路径迁移](docs/CONFIG-PATH-MIGRATION.md) 与 [验收范围](docs/VALIDATION-0.5.md)。

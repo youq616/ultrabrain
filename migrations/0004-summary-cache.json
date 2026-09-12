@@ -1,0 +1,9 @@
+{
+  "id": "0004-summary-cache",
+  "statements": [
+    "CREATE TABLE ultrabrain.summary_cache (source_id text NOT NULL REFERENCES public.sources(id), slug text NOT NULL, reader_key text NOT NULL CHECK(length(reader_key)=64), view_hash text NOT NULL CHECK(length(view_hash)=64), profile_hash text NOT NULL CHECK(length(profile_hash)=64), state text NOT NULL CHECK(state IN ('building','ready','failed')), lease_id uuid NOT NULL, expires_at timestamptz NOT NULL, document jsonb CHECK(document IS NULL OR jsonb_typeof(document)='object'), error_code text, updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(source_id,slug,reader_key))",
+    "CREATE INDEX summary_cache_expiry_idx ON ultrabrain.summary_cache(expires_at)",
+    "CREATE FUNCTION ultrabrain.invalidate_page_summaries() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,ultrabrain AS $$ BEGIN DELETE FROM ultrabrain.summary_cache WHERE source_id=OLD.source_id AND slug=OLD.slug; RETURN NULL; END $$",
+    "CREATE TRIGGER ultrabrain_summary_invalidate AFTER UPDATE OF content_hash,compiled_truth,timeline,title,frontmatter,slug,source_id,deleted_at OR DELETE ON public.pages FOR EACH ROW EXECUTE FUNCTION ultrabrain.invalidate_page_summaries()"
+  ]
+}

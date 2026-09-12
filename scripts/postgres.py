@@ -194,13 +194,54 @@ def init(port):
     config_path = HOME / 'gbrain/config.json'
     url = f"postgresql://ultrabrain:{quote(s['app_password'], safe='')}@127.0.0.1:{s['port']}/ultrabrain"
     if config_path.exists():
+        if config_path.is_symlink() or config_path.stat().st_uid != os.geteuid() or config_path.stat().st_mode & 0o077:
+            raise RuntimeError('Legacy managed config must be an owner-only regular file')
         config = json.loads(config_path.read_text())
         if config.get('engine') != 'postgres' or config.get('database_url') != url:
             raise RuntimeError('Existing config points elsewhere; refusing to overwrite it')
     else:
         private_write(config_path, json.dumps({'engine': 'postgres', 'database_url': url,
             'embedding_model': 'openai:text-embedding-3-small', 'embedding_dimensions': 1536}, indent=2) + '\n')
-    print('Private PostgreSQL initialized; runtime role is not a superuser. No model key is configured.')
+    align_native_config(url)
+    print('Private PostgreSQL initialized; runtime role is not a superuser. No model key was added.')
+
+def align_native_config(url):
+    """Keep the native data root; repair only the historical config location.
+
+    Existing native configuration wins. When adopting the misplaced legacy file,
+    preserve database-recorded embedding identity rather than silently enabling
+    the formerly ignored model/dimension settings on an existing vector store.
+    """
+    directory = HOME / 'gbrain' / '.gbrain'
+    if directory.exists():
+        if directory.is_symlink() or directory.stat().st_uid != os.geteuid() or not directory.is_dir():
+            raise RuntimeError('Native configuration directory is not owned by the service user')
+        # Historical native mkdir used a broader mode inside our private HOME.
+        os.chmod(directory, 0o700)
+    private_dir(directory)
+    target = directory / 'config.json'
+    if target.exists():
+        if target.is_symlink() or target.stat().st_uid != os.geteuid() or not target.is_file() or target.stat().st_mode & 0o077:
+            raise RuntimeError('Native config must be an owner-only regular file')
+        current = json.loads(target.read_text())
+        if current.get('engine', 'postgres') != 'postgres' or current.get('database_url', url) != url:
+            raise RuntimeError('Native config points elsewhere; refusing to replace it')
+        if current.get('engine') != 'postgres' or current.get('database_url') != url:
+            current.update(engine='postgres', database_url=url)
+            private_write(target, json.dumps(current, indent=2) + '\n')
+        return
+    legacy = json.loads((HOME / 'gbrain/config.json').read_text())
+    exists = pg('psql', '-X', '-tAc', "SELECT to_regclass('public.config') IS NOT NULL", '-d', 'ultrabrain').stdout.strip()
+    if exists == 't':
+        raw = pg('psql','-X','-tAc', "SELECT coalesce(json_object_agg(key,value),'{}'::json)::text FROM public.config WHERE key IN ('embedding_model','embedding_dimensions')", '-d', 'ultrabrain').stdout.strip()
+        metadata = json.loads(raw)
+        if metadata:
+            model, dimensions = metadata.get('embedding_model'), metadata.get('embedding_dimensions')
+            if not isinstance(model,str) or not model or not isinstance(dimensions,str) or not dimensions.isdigit() or int(dimensions)<1:
+                raise RuntimeError('Existing embedding metadata is incomplete; refusing automatic config adoption')
+            legacy.update(embedding_model=model, embedding_dimensions=int(dimensions))
+    private_write(target, json.dumps(legacy, indent=2) + '\n')
+    print('Native config path aligned; existing native data and recorded embedding identity preserved.')
 
 def file_hash(path):
     with Path(path).open('rb') as stream: return hashlib.file_digest(stream, 'sha256').hexdigest()

@@ -21,11 +21,11 @@ Bun 按其官方发行方式安装，并确认 `bun --version`。后续构建、
 
 ## 获取候选并初始化
 
-开发候选目前在 `development/integration-hardening`。正式部署应选定已经完成该提交 CI 验收的版本，而不是盲目跟随分支最新位置。
+已验收的集成版本进入 `main`；开发分支不是发行通道。正式部署应核对具体提交的 CI 结果，并固定该提交，而不是盲目跟随分支最新位置。
 
 ```bash
 umask 077
-git clone --branch development/integration-hardening --single-branch https://github.com/youq616/ultrabrain.git
+git clone --branch main --single-branch https://github.com/youq616/ultrabrain.git
 cd ultrabrain
 export ULTRABRAIN_HOME="$HOME/.local/share/ultrabrain"
 install -d -m 700 "$ULTRABRAIN_HOME"
@@ -104,3 +104,7 @@ bun src/cli.mjs db start
 应用数据库账号不是超级用户，但具备上游迁移所需的 BYPASSRLS；客户端隔离在原生 operation 授权层，不是每个 MCP 客户端独立的 PostgreSQL 角色。
 
 本地服务账号能够访问自己的数据库配置和管理员准备材料。因此“应用使用非超级用户数据库连接”不等于抵抗该 Linux 账号被完全控制。生产环境还需要主机账户隔离、文件权限、受控依赖和备份策略。
+
+## 0.5.0 配置路径与摘要
+
+实际原生配置文件为 `$ULTRABRAIN_HOME/gbrain/.gbrain/config.json`；旧位置文件由 `db init` 安全接纳，详见 CONFIG-PATH-MIGRATION.md。升级前停写并备份，不能直接移动 native 数据根目录。摘要默认关闭，显式配置和调用方式见 SEMANTIC-MEMORY.md。

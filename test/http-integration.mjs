@@ -104,6 +104,25 @@ try {
   await denied(call(reader,'ultra_process_sessions',{expected_source:source}));
   await denied(call(foreign,'ultra_session_status',{session_id:'http-deferred',event_id:suffix}));
   const tokenFile=join(workerDir,'token');writeFileSync(tokenFile,writerToken,{mode:0o600});
+  // A separate JSON/stdin client uses the actual authenticated HTTP server.
+  const generic=spawn(process.execPath,[`${ROOT}/scripts/mcp-call.mjs`,'--url',`${base}/mcp`,'--token-file',tokenFile,'--tool','ultra_session_status'],
+    {cwd:ROOT,env:process.env,stdio:['pipe','pipe','pipe']});
+  let genericOutput='',genericErrors='';generic.stdout.on('data',x=>genericOutput+=x);generic.stderr.on('data',x=>genericErrors+=x);
+  const genericDeadline=setTimeout(()=>generic.kill('SIGKILL'),15000);
+  generic.stdin.end(JSON.stringify({session_id:'http-deferred',event_id:suffix}));
+  const [genericCode]=await once(generic,'close');clearTimeout(genericDeadline);
+  assert.equal(genericCode,0,genericErrors);assert.equal(result(JSON.parse(genericOutput)).state,'queued');proof();
+  // Disabled summary configuration never makes a network model call.
+  const summaryUri=`ultra://${source}/summary/original`;
+  result(await call(writer,'ultra_write',{uri:summaryUri,content:'---\ntype: note\nvisibility: world\n---\nHTTP summary original.'}));
+  const disabled=await call(writer,'ultra_summarize',{uri:summaryUri,allow_model_call:true});
+  assert.equal(disabled.isError,true);assert.equal(JSON.parse(disabled.content[0].text).error,'model_unavailable');proof();
+  const original=result(await call(writer,'ultra_read',{uri:summaryUri,level:'L2'}));
+  const sourceExcerpt=result(await call(reader,'ultra_excerpt',{uri:summaryUri,content_sha256:original.content_sha256,start:0,end:10}));
+  assert.equal(sourceExcerpt.content,original.content.slice(0,10));proof();
+  assert.equal(result(await call(writer,'ultra_summary_status',{uri:summaryUri})).state,'not_cached_or_stale');proof();
+  assert.ok(writerCatalog.tools.some(t=>t.name==='ultra_excerpt'));proof();
+
   worker=spawn(process.execPath,[`${ROOT}/scripts/consolidate.mjs`,'--url',`${base}/mcp`,'--token-file',tokenFile,'--source',source],
     {cwd:ROOT,env:process.env,stdio:['ignore','pipe','pipe']});
   let output='',diagnostic='';worker.stdout.on('data',x=>output+=x);worker.stderr.on('data',x=>diagnostic+=x);

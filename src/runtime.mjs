@@ -23,8 +23,9 @@ export function prepareEnvironment() {
   process.env.GBRAIN_SELF_UPGRADE_MODE = 'off';
   delete process.env.DATABASE_URL;
   delete process.env.GBRAIN_DATABASE_URL;
-  const path = join(HOME, 'gbrain/config.json');
+  const path = join(HOME, 'gbrain/.gbrain/config.json');
   privatePath(join(HOME, 'gbrain'), 'directory');
+  privatePath(join(HOME,'gbrain/.gbrain'),'directory');
   privatePath(path, 'file');
   const statePath = join(HOME, 'postgres/state.json');
   privatePath(join(HOME, 'postgres'), 'directory');
@@ -67,6 +68,7 @@ export async function connect({ migrate = false } = {}) {
   const [{ createEngine }, config, gateway] = await Promise.all([
     load('src/core/engine-factory.ts'), load('src/core/config.ts'), load('src/core/ai/gateway.ts'),
   ]);
+  requireThat(typeof config.configPath==='function'&&config.configPath()===join(HOME,'gbrain/.gbrain/config.json'),'upstream_contract_changed','Native config directory convention changed');
   gateway.configureGatewayIfUninitialized();
   const cfg = config.toEngineConfig(config.loadConfig());
   const engine = await createEngine(cfg);
