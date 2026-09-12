@@ -9,8 +9,8 @@ function fixture() {
   const native={validateParams:()=>null,OperationError,enforceClientSlugFence:()=>{}};
   return {operations,native,calls};
 }
-test('plugin registers twelve explicit read/write operations',()=>{
-  const f=fixture();assert.equal(registerPlugin(f.operations,f.native,async()=>({profile:null})).length,12);
+test('plugin registers seventeen explicit read/write operations',()=>{
+  const f=fixture();assert.equal(registerPlugin(f.operations,f.native,async()=>({profile:null})).length,17);
   for(const op of f.operations.filter(x=>x.name.startsWith('ultra_')))
     assert.equal(op.mutating,op.scope==='write');
 });
@@ -23,7 +23,7 @@ test('duplicate registration is rejected',()=>{
 });
 test('read forwards the exact original context including remote and grant objects',async()=>{
   const f=fixture();registerPlugin(f.operations,f.native,async()=>({profile:null}));
-  const ctx={sourceId:'default',remote:true,auth:{sourceId:'default'},subagentGrant:{test:true}};
+  const ctx={sourceId:'default',remote:true,auth:{sourceId:'default'},subagentGrant:{test:true},engine:{async executeRaw(){return [{db_now:new Date(),revision:null}];}}};
   await f.operations.find(x=>x.name==='ultra_read').handler(ctx,{uri:'ultra://default/a'});
   assert.strictEqual(f.calls[0].ctx,ctx);assert.equal(f.calls[0].p.include_content,true);
 });

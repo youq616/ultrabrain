@@ -27,8 +27,14 @@ PostgreSQL 随项目在本机安装和管理，不要求外部数据库，不是
 
 各上游保留自身许可证及署名。锁定的 OpenViking 主项目为 AGPLv3、GBrain 为 MIT、PostgreSQL/pgvector 使用各自 PostgreSQL License 文件。引入具体代码或分发时需保留完整来源并审查相应许可证，参考源码指针不代表已完成代码移植。
 
-## 当前增量：0.5.0-alpha.1
+## 历史增量：0.5.0-alpha.1
 
 新增需明确模型授权的全文分层摘要、精确原文引用、按主体/视图/模型配置隔离的缓存及原文修改/删除失效。普通读取不触发摘要生成；无缓存时提供查询相关原文片段，可选择目录前置补查。新增出处展开工具与通用 JSON/MCP 客户端。
 
 真实模型质量未在本版认证；摘要与检索边界见 [语义记忆](docs/SEMANTIC-MEMORY.md)。本版还修复了历史 native config 路径问题，并保留既有数据库 embedding 身份，升级必读 [配置路径迁移](docs/CONFIG-PATH-MIGRATION.md) 与 [验收范围](docs/VALIDATION-0.5.md)。
+
+## 当前增量：0.6.0-alpha.1
+
+新增资源级审核、撤回、显式替代、有效期和原文变化后重审；默认当前检索排除过期/被替代资源，并按授权和 hash 跟随有界替代关系。新增服务端身份绑定的 JSON 生命周期事件桥，保留单机托管 PostgreSQL 默认与原生事实引擎。
+
+参阅 [资源记忆治理](docs/MEMORY-GOVERNANCE.md)、[生命周期接入桥](docs/LIFECYCLE-BRIDGE.md) 与 [本版验收](docs/VALIDATION-0.6.md)。资源策略不会替代原生事实撤回；直接原生接口保留旧语义。真实客户端自动 Hooks、完整多模态与语义质量认证尚未完成，版本仍为 alpha。

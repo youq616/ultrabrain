@@ -11,6 +11,7 @@ async function reread(store,page) {
   const current=await store.call('get_page',{slug:page.slug,source_id:page.source_id,include_content:true});
   requireThat(current?.source_id===page.source_id&&current.slug===page.slug&&summaryView(store,current)===summaryView(store,page),
     'stale_summary','Original or authorized view changed while generating the summary');
+  await store.assertCurrent?.(current);
   return current;
 }
 export function semanticCache(store) {
@@ -52,6 +53,7 @@ export function semanticCache(store) {
     await store.assertSummaryAccess(true);
     const page=await store.call('get_page',{slug:target.slug,source_id:target.source,include_content:true});
     requireThat(page?.source_id===target.source&&page.slug===target.slug,'scope_denied','Use the canonical page URI for summary generation; aliases require explicit resolution');
+    await store.assertCurrent?.(page);
     const profile=store.profile;
     requireThat(profile,'model_unavailable','Host must explicitly enable a summary profile first');
     const existing=await lookup(page);
@@ -99,8 +101,9 @@ export function semanticCache(store) {
     const target=parseUri(p.uri);requireThat(target.slug,'invalid_uri','Resource path required');
     await store.assertSummaryAccess(false);
     const page=await store.call('get_page',{slug:target.slug,source_id:target.source,include_content:true});
-    const document=await lookup(page);
-    return {uri:uri(page.source_id,page.slug),state:document?'ready':'not_cached_or_stale',
+    const memory=store.policy?await store.policy(page):null;
+    const document=memory&&!memory.eligible?null:await lookup(page);
+    return {uri:uri(page.source_id,page.slug),...(memory?{memory}:{}),state:memory&&!memory.eligible?'excluded_by_memory_policy':document?'ready':'not_cached_or_stale',
       profile_enabled:!!store.profile,content_sha256:sha256(canonicalPage(page)),model_calls:0,
       ...(document?{generated_at:document.generated_at,profile_sha256:document.profile_sha256}:{})};
   }

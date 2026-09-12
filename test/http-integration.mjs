@@ -123,6 +123,36 @@ try {
   assert.equal(result(await call(writer,'ultra_summary_status',{uri:summaryUri})).state,'not_cached_or_stale');proof();
   assert.ok(writerCatalog.tools.some(t=>t.name==='ultra_excerpt'));proof();
 
+  // Authenticated lifecycle process: identity binding, context, opt-in capture and recovery.
+  const ownIdentity=result(await call(writer,'ultra_identity',{}));
+  assert.equal(ownIdentity.source_id,source);assert.match(ownIdentity.actor_key,/^[a-f0-9]{64}$/);proof();
+  const otherIdentity=result(await call(reader,'ultra_identity',{}));
+  assert.equal(ownIdentity.instance_id,otherIdentity.instance_id);assert.notEqual(ownIdentity.actor_key,otherIdentity.actor_key);proof();
+  const runBridge=async(event,extra=[])=>{
+    const proc=spawn(process.execPath,[`${ROOT}/scripts/agent-bridge.mjs`,'--url',`${base}/mcp`,'--token-file',tokenFile,'--root',`ultra://${source}/`,...extra],
+      {cwd:ROOT,env:process.env,stdio:['pipe','pipe','pipe']});
+    let output='',errors='';proc.stdout.on('data',x=>output+=x);proc.stderr.on('data',x=>errors+=x);
+    const deadline=setTimeout(()=>proc.kill('SIGKILL'),15000);
+    proc.stdin.end(JSON.stringify(event));const [code]=await once(proc,'close');clearTimeout(deadline);
+    assert.ok(!output.includes(writerToken));return {code,response:JSON.parse(output),errors};
+  };
+  const before=await runBridge({event:'before_turn',session_id:'bridge-session',query:'HTTP',project_id});
+  assert.equal(before.code,0,before.errors);assert.ok(before.response.result.context);proof();
+  const withoutConsent=await runBridge({event:'after_turn',session_id:'bridge-session',event_id:'turn',transcript:'consented bridge fixture'});
+  assert.equal(withoutConsent.code,1);assert.equal(withoutConsent.response.error,'capture_disabled');proof();
+  const bridgeCapture={event:'after_turn',session_id:'bridge-session',event_id:'turn',transcript:'consented bridge fixture'};
+  const captureOptions=['--capture','--outbox',join(workerDir,'outbox')];
+  const after=await runBridge(bridgeCapture,captureOptions);assert.equal(after.code,0,after.errors);assert.equal(after.response.result.delivery.storage,'journaled');proof();
+  const replayBridge=await runBridge(bridgeCapture,captureOptions);assert.equal(replayBridge.code,0,replayBridge.errors);proof();
+  const bridgeStatus=await runBridge({event:'session_status',session_id:'bridge-session',event_id:'turn'});
+  assert.equal(bridgeStatus.code,0);assert.equal(bridgeStatus.response.result.status.state,'queued');proof();
+  const sourceView=result(await call(writer,'ultra_memory_inspect',{uri:summaryUri}));
+  result(await call(writer,'ultra_memory_review',{uri:summaryUri,event_id:'http-review',expected_revision:0,content_sha256:sourceView.content_sha256,
+    status:'retracted',assertion_kind:'attributed',reason:'HTTP retirement',provenance:'Fixture review'}));proof();
+  await denied(call(reader,'ultra_read',{uri:summaryUri}));
+  assert.equal(result(await call(reader,'ultra_read',{uri:summaryUri,memory_policy:'history',level:'L2'})).memory.status,'retracted');proof();
+  await denied(call(reader,'ultra_memory_review',{uri:summaryUri,event_id:'read-only',expected_revision:1,content_sha256:sourceView.content_sha256,
+    status:'active',assertion_kind:'attributed',reason:'cannot write',provenance:'Fixture',reactivate:true}));
   worker=spawn(process.execPath,[`${ROOT}/scripts/consolidate.mjs`,'--url',`${base}/mcp`,'--token-file',tokenFile,'--source',source],
     {cwd:ROOT,env:process.env,stdio:['ignore','pipe','pipe']});
   let output='',diagnostic='';worker.stdout.on('data',x=>output+=x);worker.stderr.on('data',x=>diagnostic+=x);

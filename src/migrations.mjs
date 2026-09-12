@@ -1,7 +1,7 @@
 /** Append-only application metadata migrations; no PostgreSQL-major or native-engine upgrade magic. */
 import {readFileSync} from 'node:fs';
 import {requireThat,sha256} from './core.mjs';
-export const migrations=['0001-baseline','0002-revision-evidence','0003-deferred-sessions','0004-summary-cache'].map(id =>
+export const migrations=['0001-baseline','0002-revision-evidence','0003-deferred-sessions','0004-summary-cache','0005-memory-policy','0006-instance-identity'].map(id =>
   JSON.parse(readFileSync(new URL(`../migrations/${id}.json`,import.meta.url),'utf8')));
 export const checksum=m=>sha256(JSON.stringify(m.statements));
 export function validateHistory(rows, plan=migrations) {

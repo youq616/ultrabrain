@@ -5,7 +5,7 @@ const args = process.argv.slice(2);
 const [command, ...rest] = args;
 try {
   if (!command || ['help','--help','-h'].includes(command)) {
-    console.log(`ultrabrain 0.5.0-alpha.1 — Linux / managed PostgreSQL
+    console.log(`ultrabrain 0.6.0-alpha.1 — Linux / managed PostgreSQL
   db init|start|stop|status|backup|restore-new   Manage local PostgreSQL
   db activate-runtime                        Switch a stopped cluster to reviewed same-major binaries
   verify --project ID --task ID -- command    Host-only execution evidence (no remote executor)
@@ -20,6 +20,7 @@ try {
 
 Setup: bash scripts/bootstrap-linux.sh
 No arbitrary SQL MCP endpoint is added. HTTP/OAuth: native serve --help.
+Lifecycle bridge: bun scripts/agent-bridge.mjs --url URL --token-file PATH --root ultra://SOURCE/ < event.json
 Deferred worker: bun scripts/consolidate.mjs --url URL --token-file PATH --source SOURCE
 Upstream-dependent features require their original providers/configuration.`);
   } else if (['db','upstream','summary-config'].includes(command)) {

@@ -1,3 +1,4 @@
+import {mode as memoryMode,policyAllows} from './memory-policy.mjs';
 /** Agent lifecycle hooks over authenticated MCP. Evidence is data, never execution authority. */
 import { parseUri, within, text, integer, clip, sha256, requireThat, UltraError } from './core.mjs';
 function identifier(value, name) {
@@ -29,12 +30,13 @@ function decode(result) {
 export class AgentMemory {
   constructor({ client, rootUri, sessionId, capture = false, visibility: access = 'private',
     budgetBytes = 16000, timeoutMs = 30000, maxPending = 32, projectId = null,
-    outbox = null, principalId, serverId, captureFilter = value => value, deferExtraction = false, summary='prefer', scopeScanLimit=0 } = {}) {
+    outbox = null, principalId, serverId, captureFilter = value => value, deferExtraction = false, summary='prefer', scopeScanLimit=0, memoryPolicy='current' } = {}) {
     requireThat(client && typeof client.callTool === 'function', 'invalid_params', 'A connected MCP client is required');
     requireThat(typeof capture === 'boolean', 'invalid_params', 'capture must be boolean');
     requireThat(['prefer','require','off'].includes(summary),'invalid_params','Invalid summary preference');
     this.summary=summary;this.scopeScanLimit=integer(scopeScanLimit,0,0,500);
     this.client = client;
+    this.memoryPolicy=memoryMode(memoryPolicy);
     this.root = parseUri(rootUri);
     this.sessionId = identifier(sessionId, 'sessionId');
     this.capture = capture;
@@ -79,12 +81,14 @@ export class AgentMemory {
     integer(scopeScanLimit,0,0,500);
     requireThat(['L0', 'L1', 'L2'].includes(level), 'invalid_params', 'Invalid context level');
     const result = await this.invoke('ultra_retrieve', {
-      uri: this.root.uri, query, level, budget_bytes: this.budgetBytes, summary,
+      uri: this.root.uri, query, level, budget_bytes: this.budgetBytes,memory_policy:this.memoryPolicy, summary,
       ...(scopeScanLimit ? {scope_scan_limit:scopeScanLimit} : {}),
     }, signal);
     requireThat(Array.isArray(result.items), 'mcp_contract_changed', 'Retrieval result has no evidence array');
     for (const item of result.items) {
       requireThat(item && typeof item.content === 'string', 'mcp_contract_changed', 'Invalid evidence item');
+      if(item.memory)requireThat(policyAllows(item.memory,this.memoryPolicy),'memory_not_current','Server returned evidence excluded by the selected memory policy');
+      else requireThat(this.memoryPolicy!=='reviewed','mcp_contract_changed','Reviewed-only selection requires server policy metadata');
       const target = parseUri(item.uri);
       requireThat(target.source === this.root.source && within(target.slug, this.root.slug),
         'scope_denied', 'Server returned evidence outside the requested source or directory');
@@ -145,7 +149,9 @@ export class AgentMemory {
   async sourceExcerpt(citation,{signal}={}) {
     const target=parseUri(citation?.uri);
     requireThat(target.source===this.root.source&&within(target.slug,this.root.slug),'scope_denied','Citation is outside this memory root');
-    const result=await this.invoke('ultra_excerpt',{uri:target.uri,content_sha256:citation.content_sha256,start:citation.start,end:citation.end},signal);
+    const result=await this.invoke('ultra_excerpt',{uri:target.uri,content_sha256:citation.content_sha256,start:citation.start,end:citation.end,memory_policy:this.memoryPolicy},signal);
+    if(result.memory)requireThat(policyAllows(result.memory,this.memoryPolicy),'memory_not_current','Source excerpt violates the selected memory policy');
+    else requireThat(this.memoryPolicy!=='reviewed','mcp_contract_changed','Reviewed-only selection requires server policy metadata');
     const resolved=parseUri(result.uri);
     requireThat(resolved.source===this.root.source&&within(resolved.slug,this.root.slug),'scope_denied','Source result is outside this memory root');
     requireThat(result.content_sha256===citation.content_sha256&&result.content===citation.quote,

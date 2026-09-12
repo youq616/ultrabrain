@@ -167,6 +167,32 @@
         "binary and SQL extension versions are separate",
         "real cross-version extension migration still required"
       ]
+    },
+    {
+      "id": "resource-review-governance",
+      "upstream": "gbrain",
+      "baseline": "a6be012a3bcfac42e279630aedec5cda4a450e29",
+      "watch_prefixes": [
+        "src/core/ops/pages.ts",
+        "src/core/postgres",
+        "src/schema.sql",
+        "src/core/markdown.ts"
+      ],
+      "status": "resource-policy-overlay-not-native-fact-withdrawal",
+      "local_files": [
+        "src/memory-policy.mjs",
+        "src/lifecycle-bridge.mjs"
+      ],
+      "tests": [
+        "test/memory-policy-integration.mjs",
+        "test/lifecycle-bridge.test.mjs"
+      ],
+      "review": [
+        "Current native page authorization must remain authoritative",
+        "Canonical hash and native update triggers",
+        "Direct native tools remain historical and need their own governance",
+        "No source quotation can prove truth or entailment"
+      ]
     }
   ]
 }

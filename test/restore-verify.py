@@ -8,6 +8,10 @@ name = sys.argv[1] if len(sys.argv) == 2 else 'ub_restore_ci'
 if not name.startswith('ub_restore_'):
     raise SystemExit('Only isolated restoration targets are accepted')
 queries = {
+    'memory_policies': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(source_id || ':' || slug || ':' || revision::text || ':' || status || ':' || content_sha256, ',' ORDER BY source_id,slug)),'empty') FROM ultrabrain.memory_policies",
+    'memory_policy_history': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(snapshot::text, ',' ORDER BY source_id,slug,revision)),'empty') FROM ultrabrain.memory_policy_history",
+    'instance_identity': "SELECT instance_id::text FROM ultrabrain.instance_identity WHERE singleton",
+
     'summary_cache': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(view_hash || ':' || coalesce(document::text,''), ',' ORDER BY source_id,slug,reader_key)),'empty') FROM ultrabrain.summary_cache",
     'migration_ledger': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(id || ':' || checksum, ',' ORDER BY id)),'empty') FROM ultrabrain.schema_migrations",
     'projects': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(state::text, ',' ORDER BY source_id,project_id)),'empty') FROM ultrabrain.projects",

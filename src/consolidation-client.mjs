@@ -54,3 +54,17 @@ export function boundTokenFetch(endpoint,tokenFile,fetchImpl=fetch) {
     return fetchImpl(target,{...init,headers,redirect:'error'});
   };
 }
+
+/** A lifecycle invocation pins one credential across identity checks and event delivery.
+ * Server revocation still applies. Rotation is picked up by the next invocation.
+ */
+export function snapshotTokenFetch(endpoint,tokenFile,fetchImpl=fetch) {
+  const token=readWorkerToken(tokenFile),origin=new URL(endpoint).origin;
+  return (target,init={})=>{
+    const url=new URL(target instanceof Request?target.url:target);
+    requireThat(url.origin===origin,'insecure_endpoint','Refusing credential forwarding outside configured MCP origin');
+    const headers=new Headers(init.headers??(target instanceof Request?target.headers:undefined));
+    headers.set('Authorization',`Bearer ${token}`);
+    return fetchImpl(target,{...init,headers,redirect:'error'});
+  };
+}

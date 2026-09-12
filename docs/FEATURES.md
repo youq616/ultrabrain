@@ -29,3 +29,11 @@ Ultrabrain 使用锁定的 GBrain 业务引擎与本机托管原生 PostgreSQL�
 同一候选提交的单元、运维、真实数据库、stdio/HTTP、队列与项目并发、旧数据迁移、备份恢复及停启检查都须通过。语义质量另需模型和标注语料证据。包含双方全部功能必须逐项映射公共 CLI/API/MCP、数据类型、迁移及验收，当前尚未达到。
 
 0.5.0 新增 ultra_summarize / ultra_summary_status / ultra_summary_forget / ultra_excerpt 与通用 JSON MCP 客户端。详见 SEMANTIC-MEMORY.md；专用 Agent/n8n 安装插件和多文档递归摘要树仍未全量完成。
+
+## 0.6.0 补充
+
+资源政策工具：ultra_memory_inspect / review / supersede / history；canonical hash 与政策 revision 联合检查，审核与更正原子写入元数据。不改写原生正文，也不自动撤回已提取事实。
+
+读取、检索、目录和出处工具支持 current / reviewed / history；原文变化使审核失效。替代关系只在权限、请求范围及内容 hash 均满足时有界跟随。默认 current 仍允许未审核老资源，但明确标注 unreviewed。
+
+ultra_identity 和通用生命周期桥用实际认证返回绑定 outbox；同进程凭据快照避免身份/交付间换主体。不读取未接入应用，不执行事件命令，不默认采集。多平台原生 Hooks 和完整事实时态治理依然在后续范围内。

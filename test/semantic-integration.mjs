@@ -94,6 +94,17 @@ try {
   await assert.rejects(call('ultra_summary_status',{uri:`ultra://${source}/private/secret`}));check();
   // Leave a real derived JSONB record to include in backup/restore verification.
   await call('ultra_summarize',{uri,allow_model_call:true});
+  const policy=await call('ultra_memory_inspect',{uri});
+  const beforePolicyCalls=modelCalls;
+  await call('ultra_memory_review',{uri,event_id:'retract-summary-source',expected_revision:0,content_sha256:policy.content_sha256,
+    status:'retracted',assertion_kind:'attributed',reason:'Superseded decision',provenance:'Fixture review'});
+  assert.equal((await engine.executeRaw('SELECT count(*)::integer AS n FROM ultrabrain.summary_cache WHERE source_id=$1 AND slug=$2',[source,slug]))[0].n,0);check();
+  await assert.rejects(call('ultra_summarize',{uri,allow_model_call:true}),{code:'memory_not_current'});
+  assert.equal(modelCalls,beforePolicyCalls);check();
+  assert.equal((await call('ultra_summary_status',{uri})).state,'excluded_by_memory_policy');check();
+  await call('ultra_memory_review',{uri,event_id:'reactivate-summary-source',expected_revision:1,content_sha256:policy.content_sha256,
+    status:'active',assertion_kind:'attributed',reason:'Explicitly reactivated',provenance:'Fixture review',reactivate:true});
+  await call('ultra_summarize',{uri,allow_model_call:true});check();
   console.log(`PASS ${checks} semantic pipeline DB/dispatcher checks; controlled model output, not real model quality`);
 } finally {
   gateway.__setChatTransportForTests(null);writeFileSync(configPath,original,{mode:0o600});await engine.disconnect();
