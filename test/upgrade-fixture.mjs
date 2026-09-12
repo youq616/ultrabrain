@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import {join,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync,existsSync} from 'node:fs';
 import {evaluateRetrieval} from '../src/evaluation.mjs';
 import {compareRetrievalReports} from '../src/evaluation-gate.mjs';
 import {applyMigrations,migrations,checksum,migrationStatus} from '../src/migrations.mjs';
@@ -45,11 +45,26 @@ try {
     await call('ultra_commit_session',{session_id:'s1',event_id:'e1',transcript:'Consented upgrade fixture transcript',visibility:'private'});
     const box=new DurableOutbox(boxOptions);
     box.enqueue({session_id:'s2',event_id:'escaped',transcript:'x'+'"'.repeat(65535),visibility:'private'});
+    const [policies]=await engine.executeRaw("SELECT to_regclass('ultrabrain.memory_policies') IS NOT NULL AS present");
+    if(policies.present) {
+      await call('put_page',{slug:'references/legacy-quote',content:'---\ntype: note\nvisibility: world\n---\nLegacy quoted source fixture'});
+      const reference=await call('ultra_memory_inspect',{uri:`ultra://${source}/references/legacy-quote`});
+      await call('ultra_memory_review',{uri:reference.uri,content_sha256:reference.content_sha256,expected_revision:0,
+        event_id:'legacy-review',status:'active',assertion_kind:'source_quote',reason:'Legacy quote fixture',provenance:'Synthetic',
+        evidence:{uri:reference.uri,content_sha256:reference.content_sha256,start:0,end:10}});
+      writeFileSync(join(directory,'legacy-quote.json'),JSON.stringify(reference),{mode:0o600});
+    }
     writeFileSync(join(directory,'fingerprints.json'),JSON.stringify(await fingerprint()),{mode:0o600});
     writeFileSync(join(directory,'baseline-eval.json'),JSON.stringify(await evaluate()),{mode:0o600});
     console.log('PASS old-source seed: pages, privacy, project/history, session receipt, legacy oversized queue record');
   } else {
     assert.deepEqual(await fingerprint(),JSON.parse(readFileSync(join(directory,'fingerprints.json'),'utf8')));
+    if(existsSync(join(directory,'legacy-quote.json'))) {
+      const reference=JSON.parse(readFileSync(join(directory,'legacy-quote.json'),'utf8'));
+      const current=await call('ultra_memory_inspect',{uri:reference.uri});
+      assert.equal(current.memory.status,'review_required');assert.equal(current.memory.revision,2);
+      assert.equal(current.content_sha256,reference.content_sha256);
+    }
     assert.equal((await call('ultra_project_load',{project_id:project})).revision,1);
     await assert.rejects(call('ultra_read',{uri:`ultra://${source}/private/preserved`,level:'L2'},{remote:true}));
     await assert.rejects(call('ultra_project_load',{project_id:project},{sourceId:'default',remote:true}));

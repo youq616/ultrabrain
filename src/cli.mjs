@@ -5,9 +5,10 @@ const args = process.argv.slice(2);
 const [command, ...rest] = args;
 try {
   if (!command || ['help','--help','-h'].includes(command)) {
-    console.log(`ultrabrain 0.6.0-alpha.1 — Linux / managed PostgreSQL
+    console.log(`ultrabrain 0.6.1-alpha.1 — Linux / managed PostgreSQL
   db init|start|stop|status|backup|restore-new   Manage local PostgreSQL
   db activate-runtime                        Switch a stopped cluster to reviewed same-major binaries
+  db vector-plan|vector-upgrade|vector-recover   Review/upgrade pinned vector SQL objects
   verify --project ID --task ID -- command    Host-only execution evidence (no remote executor)
   summary-config --from-chat-model --revision ID   Explicitly enable source summaries
   compat                                     Check native catalog compatibility without a database
@@ -24,7 +25,7 @@ Lifecycle bridge: bun scripts/agent-bridge.mjs --url URL --token-file PATH --roo
 Deferred worker: bun scripts/consolidate.mjs --url URL --token-file PATH --source SOURCE
 Upstream-dependent features require their original providers/configuration.`);
   } else if (['db','upstream','summary-config'].includes(command)) {
-    const script = command === 'db' ? 'postgres.py' : command === 'summary-config' ? 'configure-summary.py' : 'upstreams.py';
+    const script = command === 'db' ? (['vector-plan','vector-upgrade','vector-recover'].includes(rest[0]) ? 'vector-upgrade.py' : 'postgres.py') : command === 'summary-config' ? 'configure-summary.py' : 'upstreams.py';
     const p = spawnSync('python3', [`${ROOT}/scripts/${script}`, ...rest], { stdio: 'inherit' });
     if (p.error) throw p.error;
     process.exitCode = p.status ?? 1;

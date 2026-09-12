@@ -8,6 +8,7 @@ name = sys.argv[1] if len(sys.argv) == 2 else 'ub_restore_ci'
 if not name.startswith('ub_restore_'):
     raise SystemExit('Only isolated restoration targets are accepted')
 queries = {
+    'review_dependencies': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(source_id || ':' || policy_slug || ':' || evidence_slug || ':' || evidence_sha256, ',' ORDER BY source_id,policy_slug,evidence_slug)),'empty') FROM ultrabrain.review_dependencies",
     'memory_policies': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(source_id || ':' || slug || ':' || revision::text || ':' || status || ':' || content_sha256, ',' ORDER BY source_id,slug)),'empty') FROM ultrabrain.memory_policies",
     'memory_policy_history': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(snapshot::text, ',' ORDER BY source_id,slug,revision)),'empty') FROM ultrabrain.memory_policy_history",
     'instance_identity': "SELECT instance_id::text FROM ultrabrain.instance_identity WHERE singleton",

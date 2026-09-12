@@ -64,3 +64,8 @@ test('source excerpts retain explicit historical policy and reject ineligible re
  const reviewed=new AgentMemory({client,rootUri:'ultra://default/',sessionId:'s',memoryPolicy:'reviewed'});
  await assert.rejects(reviewed.sourceExcerpt(citation),{code:'memory_not_current'});
 });
+
+test('clock-invalid reference cannot leave a reviewed resource eligible',()=>{
+ const p=effectivePolicy({...row,references_current:false},hash,now);
+ assert.equal(p.status,'review_required');assert.equal(policyAllows(p),false);
+});

@@ -33,8 +33,14 @@ PostgreSQL 随项目在本机安装和管理，不要求外部数据库，不是
 
 真实模型质量未在本版认证；摘要与检索边界见 [语义记忆](docs/SEMANTIC-MEMORY.md)。本版还修复了历史 native config 路径问题，并保留既有数据库 embedding 身份，升级必读 [配置路径迁移](docs/CONFIG-PATH-MIGRATION.md) 与 [验收范围](docs/VALIDATION-0.5.md)。
 
-## 当前增量：0.6.0-alpha.1
+## 历史增量：0.6.0-alpha.1
 
 新增资源级审核、撤回、显式替代、有效期和原文变化后重审；默认当前检索排除过期/被替代资源，并按授权和 hash 跟随有界替代关系。新增服务端身份绑定的 JSON 生命周期事件桥，保留单机托管 PostgreSQL 默认与原生事实引擎。
 
 参阅 [资源记忆治理](docs/MEMORY-GOVERNANCE.md)、[生命周期接入桥](docs/LIFECYCLE-BRIDGE.md) 与 [本版验收](docs/VALIDATION-0.6.md)。资源策略不会替代原生事实撤回；直接原生接口保留旧语义。真实客户端自动 Hooks、完整多模态与语义质量认证尚未完成，版本仍为 alpha。
+
+## 当前增量：0.6.1-alpha.1
+
+引用来源变化/撤回后可沿依赖链自动转为待重审，当前读取还检查引用链有效期；旧 source_quote 审核通过追加迁移保守重新审核。新增本地主机的 pgvector SQL 版本计划、维护升级与中断恢复，升级前生成新备份，不强制终止客户端。
+
+详见 [引用治理](docs/MEMORY-GOVERNANCE.md)、[pgvector SQL 升级](docs/VECTOR-UPGRADES.md) 和 [验收范围](docs/VALIDATION-0.6.1.md)。本版没有改变上游锁定提交，不宣称语义质量认证或 PostgreSQL 跨主版本自动迁移。

@@ -36,7 +36,7 @@ export function effectivePolicy(row,contentHash,now) {
   requireThat(states.includes(row.status),'memory_policy_corrupt','Unknown stored memory state');
   let status=row.status;
   if(status==='active') {
-    if(row.content_sha256!==contentHash)status='review_required';
+    if(row.content_sha256!==contentHash||row.references_current===false)status='review_required';
     else if(row.valid_from&&new Date(row.valid_from).getTime()>new Date(now).getTime())status='not_yet_valid';
     else if(row.valid_until&&new Date(row.valid_until).getTime()<=new Date(now).getTime())status='expired';
   }
@@ -70,10 +70,29 @@ async function getExact(store,value,hash) {
   if(hash)requireThat(pageHash(page)===hash,'stale_source','Page changed; reload the original before reviewing');
   return page;
 }
+/** Internal metadata query; never returns referenced source text or its URI.
+ * Clock-only expiry needs no UPDATE to the source, so evaluate dependency validity at read time.
+ */
+async function policyRow(sql,source,slug) {
+  const [row]=await sql(`WITH RECURSIVE evidence(slug) AS (
+      SELECT evidence_slug FROM ultrabrain.review_dependencies WHERE source_id=$1 AND policy_slug=$2
+      UNION SELECT d.evidence_slug FROM ultrabrain.review_dependencies d
+        JOIN evidence e ON d.policy_slug=e.slug WHERE d.source_id=$1
+    ), clock AS (SELECT statement_timestamp() AS now)
+    SELECT clock.now AS db_now,p.*,NOT EXISTS (
+      SELECT 1 FROM evidence e
+      LEFT JOIN public.pages original ON original.source_id=$1 AND original.slug=e.slug
+      LEFT JOIN ultrabrain.memory_policies ep ON ep.source_id=$1 AND ep.slug=e.slug
+      WHERE original.id IS NULL OR original.deleted_at IS NOT NULL
+        OR (ep.revision IS NOT NULL AND (ep.status!='active'
+          OR ep.valid_from>clock.now OR ep.valid_until<=clock.now))
+    ) AS references_current
+    FROM clock LEFT JOIN ultrabrain.memory_policies p ON p.source_id=$1 AND p.slug=$2`,[source,slug]);
+  return row;
+}
 /** Called only after a page has passed native current read authorization. */
 export async function inspectPolicy(store,page) {
-  const [row]=await store.sql(`SELECT clock_timestamp() AS db_now,p.* FROM (VALUES(1)) AS seed(n)
-    LEFT JOIN ultrabrain.memory_policies p ON p.source_id=$1 AND p.slug=$2`,[page.source_id,page.slug]);
+  const row=await policyRow((q,p)=>store.sql(q,p),page.source_id,page.slug);
   const result=effectivePolicy(row?.revision?row:null,typeof page.content==='string'?pageHash(page):row?.content_sha256,row.db_now);
   return result;
 }
@@ -89,7 +108,7 @@ export function memoryPolicyTools(store) {
       requireThat(!p.evidence,'invalid_params','Evidence interval is only accepted for source_quote');return null;
     }
     const e=p.evidence;
-    requireThat(e&&typeof e==='object'&&!Array.isArray(e)&&/^[a-f0-9]{64}$/.test(e.content_sha256??''),
+    requireThat(e&&typeof e==='object'&&!Array.isArray(e)&&Object.keys(e).every(k=>['uri','content_sha256','start','end'].includes(k))&&/^[a-f0-9]{64}$/.test(e.content_sha256??''),
       'invalid_params','source_quote requires URI, source hash and exact interval');
     const page=await getExact(store,e.uri,e.content_sha256);
     integer(e.start,undefined,0,16777216);integer(e.end,undefined,1,16777216);
@@ -116,6 +135,11 @@ export function memoryPolicyTools(store) {
       requireThat(replacement.slug!==page.slug,'invalid_params','Cannot supersede a resource with itself');
     }
     const proof=supersede?null:await evidence(p);
+    let evidencePolicy=null;
+    if(proof&&proof.page.slug!==page.slug) {
+      evidencePolicy=await inspectPolicy(store,proof.page);
+      requireThat(evidencePolicy.eligible,'evidence_not_current','Referenced evidence is retired, expired or needs review');
+    }
     if(store.dryRun)return {dry_run:true,uri:p.uri,expected_revision:p.expected_revision};
     return store.transaction(async tx=>{
       await tx.executeRaw("SET LOCAL lock_timeout='5s'");
@@ -139,11 +163,16 @@ export function memoryPolicyTools(store) {
       if(!supersede&&p.status==='active'&&['retracted','superseded'].includes(prior?.status))
         requireThat(p.reactivate===true,'reactivation_required','Explicit reactivate:true required to restore retired memory');
       if(supersede) {
-        const [targetPolicy]=await tx.executeRaw('SELECT * FROM ultrabrain.memory_policies WHERE source_id=$1 AND slug=$2',[store.source,replacement.slug]);
-        const [clock]=await tx.executeRaw('SELECT clock_timestamp() AS now');
+        const targetPolicy=await policyRow((q,args)=>tx.executeRaw(q,args),store.source,replacement.slug);
         requireThat((targetPolicy?.revision??0)===p.replacement_revision,'revision_conflict','Replacement policy changed');
-        requireThat(effectivePolicy(targetPolicy,p.replacement_sha256,clock.now).status==='active','replacement_not_reviewed',
+        requireThat(effectivePolicy(targetPolicy?.revision?targetPolicy:null,p.replacement_sha256,targetPolicy.db_now).status==='active','replacement_not_reviewed',
           'Replacement must be explicitly reviewed and currently valid');
+      }
+      if(evidencePolicy) {
+        const checked=await policyRow((q,args)=>tx.executeRaw(q,args),store.source,proof.page.slug);
+        const currentEvidence=effectivePolicy(checked?.revision?checked:null,proof.content_sha256,checked.db_now);
+        requireThat(currentEvidence.revision===evidencePolicy.revision&&currentEvidence.eligible,
+          'evidence_not_current','Referenced evidence policy changed during review');
       }
       const revision=(prior?.revision??0)+1;
       const state={status:annotation.status,assertion_kind:supersede?(prior?.assertion_kind??'attributed'):annotation.assertion_kind,
@@ -154,6 +183,11 @@ export function memoryPolicyTools(store) {
         revision=EXCLUDED.revision,status=EXCLUDED.status,assertion_kind=EXCLUDED.assertion_kind,content_sha256=EXCLUDED.content_sha256,
         valid_from=EXCLUDED.valid_from,valid_until=EXCLUDED.valid_until,replacement_slug=EXCLUDED.replacement_slug,replacement_sha256=EXCLUDED.replacement_sha256,updated_at=now()`,
         [store.source,page.slug,revision,state.status,state.assertion_kind,state.content_sha256,state.valid_from,state.valid_until,state.replacement_slug,state.replacement_sha256]);
+      // Keep only the current dependency edge; historical quotations remain in history.
+      await tx.executeRaw('DELETE FROM ultrabrain.review_dependencies WHERE source_id=$1 AND policy_slug=$2',[store.source,page.slug]);
+      if(proof&&state.status==='active') await tx.executeRaw(`INSERT INTO ultrabrain.review_dependencies
+        (source_id,policy_slug,evidence_slug,evidence_sha256) VALUES($1,$2,$3,$4)`,
+        [store.source,page.slug,proof.page.slug,proof.content_sha256]);
       const {page:ignored,...reference}=proof??{};
       const snapshot={...state,reason:annotation.reason,provenance:annotation.provenance,...(proof?{evidence:reference}:{}),
         basis:'Caller review; exact source location is not independent truth verification'};
