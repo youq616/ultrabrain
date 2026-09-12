@@ -1,5 +1,6 @@
 /** Real MCP/PostgreSQL adapter tests. --engine additionally runs an installed, real n8n CLI. */
 import assert from 'node:assert/strict';
+import {executionFromOutput} from './n8n-cli-output.mjs';
 import {createRequire} from 'node:module';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
@@ -120,13 +121,16 @@ try{
       assert.equal(importedWorkflow.code,0,'Actual n8n workflow import failed: '+diagnostic(importedWorkflow.output));
     };
     await importWorkflow();proof();
+    // n8n's --rawOutput still uses BaseCommand.log -> logger.info. Capture info-level
+    // output privately for assertions; never echo it into the CI log.
+    const executionEnv={...env,N8N_LOG_LEVEL:'info'};
     for(let repeat=0;repeat<2;repeat++){
-      const run=await executeProcess('node',[binary,'execute',`--id=${workflow.id}`,'--rawOutput'],{env});
+      const run=await executeProcess('node',[binary,'execute',`--id=${workflow.id}`,'--rawOutput'],{env:executionEnv});
       if(run.code!==0)writeFileSync(join(temp,'engine-execution-error.log'),run.output,{mode:0o600});
       assert.equal(run.code,0,'Real n8n workflow failed: '+diagnostic(run.output));
       // Verify the actual final-node output, not just a potentially successful CLI exit.
-      let execution;
-      try {execution=JSON.parse(run.output.slice(run.output.indexOf('{'),run.output.lastIndexOf('}')+1));} catch {}
+      const execution=executionFromOutput(run.output);
+      assert.ok(!execution.data.resultData.error,'Actual n8n workflow reported an execution error');
       const last=execution?.data?.resultData?.runData?.Status?.[0]?.data?.main?.[0]?.[0]?.json;
       assert.equal(last?.ok,true,'Actual n8n Status node did not produce a successful result: '+diagnostic(run.output));
       assert.equal(last.result.status.state,'queued');
@@ -136,8 +140,8 @@ try{
     }
     workflow.nodes[1].parameters.captureConsent=false;workflow.nodes[1].parameters.eventId='no-consent';
     await importWorkflow();
-    const blocked=await executeProcess('node',[binary,'execute',`--id=${workflow.id}`,'--rawOutput'],{env});
-    assert.ok(blocked.code!==0 || /capture_disabled/.test(blocked.output),'Non-consented actual workflow lacked an explicit rejection');
+    const blocked=await executeProcess('node',[binary,'execute',`--id=${workflow.id}`,'--rawOutput'],{env:executionEnv});
+    assert.match(blocked.output,/capture_disabled/,'Non-consented actual workflow lacked the expected consent rejection');
     assert.equal(await sessionCount('real-n8n-cli'),1);proof();
     console.log('PASS real n8n CLI: private node loading, credential import, Capture -> Status workflow, replay, consent refusal');
   }

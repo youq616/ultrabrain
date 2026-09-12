@@ -11,3 +11,5 @@
 n8n fixture 的 SQLite（由实际 n8n 自己使用）只是一次性测试宿主状态，不是第二套 Ultrabrain 记忆数据库，不分发或迁移用户数据。测试不会连接用户的 n8n 或创建生产凭据。
 
 本版没有 n8n UI 浏览器自动化、Cloud 官方验证、所有 n8n 历史版本兼容、所有 Agent 原生 Hook、多模态、完整离线运行包或实际付费模型效果的验收。
+
+实际 n8n CLI 的 rawOutput 仍经 info logger 输出；验收进程只在执行阶段启用 info 并私有捕获 JSON，不向 CI 输出原始执行记录。检查最终 Status 节点数据、session/event 及数据库去重，拒绝路径必须包含明确的 capture_disabled，不能仅凭退出码判断。
