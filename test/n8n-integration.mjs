@@ -6,7 +6,7 @@ import {once} from 'node:events';
 import {createServer} from 'node:net';
 import {mkdtempSync,writeFileSync,readFileSync,mkdirSync,rmSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join,resolve} from 'node:path';
+import {join,resolve,dirname} from 'node:path';
 import {randomBytes,createHash} from 'node:crypto';
 import {connect,ROOT} from '../src/runtime.mjs';
 assert.equal(process.env.ULTRABRAIN_TEST_ALLOW_WRITE,'1','Isolated test installation required');
@@ -16,6 +16,7 @@ const engine=await connect();
 const source='n8n-'+randomBytes(5).toString('hex'),secret='gbrain_'+randomBytes(32).toString('hex');
 const readerSecret='gbrain_'+randomBytes(32).toString('hex');
 const temp=mkdtempSync(join(tmpdir(),'ub-n8n-'));
+let hostVersion=null,hostNodeVersion=null;
 let server,checks=0;const proof=()=>checks++;
 const free=createServer();free.listen(0,'127.0.0.1');await once(free,'listening');const port=free.address().port;await new Promise(r=>free.close(r));
 const endpoint=`http://127.0.0.1:${port}/mcp`;
@@ -78,6 +79,10 @@ try{
     const binary=process.env.ULTRABRAIN_N8N_BIN,packageDir=process.env.ULTRABRAIN_N8N_INSTALLED;
     assert.ok(binary&&existsSync(binary),'--engine requires the pinned installed n8n CLI');
     assert.ok(packageDir&&existsSync(join(packageDir,'dist/nodes/Ultrabrain/Ultrabrain.node.js')),'--engine requires the installed tgz, not source mocks');
+    hostVersion=JSON.parse(readFileSync(join(dirname(binary),'../package.json'),'utf8')).version;
+    assert.equal(hostVersion,'2.38.7','Actual host does not match the reviewed baseline');
+    hostNodeVersion=(await executeProcess('node',['--version'])).output.trim();
+    assert.match(hostNodeVersion,/^v22\./,'Actual n8n engine must run under the reviewed Node.js major');
     const env={...process.env,N8N_USER_FOLDER:join(temp,'n8n-home'),N8N_ENCRYPTION_KEY:randomBytes(32).toString('hex'),
       N8N_CUSTOM_EXTENSIONS:join(packageDir,'dist'),N8N_DIAGNOSTICS_ENABLED:'false',N8N_VERSION_NOTIFICATIONS_ENABLED:'false',
       N8N_PERSONALIZATION_ENABLED:'false',N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS:'true',
@@ -97,17 +102,32 @@ try{
     const status={...save,name:'Status',id:'status',position:[520,0],parameters:{...save.parameters,operation:'session_status'}};
     const workflow={id:'UltrabrainWorkflow01',name:'Ultrabrain real n8n fixture',active:false,settings:{executionOrder:'v1'},
       nodes:[manual,save,status],connections:{Start:{main:[[{node:'Capture',type:'main',index:0}]]},Capture:{main:[[{node:'Status',type:'main',index:0}]]}}};
-    const file=join(temp,'workflow.json');writeFileSync(file,JSON.stringify(workflow),{mode:0o600});
+    const file=join(temp,'workflow.json');
+    const importWorkflow=async()=>{
+      writeFileSync(file,JSON.stringify(workflow),{mode:0o600});
+      const importedWorkflow=await executeProcess('node',[binary,'import:workflow',`--input=${file}`],{env});
+      if(importedWorkflow.code!==0)writeFileSync(join(temp,'engine-workflow-import-error.log'),importedWorkflow.output,{mode:0o600});
+      assert.equal(importedWorkflow.code,0,'Actual n8n workflow import failed');
+    };
+    await importWorkflow();proof();
     for(let repeat=0;repeat<2;repeat++){
-      const run=await executeProcess('node',[binary,'execute',`--file=${file}`],{env});
+      const run=await executeProcess('node',[binary,'execute',`--id=${workflow.id}`,'--rawOutput'],{env});
       if(run.code!==0)writeFileSync(join(temp,'engine-execution-error.log'),run.output,{mode:0o600});
-      assert.equal(run.code,0,'Real n8n workflow failed (private diagnostic at '+temp+')');proof();
+      assert.equal(run.code,0,'Real n8n workflow failed (private diagnostic at '+temp+')');
+      // Verify the actual final-node output, not just a potentially successful CLI exit.
+      let execution;
+      try {execution=JSON.parse(run.output.slice(run.output.indexOf('{'),run.output.lastIndexOf('}')+1));} catch {}
+      const last=execution?.data?.resultData?.runData?.Status?.[0]?.data?.main?.[0]?.[0]?.json;
+      assert.equal(last?.ok,true,'Actual n8n Status node did not produce a successful result');
+      assert.equal(last.result.status.state,'queued');
+      assert.equal(last.result.status.session_id,'real-n8n-cli');
+      assert.equal(last.result.status.event_id,'stable-event');proof();
       assert.equal(await sessionCount('real-n8n-cli'),1);proof();
     }
     workflow.nodes[1].parameters.captureConsent=false;workflow.nodes[1].parameters.eventId='no-consent';
-    writeFileSync(file,JSON.stringify(workflow),{mode:0o600});
-    const blocked=await executeProcess('node',[binary,'execute',`--file=${file}`],{env});
-    assert.notEqual(blocked.code,0,'Non-consented actual workflow unexpectedly succeeded');
+    await importWorkflow();
+    const blocked=await executeProcess('node',[binary,'execute',`--id=${workflow.id}`,'--rawOutput'],{env});
+    assert.ok(blocked.code!==0 || /capture_disabled/.test(blocked.output),'Non-consented actual workflow lacked an explicit rejection');
     assert.equal(await sessionCount('real-n8n-cli'),1);proof();
     console.log('PASS real n8n CLI: private node loading, credential import, Capture -> Status workflow, replay, consent refusal');
   }
@@ -115,7 +135,7 @@ try{
   await assert.rejects(adapter.execute(context([{operation:'after_turn',eventId:'revoked'}])));assert.equal(await sessionCount('n8n-session'),1);proof();
   console.log(`PASS ${checks} n8n adapter checks: real SDK/HTTP/PostgreSQL; ${process.argv.includes('--engine')?'real n8n CLI included':'n8n execution context fixture, not UI/engine certification'}`);
   if(process.env.ULTRABRAIN_N8N_REPORT)writeFileSync(process.env.ULTRABRAIN_N8N_REPORT,JSON.stringify({checks,passed:true,
-    engine:process.argv.includes('--engine')?'n8n 2.38.7 CLI':'execution-context fixture',nodeJs:process.version,sdk:'1.29.0'},null,2)+'\n');
+    engine:process.argv.includes('--engine')?'n8n 2.38.7 CLI':'execution-context fixture',harnessRuntime:typeof Bun==='undefined'?'Node.js '+process.version:'Bun '+Bun.version,hostVersion,hostNodeVersion,sdk:'1.29.0'},null,2)+'\n');
 }finally{
   if(server&&server.exitCode===null){server.kill('SIGTERM');const forced=setTimeout(()=>server.kill('SIGKILL'),5000);forced.unref();await once(server,'exit');clearTimeout(forced);}
   await engine.executeRaw('DELETE FROM access_tokens WHERE name=ANY($1::text[])',[[source+'-writer',source+'-reader']]);

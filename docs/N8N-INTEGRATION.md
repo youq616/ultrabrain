@@ -57,7 +57,7 @@ N8N_CUSTOM_EXTENSIONS="$INSTALL_ROOT/node_modules/n8n-nodes-ultrabrain/dist" n8n
 | Get Session Status | 查询同一认证主体、session/event 的原始交付和整理状态，不返回 transcript。 |
 | Resume Project | 读取已存在的项目检查点；不会执行下一步命令。 |
 
-保存只走 deferred 路径，服务端原子保存后返回 journaled/queued。节点不会启动整理、生成摘要或替你调用付费模型；单独 worker 的授权保持不变。读取摘要只使用现有缓存，没有缓存时依配置降级或明确失败。
+保存只走 deferred 路径，服务端原子保存后返回 journaled/queued。采集操作不会启动整理或生成摘要；单独 worker 的授权保持不变。读取摘要只使用现有缓存，没有缓存时依配置降级或明确失败。上下文检索仍按服务器配置运行，已配置的 embedding 等检索服务可能产生自身的模型调用与费用；不能把“不生成新摘要”解释为“整个检索绝不调用模型”。
 
 会话 ID 与事件 ID 必须来自生产事件，使用相同内容重试时保持不变，不能用新的 n8n execution ID 代替。默认不自动生成 ID，避免重试生成重复事实。共享源有配额时拒绝新保存，不丢旧事件。
 
