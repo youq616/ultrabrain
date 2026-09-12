@@ -31,6 +31,16 @@ function context(rows=[{}],credentials=creds,continueOnFail=false){return {
   continueOnFail:()=>continueOnFail,
 };}
 const sessionCount=async session=>(await engine.executeRaw('SELECT count(*)::integer AS n FROM ultrabrain.session_receipts WHERE source_id=$1 AND session_id=$2',[source,session]))[0].n;
+function diagnostic(output) {
+  // Fixed classifications only; never print raw host errors, source input, paths or credentials.
+  return JSON.stringify({unsupportedNode:/Node\.js.*(?:support|requir)|node version/i.test(output),
+    missingModule:/Cannot find module|ERR_MODULE_NOT_FOUND/i.test(output),
+    unknownNode:/Unrecognized node type|Unknown node type/i.test(output),
+    credentials:/credentials?.*(?:not found|could not|unknown)|encryption/i.test(output),
+    database:/sqlite|database.*(?:fail|error)|SQLITE_/i.test(output),
+    ownership:/owner|ownership|personal project/i.test(output),
+    expression:/isolated-vm|expression.*(?:fail|error)/i.test(output)});
+}
 async function executeProcess(command,args,{env=process.env,timeout=180000}={}) {
   const child=spawn(command,args,{env,cwd:ROOT,stdio:['ignore','pipe','pipe']});let output='';
   child.stdout.on('data',x=>{output=(output+x).slice(-262144);});child.stderr.on('data',x=>{output=(output+x).slice(-262144);});
@@ -82,7 +92,7 @@ try{
     hostVersion=JSON.parse(readFileSync(join(dirname(binary),'../package.json'),'utf8')).version;
     assert.equal(hostVersion,'2.38.7','Actual host does not match the reviewed baseline');
     hostNodeVersion=(await executeProcess('node',['--version'])).output.trim();
-    assert.match(hostNodeVersion,/^v22\./,'Actual n8n engine must run under the reviewed Node.js major');
+    assert.match(hostNodeVersion,/^v24\./,'Actual n8n engine must run under the reviewed Node.js major');
     const env={...process.env,N8N_USER_FOLDER:join(temp,'n8n-home'),N8N_ENCRYPTION_KEY:randomBytes(32).toString('hex'),
       N8N_CUSTOM_EXTENSIONS:join(packageDir,'dist'),N8N_DIAGNOSTICS_ENABLED:'false',N8N_VERSION_NOTIFICATIONS_ENABLED:'false',
       N8N_PERSONALIZATION_ENABLED:'false',N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS:'true',
@@ -91,34 +101,34 @@ try{
       EXECUTIONS_DATA_SAVE_ON_SUCCESS:'none',EXECUTIONS_DATA_SAVE_ON_ERROR:'none',
       EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS:'false'};
     mkdirSync(env.N8N_USER_FOLDER,{recursive:true,mode:0o700});
-    const credentialId='UltrabrainFixture01',credentialFile=join(temp,'credentials.json');
+    const credentialId='ubN8nCred00000001',credentialFile=join(temp,'credentials.json');
     writeFileSync(credentialFile,JSON.stringify([{id:credentialId,name:'Ultrabrain Fixture',type:'ultrabrainApi',data:creds}]),{mode:0o600});
     const imported=await executeProcess('node',[binary,'import:credentials',`--input=${credentialFile}`],{env});
     if(imported.code!==0){writeFileSync(join(temp,'engine-import-error.log'),imported.output,{mode:0o600});}
-    assert.equal(imported.code,0,'Real n8n credential import failed (private diagnostic at '+temp+')');proof();
+    assert.equal(imported.code,0,'Real n8n credential import failed: '+diagnostic(imported.output));proof();
     const manual={parameters:{},name:'Start',type:'n8n-nodes-base.manualTrigger',typeVersion:1,position:[0,0],id:'start'};
     const save={parameters:{...defaults,operation:'after_turn',sessionId:'real-n8n-cli',eventId:'stable-event'},
       name:'Capture',type:'CUSTOM.ultrabrain',typeVersion:1,position:[260,0],id:'save',credentials:{ultrabrainApi:{id:credentialId,name:'Ultrabrain Fixture'}}};
     const status={...save,name:'Status',id:'status',position:[520,0],parameters:{...save.parameters,operation:'session_status'}};
-    const workflow={id:'UltrabrainWorkflow01',name:'Ultrabrain real n8n fixture',active:false,settings:{executionOrder:'v1'},
+    const workflow={id:'ubN8nFlow00000001',name:'Ultrabrain real n8n fixture',active:false,settings:{executionOrder:'v1'},
       nodes:[manual,save,status],connections:{Start:{main:[[{node:'Capture',type:'main',index:0}]]},Capture:{main:[[{node:'Status',type:'main',index:0}]]}}};
     const file=join(temp,'workflow.json');
     const importWorkflow=async()=>{
       writeFileSync(file,JSON.stringify(workflow),{mode:0o600});
       const importedWorkflow=await executeProcess('node',[binary,'import:workflow',`--input=${file}`],{env});
       if(importedWorkflow.code!==0)writeFileSync(join(temp,'engine-workflow-import-error.log'),importedWorkflow.output,{mode:0o600});
-      assert.equal(importedWorkflow.code,0,'Actual n8n workflow import failed');
+      assert.equal(importedWorkflow.code,0,'Actual n8n workflow import failed: '+diagnostic(importedWorkflow.output));
     };
     await importWorkflow();proof();
     for(let repeat=0;repeat<2;repeat++){
       const run=await executeProcess('node',[binary,'execute',`--id=${workflow.id}`,'--rawOutput'],{env});
       if(run.code!==0)writeFileSync(join(temp,'engine-execution-error.log'),run.output,{mode:0o600});
-      assert.equal(run.code,0,'Real n8n workflow failed (private diagnostic at '+temp+')');
+      assert.equal(run.code,0,'Real n8n workflow failed: '+diagnostic(run.output));
       // Verify the actual final-node output, not just a potentially successful CLI exit.
       let execution;
       try {execution=JSON.parse(run.output.slice(run.output.indexOf('{'),run.output.lastIndexOf('}')+1));} catch {}
       const last=execution?.data?.resultData?.runData?.Status?.[0]?.data?.main?.[0]?.[0]?.json;
-      assert.equal(last?.ok,true,'Actual n8n Status node did not produce a successful result');
+      assert.equal(last?.ok,true,'Actual n8n Status node did not produce a successful result: '+diagnostic(run.output));
       assert.equal(last.result.status.state,'queued');
       assert.equal(last.result.status.session_id,'real-n8n-cli');
       assert.equal(last.result.status.event_id,'stable-event');proof();

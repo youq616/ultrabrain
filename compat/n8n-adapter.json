@@ -2,7 +2,7 @@
   "format": 1,
   "n8n_cli": "2.38.7",
   "n8n_workflow": "2.38.1",
-  "node": "22",
+  "node": "24",
   "mcp_sdk": "1.29.0",
   "install_mode": "private CustomDirectoryLoader (CUSTOM.ultrabrain)",
   "reference_tag": "n8n@2.38.7",

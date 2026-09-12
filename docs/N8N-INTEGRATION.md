@@ -35,7 +35,7 @@ N8N_CUSTOM_EXTENSIONS="$INSTALL_ROOT/node_modules/n8n-nodes-ultrabrain/dist" n8n
 
 本流程使用官方 CustomDirectoryLoader，因此节点类型为 `CUSTOM.ultrabrain`。n8n 自动注入其自身的模块解析路径以提供 `n8n-workflow`。生产服务应在自己的 systemd/容器配置中持久设置环境；临时 shell 的 export 不会修改已经启动的服务。Docker 部署需将扩展与配置挂载到 n8n 容器，并对每个 worker 安装相同版本。本项目不要求 Docker Hub，也不会创建或启动用户的容器。
 
-测试基线记录在 `compat/n8n-adapter.json`：n8n 2.38.7、n8n-workflow 2.38.1、Node.js 22。没有据此声明所有旧版、Cloud、分布式 runner 或代理组合都已支持。
+测试基线记录在 `compat/n8n-adapter.json`：n8n 2.38.7、n8n-workflow 2.38.1、Node.js 24。没有据此声明所有旧版、Cloud、分布式 runner 或代理组合都已支持。
 
 ## 配置凭据
 

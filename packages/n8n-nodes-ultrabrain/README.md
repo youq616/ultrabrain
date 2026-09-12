@@ -12,7 +12,7 @@ Saving requires both credential permission and per-item consent. Shared `world` 
 
 Outputs contain requested memory, not source inputs by default. Failed items return safe error codes and `delivery: not_submitted|unconfirmed`; `continueOnFail` must be followed by an explicit success check. A `journaled` capture is not completed extraction or proof of truth. This node never schedules consolidation or captures conversations it was not given.
 
-Test baseline: n8n 2.38.7, n8n-workflow 2.38.1, Node.js 22.16+. Full compatibility, loading, and workflow execution must be evaluated using the actual commit's CI; the source package alone is not a test result.
+Test baseline: n8n 2.38.7, n8n-workflow 2.38.1, Node.js 24+. Full compatibility, loading, and workflow execution must be evaluated using the actual commit's CI; the source package alone is not a test result.
 
 Full instructions and boundaries: https://github.com/youq616/ultrabrain/blob/main/docs/N8N-INTEGRATION.md
 

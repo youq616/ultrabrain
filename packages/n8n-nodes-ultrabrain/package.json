@@ -7,7 +7,7 @@
   "keywords": ["n8n-community-node-package", "ultrabrain", "mcp", "agent-memory"],
   "author": "Ultrabrain contributors",
   "repository": {"type": "git", "url": "git+https://github.com/youq616/ultrabrain.git", "directory": "packages/n8n-nodes-ultrabrain"},
-  "engines": {"node": ">=22.16.0"},
+  "engines": {"node": ">=24.0.0"},
   "files": ["dist", "README.md", "LICENSE"],
   "n8n": {"n8nNodesApiVersion": 1, "credentials": ["dist/credentials/UltrabrainApi.credentials.js"], "nodes": ["dist/nodes/Ultrabrain/Ultrabrain.node.js"]},
   "dependencies": {"@modelcontextprotocol/sdk": "1.29.0"},
