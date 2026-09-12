@@ -1,14 +1,16 @@
 #!/usr/bin/env bun
 import { spawnSync, spawn } from 'node:child_process';
+import {deploymentProfile} from './enterprise-policy.mjs';
 import { ROOT, prepareEnvironment, connect } from './runtime.mjs';
 const args = process.argv.slice(2);
 const [command, ...rest] = args;
 try {
   if (!command || ['help','--help','-h'].includes(command)) {
-    console.log(`ultrabrain 0.8.0-alpha.1 — Linux / managed PostgreSQL
+    console.log(`ultrabrain 0.9.0-alpha.1 — Linux / managed PostgreSQL
   db init|start|stop|status|backup|restore-new   Manage local PostgreSQL
   db activate-runtime                        Switch a stopped cluster to reviewed same-major binaries
   db vector-plan|vector-upgrade|vector-recover   Review/upgrade pinned vector SQL objects
+  enterprise configure|status|audit          Host-only source admission policy and audit
   verify --project ID --task ID -- command    Host-only execution evidence (no remote executor)
   summary-config --from-chat-model --revision ID   Explicitly enable source summaries
   compat                                     Check native catalog compatibility without a database
@@ -29,6 +31,10 @@ Upstream-dependent features require their original providers/configuration.`);
     const p = spawnSync('python3', [`${ROOT}/scripts/${script}`, ...rest], { stdio: 'inherit' });
     if (p.error) throw p.error;
     process.exitCode = p.status ?? 1;
+  } else if (command === 'enterprise') {
+    const engine=await connect();
+    try {const {enterpriseCLI}=await import('./enterprise-cli.mjs');console.log(JSON.stringify(await enterpriseCLI(rest,engine),null,2));}
+    finally {await engine.disconnect();}
   } else if (command === 'verify') {
     const engine = await connect();
     try {
@@ -50,9 +56,24 @@ Upstream-dependent features require their original providers/configuration.`);
     await engine.disconnect();
     console.log('Native and ultrabrain schemas ready.');
   } else {
+    if(command==='mcp'&&rest.includes('--profile')){
+      const n=rest.indexOf('--profile');
+      if(rest.lastIndexOf('--profile')!==n||rest[n+1]===undefined)throw new Error('Invalid profile argument');
+      process.env.ULTRABRAIN_MCP_PROFILE=deploymentProfile(rest[n+1]);rest.splice(n,2);
+    }
+    const profile=deploymentProfile(process.env.ULTRABRAIN_MCP_PROFILE);
     const forwarded = command === 'native' ? rest : command === 'mcp' ? ['serve','--surface','full', ...rest] : args;
     if (['self-update','self-upgrade','update','upgrade','init','reinit-pglite','pglite-repair','post-upgrade'].includes(forwarded[0])) {
       throw new Error('Use managed db init + migrate, or upstream prepare. Native self-update/init could bypass pins or replace PostgreSQL with PGLite.');
+    }
+    if(profile==='governed'&&forwarded[0]==='serve'){
+      if(forwarded.some(x=>['--log-full-params','--enable-dcr-insecure'].includes(x)))throw new Error('Sensitive logging and insecure registration are disabled in governed mode');
+      process.env.GBRAIN_SWEEP='0';
+      if(!forwarded.includes('--http'))throw new Error('Governed profile requires authenticated HTTP');
+      const bind=forwarded.indexOf('--bind');
+      if(bind>=0&&(forwarded.lastIndexOf('--bind')!==bind||forwarded[bind+1]!=='127.0.0.1'))throw new Error('Governed service must bind loopback behind a restricted TLS proxy');
+      if(forwarded.some(x=>x.startsWith('--bind=')||x.startsWith('--profile=')))throw new Error('Use explicit supported flags');
+      if(bind<0)forwarded.push('--bind','127.0.0.1');
     }
     prepareEnvironment();
     const child = spawn(process.execPath, ['--preload', `${ROOT}/src/preload.mjs`,

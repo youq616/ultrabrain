@@ -8,6 +8,9 @@ name = sys.argv[1] if len(sys.argv) == 2 else 'ub_restore_ci'
 if not name.startswith('ub_restore_'):
     raise SystemExit('Only isolated restoration targets are accepted')
 queries = {
+    'enterprise_policy': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(source_id || ':' || revision::text || ':' || policy::text, ',' ORDER BY source_id)),'empty') FROM ultrabrain.enterprise_sources",
+    'enterprise_audit': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(row_to_json(t)::text, ',' ORDER BY id)),'empty') FROM ultrabrain.enterprise_audit t",
+    'enterprise_rates': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(row_to_json(t)::text, ',' ORDER BY source_id,subject)),'empty') FROM ultrabrain.enterprise_rate_windows t",
     'fact_evidence': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(source_id || ':' || fact_id::text || ':' || revision::text || ':' || state || ':' || fact_sha256 || ':' || evidence_sha256, ',' ORDER BY source_id,fact_id)),'empty') FROM ultrabrain.fact_evidence",
     'fact_evidence_events': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(request_hash || ':' || revision::text, ',' ORDER BY source_id,fact_id,event_id)),'empty') FROM ultrabrain.fact_evidence_events",
     'review_dependencies': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(source_id || ':' || policy_slug || ':' || evidence_slug || ':' || evidence_sha256, ',' ORDER BY source_id,policy_slug,evidence_slug)),'empty') FROM ultrabrain.review_dependencies",

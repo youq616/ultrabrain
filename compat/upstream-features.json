@@ -220,6 +220,34 @@
         "No inferred legacy binding or automatic truth claim",
         "Raw native recall remains a separate surface"
       ]
+    },
+    {
+      "id": "governed-mcp-admission",
+      "upstream": "gbrain",
+      "baseline": "a6be012a3bcfac42e279630aedec5cda4a450e29",
+      "watch_prefixes": [
+        "src/core/facts/meta-hook.ts",
+        "src/mcp/",
+        "src/commands/serve-http.ts",
+        "src/core/ops/context.ts"
+      ],
+      "status": "optional-server-profile-metadata-guard-enabled-in-all-modes",
+      "local_files": [
+        "src/enterprise.mjs",
+        "src/enterprise-policy.mjs",
+        "src/adapters/response-metadata.mjs"
+      ],
+      "tests": [
+        "test/enterprise-integration.mjs",
+        "test/response-metadata-integration.mjs"
+      ],
+      "review": [
+        "Exact native module hash must be reviewed on upgrade",
+        "No raw recall/query/context_pack or hidden tool widening in governed mode",
+        "Database limits are shared; concurrency is per process",
+        "Admin HTTP routes still require separate restricted proxy exposure",
+        "Audit covers handler admissions/results, not complete authentication or network telemetry"
+      ]
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "ultrabrain",
-  "version": "0.8.0-alpha.1",
+  "version": "0.9.0-alpha.1",
   "private": true,
   "type": "module",
   "description": "Linux-native PostgreSQL agent memory with GBrain compatibility and hierarchical context",
@@ -32,6 +32,8 @@
     "test:facts": "bun test/fact-evidence-integration.mjs",
     "build:n8n": "bun scripts/build-n8n.mjs",
     "test:n8n": "bun test/n8n-integration.mjs",
-    "package:n8n": "bash scripts/package-n8n.sh"
+    "package:n8n": "bash scripts/package-n8n.sh",
+    "test:enterprise": "bun test/enterprise-integration.mjs",
+    "test:metadata": "bun test/response-metadata-integration.mjs"
   }
 }

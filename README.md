@@ -51,6 +51,12 @@ PostgreSQL 随项目在本机安装和管理，不要求外部数据库，不是
 
 详见 [受治理事实](docs/GOVERNED-FACTS.md) 与 [本版验收](docs/VALIDATION-0.7.md)。原生直接 recall/context_pack 等保持兼容行为；完整事实迁移与语义质量仍需独立验收。
 
-## 当前增量：0.8.0-alpha.1
+## 历史增量：0.8.0-alpha.1
 
 提供可构建安装的自托管 n8n 私有节点，复用 AgentMemory 与官方 MCP SDK，支持上下文读取、显式采集、状态查询和项目续接。固定连接身份、双层采集许可、稳定事件重试及逐项错误边界见 [n8n 接入](docs/N8N-INTEGRATION.md)；测试范围见 [0.8 验收](docs/VALIDATION-0.8.md)。包未发布到 npm/Cloud，不自动修改用户工作流或部署服务。原有事实/资源存储和上游锁保持不变。
+
+## 当前增量：0.9.0-alpha.1
+
+修复自有 MCP 工具响应上的原生 hot-facts 旁路；增加可选 governed 服务模式、固定工具白名单、源级读写/停用控制、数据库共享的每源/主体请求额度、单进程并发限制及追加型审计。兼容模式仍保留，企业场景必须明确启用并隔离所有其他入口。
+
+使用 [企业服务控制](docs/ENTERPRISE-CONTROLS.md)、[企业生产准入清单](docs/ENTERPRISE-READINESS.md) 和 [本版验收范围](docs/VALIDATION-0.9.md)。**当前仍为 alpha，不是已经具备大型公司生产资质的最终完成版。**高可用、容量、组织权限、不可变审计外送、完整恢复与真实语义质量还需独立证据。

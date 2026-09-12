@@ -1,3 +1,4 @@
+import {guardMetadataSource} from './response-metadata.mjs';
 /** Versioned GBrain boundary. Structural compatibility is necessary, not proof of semantics. */
 import {readFileSync,existsSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
@@ -38,6 +39,7 @@ export const loadNative=async path=>{
   return import(file);
 };
 export async function nativeBindings({enforce=true}={}) {
+  guardMetadataSource(readFileSync(join(ROOT,'vendor/gbrain/src/core/facts/meta-hook.ts'),'utf8'));
   const [{operations},{validateParams},{OperationError},context]=await Promise.all([
     loadNative('src/core/operations.ts'),loadNative('src/mcp/dispatch.ts'),
     loadNative('src/core/ops/contract.ts'),loadNative('src/core/ops/context.ts')]);
@@ -47,6 +49,7 @@ export async function nativeBindings({enforce=true}={}) {
   const actual=catalog(operations),report=compareCatalog(actual,contract.operations);
   const fences=[...context.CLIENT_FENCED_WRITE_OPS].sort();
   report.fences_compatible=JSON.stringify(fences)===JSON.stringify(contract.fenced_write_operations);
+  report.response_metadata_compatible=true;
   report.compatible=report.compatible&&report.fences_compatible;
   if(enforce) requireThat(report.compatible,'upstream_contract_changed',
     'Native operation catalog changed; run compat and review the adapter contract before serving');

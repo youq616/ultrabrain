@@ -23,7 +23,8 @@ def literal_path(value):
 def exec_quote(value):
     return quote(value).replace('$','$$')
 
-def render(root, home, bun, python, port=3131, public_url=None):
+def render(root, home, bun, python, port=3131, public_url=None, profile='compatibility'):
+    if profile not in ('compatibility','governed'): raise ValueError('Invalid MCP profile')
     if not 1024 <= port <= 65535: raise ValueError('Port must be 1024..65535')
     if public_url:
         url=urlsplit(public_url)
@@ -56,6 +57,7 @@ TimeoutStopSec=90
 [Install]
 WantedBy=default.target
 '''
+    profile_arg = ' --profile governed' if profile=='governed' else ''
     extra = ' --public-url '+exec_quote(public_url) if public_url else ''
     mcp = f'''[Unit]
 Description=Ultrabrain authenticated MCP on loopback
@@ -66,7 +68,7 @@ After=ultrabrain-postgres.service
 Type=simple
 {common}EnvironmentFile=-{literal_path(home / 'service.env')}
 ExecStartPre={command} migrate
-ExecStart={command} mcp --http --bind 127.0.0.1 --port {port} --suppress-bootstrap-token{extra}
+ExecStart={command} mcp{profile_arg} --http --bind 127.0.0.1 --port {port} --suppress-bootstrap-token{extra}
 Restart=on-failure
 RestartSec=5
 TimeoutStartSec=180
@@ -84,6 +86,7 @@ def main():
     parser.add_argument('--replace',action='store_true',help='Explicitly replace differing existing unit files')
     parser.add_argument('--port',type=int,default=3131)
     parser.add_argument('--public-url')
+    parser.add_argument('--profile',choices=['compatibility','governed'],default='compatibility')
     args=parser.parse_args()
     if args.output and args.enable: parser.error('--output cannot be combined with --enable')
     if os.geteuid()==0: parser.error('Run as the same unprivileged account that bootstrapped Ultrabrain')
@@ -92,7 +95,7 @@ def main():
     bun=shutil.which('bun'); python=shutil.which('python3')
     if not bun or not python: parser.error('bun and python3 must be available in PATH')
     target=args.output or Path.home()/'.config/systemd/user'
-    units=render(ROOT,home,Path(bun).resolve(),Path(python).resolve(),args.port,args.public_url)
+    units=render(ROOT,home,Path(bun).resolve(),Path(python).resolve(),args.port,args.public_url,args.profile)
     target.mkdir(parents=True,exist_ok=True)
     # Check every target before writing anything. No silent overwrite of operator customization.
     for name,content in units.items():

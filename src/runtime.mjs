@@ -1,3 +1,6 @@
+import {installResponseMetadataGuard} from './adapters/response-metadata.mjs';
+import {deploymentProfile} from './enterprise-policy.mjs';
+import {publishGovernedSurface} from './enterprise.mjs';
 import { readFileSync, mkdirSync, lstatSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { resolve, join } from 'node:path';
@@ -49,20 +52,27 @@ export function prepareEnvironment() {
   process.env.GBRAIN_DATABASE_URL = config.database_url;
   return config;
 }
-let registered;
-export async function installPlugin() {
-  if (registered) return registered;
+let installation;
+export function installPlugin() {
+  // A failed partial installation stays failed; concurrent connects share one attempt.
+  if(installation)return installation;
+  installation=(async()=>{
   requireThat(typeof Bun !== 'undefined', 'bun_required', 'Runtime requires Bun >=1.3.11; pure tests run on Node');
+  installResponseMetadataGuard(ROOT);
+  const profile=deploymentProfile(process.env.ULTRABRAIN_MCP_PROFILE);
   const {operations,validateParams,OperationError,context,auditSources} = await nativeBindings();
   const facts=factAdapter(operations,{validateParams,OperationError,auditSources});
-  registered = registerPlugin(operations, { validateParams, OperationError,
+  let registered = registerPlugin(operations, { validateParams, OperationError,
     enforceClientSlugFence: context.enforceClientSlugFence, extractWithEvidence:facts.extract });
   // Only these two wrappers delegate exclusively to the corresponding fenced native write.
   // Session extraction may touch entity pages; never grant it to prefix-bound clients.
   context.CLIENT_FENCED_WRITE_OPS.add('ultra_write');
   context.CLIENT_FENCED_WRITE_OPS.add('ultra_delete');
   registered = [...registered, ...facts.register(), ...registerProjectPlugin(operations, { OperationError })];
+  if(profile==='governed')publishGovernedSurface(operations,{OperationError});
   return registered;
+  })();
+  return installation;
 }
 export async function connect({ migrate = false } = {}) {
   prepareEnvironment();
