@@ -1,17 +1,21 @@
-/** Real authenticated Streamable HTTP MCP, using the pinned upstream client SDK. */
+/** Real authenticated Streamable HTTP MCP, including a separate consolidation process. */
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer } from 'node:net';
 import { once } from 'node:events';
 import { connect, ROOT } from '../src/runtime.mjs';
 import { Client } from '../vendor/gbrain/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js';
 import { StreamableHTTPClientTransport } from '../vendor/gbrain/node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.js';
-
 const engine = await connect();
 const suffix = randomBytes(6).toString('hex');
 const source = `http-${suffix}`;
 const clients = [], tokenNames = [];
+const workerDir=mkdtempSync(join(tmpdir(),'ub-worker-http-'));
+let worker;
 let child, checks = 0;
 const proof = () => checks++;
 const freePort = async () => {
@@ -48,7 +52,6 @@ try {
       cwd:ROOT, env:{...process.env,GBRAIN_SWEEP:'0',GBRAIN_ADMIN_BOOTSTRAP_TOKEN:randomBytes(32).toString('hex')},
       stdio:['ignore','ignore','pipe'],
     });
-  // Consume diagnostics without retaining tokens or memory in test output.
   child.stderr.on('data', () => {});
   let ready = false;
   for(let attempt=0;attempt<100;attempt++) {
@@ -62,11 +65,10 @@ try {
     body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list',params:{}})});
   assert.equal(unauthorized.status,401); proof();
   const clientFor = async token => {
-    const client=new Client({name:'ultrabrain-http-test',version:'0.2.0'});
+    const client=new Client({name:'ultrabrain-http-test',version:'0.4.0'});
     clients.push(client);
     await client.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp`),{
-      requestInit:{headers:{Authorization:`Bearer ${token}`}},
-      reconnectionOptions:{maxRetries:0},
+      requestInit:{headers:{Authorization:`Bearer ${token}`}},reconnectionOptions:{maxRetries:0},
     }));
     return client;
   };
@@ -96,11 +98,30 @@ try {
   await denied(call(reader,'ultra_project_save',{project_id,state,expected_revision:1,event_id:'forbidden'}));
   await denied(call(foreign,'ultra_project_load',{project_id}));
   assert.ok(!writerCatalog.tools.some(t=>t.name==='ultra_verify_run')); proof();
-  // Same live client and credentials: revocation must take effect on the next HTTP request.
+  const captureArgs={session_id:'http-deferred',event_id:suffix,transcript:'consented HTTP queue canary',defer_extraction:true};
+  const capture=result(await call(writer,'ultra_commit_session',captureArgs));
+  assert.equal(capture.state,'queued');assert.equal(capture.storage,'journaled');proof();
+  await denied(call(reader,'ultra_process_sessions',{expected_source:source}));
+  await denied(call(foreign,'ultra_session_status',{session_id:'http-deferred',event_id:suffix}));
+  const tokenFile=join(workerDir,'token');writeFileSync(tokenFile,writerToken,{mode:0o600});
+  worker=spawn(process.execPath,[`${ROOT}/scripts/consolidate.mjs`,'--url',`${base}/mcp`,'--token-file',tokenFile,'--source',source],
+    {cwd:ROOT,env:process.env,stdio:['ignore','pipe','pipe']});
+  let output='',diagnostic='';worker.stdout.on('data',x=>output+=x);worker.stderr.on('data',x=>diagnostic+=x);
+  const timer=setTimeout(()=>worker.kill('SIGKILL'),20000);
+  const [code]=await once(worker,'close');clearTimeout(timer);
+  assert.equal(code,0,diagnostic);assert.equal(JSON.parse(output).states.needs_model,1);
+  assert.ok(!output.includes(writerToken)&&!output.includes(captureArgs.transcript));proof();
+  assert.equal(result(await call(writer,'ultra_session_status',{session_id:'http-deferred',event_id:suffix})).state,'needs_model');proof();
+  result(await call(writer,'ultra_commit_session',{...captureArgs,event_id:'revocation-pending'}));
   await engine.executeRaw('UPDATE access_tokens SET revoked_at=now() WHERE name=$1',[tokenNames[0]]);
+  await denied(call(writer,'ultra_process_sessions',{expected_source:source}));
+  const [pending]=await engine.executeRaw("SELECT state,attempts FROM ultrabrain.session_receipts WHERE source_id=$1 AND session_id='http-deferred' AND event_id='revocation-pending'",[source]);
+  assert.equal(pending.state,'queued');assert.equal(pending.attempts,0);proof();
   await denied(call(writer,'ultra_ls',{uri:`ultra://${source}/`}));
   console.log(`PASS ${checks} authenticated HTTP checks: catalog scopes, CRUD, source grants, privacy, live revocation`);
 } finally {
+  if(worker&&worker.exitCode===null) worker.kill('SIGKILL');
+  rmSync(workerDir,{recursive:true,force:true});
   for(const client of clients) { try { await client.close(); } catch {} }
   if(child && child.exitCode===null) {
     child.kill('SIGTERM');

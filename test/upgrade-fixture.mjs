@@ -44,7 +44,6 @@ try {
     await call('ultra_project_save',{project_id:project,event_id:'checkpoint',expected_revision:0,state:{goal:'Preserve old data',tasks:[],next_actions:['Resume work']}});
     await call('ultra_commit_session',{session_id:'s1',event_id:'e1',transcript:'Consented upgrade fixture transcript',visibility:'private'});
     const box=new DurableOutbox(boxOptions);
-    // Accepted by the OLD writer, unreadable by its OLD 128-KiB reader: real regression seed.
     box.enqueue({session_id:'s2',event_id:'escaped',transcript:'x'+'"'.repeat(65535),visibility:'private'});
     writeFileSync(join(directory,'fingerprints.json'),JSON.stringify(await fingerprint()),{mode:0o600});
     writeFileSync(join(directory,'baseline-eval.json'),JSON.stringify(await evaluate()),{mode:0o600});
@@ -60,13 +59,11 @@ try {
     assert.equal(sent,1);assert.equal(box.inspect().pending,0);
     assert.deepEqual((await applyMigrations(engine)).applied,[]);
     const before=await migrationStatus(engine);assert.equal(before.pending.length,0);
-    // Intentional mid-migration SQL failure. BOTH DDL and ledger entries must roll back.
-    const failure={id:'0002-failure-probe',statements:['CREATE TABLE ultrabrain.rollback_probe (id integer)','SELECT * FROM ultrabrain.deliberately_missing_table']};
+    const failure={id:'0099-failure-probe',statements:['CREATE TABLE ultrabrain.rollback_probe (id integer)','SELECT * FROM ultrabrain.deliberately_missing_table']};
     await assert.rejects(applyMigrations(engine,{plan:[...migrations,failure]}));
     assert.equal((await engine.executeRaw("SELECT to_regclass('ultrabrain.rollback_probe') IS NULL AS gone"))[0].gone,true);
     assert.deepEqual(await migrationStatus(engine),before);
-    await assert.rejects(applyMigrations(engine,{plan:[{...migrations[0],statements:['SELECT 1']}]}),{code:'migration_checksum_mismatch'});
-    // Concurrent invocations serialize without duplicate migration ledger entries.
+    await assert.rejects(applyMigrations(engine,{plan:migrations.map((m,i)=>i===0?{...m,statements:['SELECT 1']}:m)}),{code:'migration_checksum_mismatch'});
     await Promise.all([applyMigrations(engine),applyMigrations(engine)]);
     assert.deepEqual(await migrationStatus(engine),before);
     const report=await evaluate();writeFileSync(join(directory,'candidate-eval.json'),JSON.stringify(report),{mode:0o600});

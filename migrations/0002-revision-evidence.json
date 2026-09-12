@@ -1,0 +1,6 @@
+{
+  "id": "0002-revision-evidence",
+  "statements": [
+    "ALTER TABLE ultrabrain.verification_receipts ADD COLUMN IF NOT EXISTS workspace jsonb CHECK (workspace IS NULL OR jsonb_typeof(workspace)='object')"
+  ]
+}

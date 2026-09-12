@@ -1,4 +1,5 @@
-/** Synchronous, retryable session finalization. No untrusted jobs inherit host authority. */
+/** Synchronous, retryable session finalization, with explicit deferred capture opt-in. */
+import { enqueueSession } from './deferred-sessions.mjs';
 import { randomUUID } from 'node:crypto';
 import { text, sourceId, sha256, requireThat, uri } from './core.mjs';
 export const SESSION_SCHEMA = `
@@ -17,6 +18,8 @@ UPDATE ultrabrain.session_receipts SET result =
  WHERE jsonb_typeof(result)='string';
 `;
 export async function commitSession(store, p) {
+  requireThat(p.defer_extraction === undefined || typeof p.defer_extraction === 'boolean', 'invalid_params', 'defer_extraction must be boolean');
+  if (p.defer_extraction === true) return enqueueSession(store,p);
   const source = sourceId(store.source);
   for (const key of ['session_id', 'event_id']) {
     requireThat(typeof p[key] === 'string' && /^[a-zA-Z0-9_-]{1,96}$/.test(p[key]),
@@ -27,10 +30,8 @@ export async function commitSession(store, p) {
   requireThat(['private', 'world'].includes(visibility), 'invalid_params', 'Invalid visibility');
   const actor = sha256(store.actor);
   const digest = sha256(JSON.stringify([p.transcript, visibility]));
-  // Actor separation prevents unrelated clients from overwriting each other's session pages.
   const slug = `sessions/${actor.slice(0, 24)}/${p.session_id}/${p.event_id}`;
   if (store.dryRun) return { dry_run: true, uri: uri(source, slug) };
-  // Apply the native source/slug WRITE fence before touching receipt metadata.
   await store.assertWrite(slug);
   const lease = randomUUID();
   const keys = [source, actor, p.session_id, p.event_id];
@@ -41,15 +42,16 @@ export async function commitSession(store, p) {
     ON CONFLICT (source_id,actor,session_id,event_id) DO UPDATE
       SET state='processing',lease_id=EXCLUDED.lease_id,
           lease_until=EXCLUDED.lease_until,updated_at=now()
-      WHERE ultrabrain.session_receipts.content_hash=EXCLUDED.content_hash
+      WHERE NOT ultrabrain.session_receipts.deferred
+        AND ultrabrain.session_receipts.content_hash=EXCLUDED.content_hash
         AND ((ultrabrain.session_receipts.state='processing'
               AND ultrabrain.session_receipts.lease_until < now())
           OR (ultrabrain.session_receipts.state IN ('needs_model','failed') AND $7))
     RETURNING state`, [...keys, digest, lease, p.retry === true]);
   if (!claimed.length) {
-    const [row] = await store.sql(`SELECT content_hash,state,result FROM ultrabrain.session_receipts
+    const [row] = await store.sql(`SELECT content_hash,state,result,deferred FROM ultrabrain.session_receipts
       WHERE source_id=$1 AND actor=$2 AND session_id=$3 AND event_id=$4`, keys);
-    requireThat(row && row.content_hash === digest, 'conflict', 'event_id was already used for different content or visibility');
+    requireThat(row && !row.deferred && row.content_hash === digest, 'conflict', 'event_id was already used for different content, visibility or processing mode');
     requireThat(row.state !== 'processing', 'busy', 'This event is being finalized; retry after its lease expires');
     return { ...row.result, state: row.state, replayed: true };
   }
@@ -72,7 +74,6 @@ export async function commitSession(store, p) {
     requireThat(updated.length === 1, 'lease_lost', 'Lease changed; inspect the receipt before retrying');
     return result;
   } catch (error) {
-    // Never retain the transcript, provider exception, credentials, or raw prompts in receipt errors.
     await store.sql(`UPDATE ultrabrain.session_receipts SET state='failed',
       result='{"error":"session_finalize_failed","retryable":true}'::jsonb,
       lease_until=NULL,updated_at=now()

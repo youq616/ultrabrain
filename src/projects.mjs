@@ -1,8 +1,6 @@
-/** Structured work-state, not a duplicate facts/vector store. Every query is source-scoped.
- * Only the host's local verification runner may INSERT execution receipts; no MCP
- * method accepts a claimed exit code or creates a verified receipt.
- */
+/** Source-scoped work state. Only the trusted host runner creates execution receipts. */
 import { randomUUID } from 'node:crypto';
+import { codeRevision, matchesCodeRevision } from './workspace-evidence.mjs';
 import { requireThat, sourceId, text, integer, sha256, clip } from './core.mjs';
 export const PROJECT_SCHEMA = `
 CREATE SCHEMA IF NOT EXISTS ultrabrain;
@@ -44,7 +42,9 @@ function strings(value, max = 32) {
   requireThat(Array.isArray(value) && value.length <= max, 'invalid_params', 'Too many entries or invalid list');
   return value.map(v => text(v,'entry',2048));
 }
-export const taskHash = task => sha256(JSON.stringify([task.id, task.title, task.acceptance]));
+// Keep historical hashes unchanged for tasks with no explicit code constraint.
+export const taskHash = task => sha256(JSON.stringify(task.code_revision === undefined
+  ? [task.id, task.title, task.acceptance] : [task.id, task.title, task.acceptance, task.code_revision]));
 export function normalizeProject(state) {
   shape(state,['goal','constraints','decisions','tasks','blockers','next_actions']);
   const out = { goal: text(state.goal,'goal',4096), constraints: strings(state.constraints ?? []),
@@ -53,14 +53,15 @@ export function normalizeProject(state) {
   requireThat(Array.isArray(state.tasks) && state.tasks.length <= 64, 'invalid_params', 'tasks must be an array of at most 64 tasks');
   const ids = new Set();
   out.tasks = state.tasks.map(t => {
-    shape(t,['id','title','acceptance','status','receipt_ids']);
+    shape(t,['id','title','acceptance','status','receipt_ids','code_revision']);
     identifier(t.id,'task id'); requireThat(!ids.has(t.id),'invalid_params','Duplicate task id'); ids.add(t.id);
     requireThat(['planned','in_progress','blocked','reported_complete','verified_complete'].includes(t.status), 'invalid_params', 'Unknown task status');
     const receipt_ids = t.receipt_ids ?? [];
     requireThat(Array.isArray(receipt_ids) && receipt_ids.length <= 16 && receipt_ids.every(x =>
       typeof x === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(x)), 'invalid_params','Invalid receipt ids');
     requireThat(t.status !== 'verified_complete' || receipt_ids.length > 0, 'evidence_required', 'Verified completion requires host execution evidence');
-    return { id: t.id, title: text(t.title,'title',2048), acceptance: strings(t.acceptance ?? [],16), status: t.status, receipt_ids };
+    const binding = t.code_revision === undefined ? {} : {code_revision:codeRevision(t.code_revision)};
+    return { id: t.id, title: text(t.title,'title',2048), acceptance: strings(t.acceptance ?? [],16), status: t.status, receipt_ids, ...binding };
   });
   requireThat(Buffer.byteLength(JSON.stringify(out)) <= 65536, 'invalid_params', 'Project state exceeds 64 KiB');
   return out;
@@ -90,7 +91,7 @@ export function projectTools(ctx) {
     const [row]=await engine.executeRaw('SELECT revision,state,updated_at FROM ultrabrain.projects WHERE source_id=$1 AND project_id=$2',[source,project]);
     requireThat(row,'not_found','Project not found in this source');
     return { source_id:source, project_id:project, ...row, trust:'untrusted-memory-data',
-      verification_scope:'Recorded host process exit only; not proof of arbitrary real-world claims' };
+      verification_scope:'Host process exit; tasks with code_revision additionally require clean matching Git observations. Not a hermetic build, CI or deployment attestation' };
   }
   async function save(p) {
     const project=identifier(p.project_id,'project id'), event=identifier(p.event_id,'event id');
@@ -110,11 +111,12 @@ export function projectTools(ctx) {
       const [current]=await tx.executeRaw('SELECT revision FROM ultrabrain.projects WHERE source_id=$1 AND project_id=$2',[source,project]);
       requireThat((current?.revision ?? 0) === p.expected_revision,'revision_conflict','Project changed; reload and reconcile instead of overwriting');
       for(const task of state.tasks.filter(t => t.status === 'verified_complete')) {
-        const receipts=await tx.executeRaw(`SELECT receipt_id,subject_hash,exit_code,timed_out FROM ultrabrain.verification_receipts
+        const receipts=await tx.executeRaw(`SELECT receipt_id,subject_hash,exit_code,timed_out,workspace FROM ultrabrain.verification_receipts
           WHERE source_id=$1 AND project_id=$2 AND task_id=$3 AND receipt_id=ANY($4::uuid[])`,[source,project,task.id,task.receipt_ids]);
         requireThat(receipts.length === new Set(task.receipt_ids).size && receipts.every(r =>
-          r.subject_hash === taskHash(task) && r.exit_code === 0 && !r.timed_out),
-          'evidence_required','Receipt is missing, failed, stale or belongs to another source/project/task');
+          r.subject_hash === taskHash(task) && r.exit_code === 0 && !r.timed_out &&
+          (task.code_revision === undefined || matchesCodeRevision(r.workspace,task.code_revision))),
+          'evidence_required','Receipt is missing, failed, stale, code-mismatched or belongs to another source/project/task');
       }
       const revision=p.expected_revision+1;
       await tx.executeRaw(`INSERT INTO ultrabrain.projects(source_id,project_id,revision,state) VALUES($1,$2,$3,$4::text::jsonb)
@@ -135,6 +137,16 @@ export function projectTools(ctx) {
       WHERE source_id=$1 AND project_id=$2 AND revision<$3 ORDER BY revision DESC LIMIT $4`,[source,project,before,limit]);
     return { project_id:project,revisions:rows,next_before_revision:rows.length === limit ? rows.at(-1).revision : null };
   }
+  async function evidence(p) {
+    const project=identifier(p.project_id);
+    requireThat(typeof p.receipt_id === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(p.receipt_id),
+      'invalid_params','receipt_id must be a UUID');
+    const [row]=await engine.executeRaw(`SELECT receipt_id,task_id,subject_hash,kind,exit_code,timed_out,
+      command_sha256,stdout_sha256,stderr_sha256,started_at,finished_at,provenance,workspace
+      FROM ultrabrain.verification_receipts WHERE source_id=$1 AND project_id=$2 AND receipt_id=$3::uuid`,[source,project,p.receipt_id]);
+    requireThat(row,'not_found','Receipt not found in this source and project');
+    return {source_id:source,project_id:project,...row,scope:'Operator-selected process and optional Git observations, not arbitrary business completion'};
+  }
   async function forget(p) {
     const project=identifier(p.project_id); integer(p.expected_revision,undefined,1,2147483647);
     requireThat(p.expected_revision !== undefined && p.confirm === project,'invalid_params','Confirm the exact project id and current revision');
@@ -148,17 +160,20 @@ export function projectTools(ctx) {
       return { project_id:project,forgotten:true,scope:'live project state, history and execution receipts; not page memories, WAL or backups' };
     });
   }
-  return { load,save,resume,history,forget };
+  return { load,save,resume,history,evidence,forget };
 }
-/** Host-only function, intentionally NOT registered as an MCP operation. */
+/** Host-only; deliberately not registered as an MCP operation. */
 export async function recordExecution(engine, source, project, task, execution) {
   sourceId(source); identifier(project); identifier(task.id);
   const receipt_id=randomUUID();
   await engine.executeRaw(`INSERT INTO ultrabrain.verification_receipts(receipt_id,source_id,project_id,task_id,subject_hash,kind,
-    exit_code,timed_out,command_sha256,stdout_sha256,stderr_sha256,started_at,finished_at,provenance)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'host-process-exit')`,
+    exit_code,timed_out,command_sha256,stdout_sha256,stderr_sha256,started_at,finished_at,provenance,workspace)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'host-process-exit',$14::text::jsonb)`,
   [receipt_id,source,project,task.id,taskHash(task),execution.kind,execution.exit_code,execution.timed_out,
-    execution.command_sha256,execution.stdout_sha256,execution.stderr_sha256,execution.started_at,execution.finished_at]);
+    execution.command_sha256,execution.stdout_sha256,execution.stderr_sha256,execution.started_at,execution.finished_at,
+    execution.workspace ? JSON.stringify(execution.workspace) : null]);
   return { receipt_id,project_id:project,task_id:task.id,exit_code:execution.exit_code,
+    workspace:execution.workspace ?? null,
+    code_revision_matched:task.code_revision === undefined ? null : matchesCodeRevision(execution.workspace,task.code_revision),
     provenance:'host-process-exit',scope:'Only this operator-selected process and task specification, not full project completion' };
 }

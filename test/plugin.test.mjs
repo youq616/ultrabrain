@@ -9,8 +9,8 @@ function fixture() {
   const native={validateParams:()=>null,OperationError,enforceClientSlugFence:()=>{}};
   return {operations,native,calls};
 }
-test('plugin registers six explicit read/write operations',()=>{
-  const f=fixture();assert.equal(registerPlugin(f.operations,f.native).length,6);
+test('plugin registers eight explicit read/write operations',()=>{
+  const f=fixture();assert.equal(registerPlugin(f.operations,f.native).length,8);
   for(const op of f.operations.filter(x=>x.name.startsWith('ultra_')))
     assert.equal(op.mutating,op.scope==='write');
 });

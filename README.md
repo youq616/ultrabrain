@@ -2,33 +2,27 @@
 
 Linux-first agent memory, built around GBrain's PostgreSQL-native business engine and OpenViking-inspired hierarchical context retrieval.
 
-## 开发状态
+## 架构与状态
 
-本仓库正在建设。首次交付的目标是可验证的集成版本，**不是宣称已经完成两个上游的全部功能等价**。功能保留、已实现扩展、待移植功能和验收证据将分别记录在 `docs/FEATURES.md` 和 `docs/VALIDATION.md`。
+以锁定的 GBrain 业务引擎为基础，保留页面、事实、版本、纠正、检索、图谱、技能与任务，新增 Ultrabrain 产品层，不复制第二套记忆数据库。OpenViking 是按功能逐项吸收的参考上游，**尚未完成双方全部功能等价**。
 
-## 架构决定
+PostgreSQL 随项目在本机安装和管理，不要求外部数据库，不是 SQLite 或 PGLite。外部通过受认证的 MCP 访问，不开放数据库超级用户或新增任意 SQL/远程命令执行接口。不依赖 Docker Hub。
 
-- 以 GBrain 的业务引擎为基础，保留来源、版本、纠正/撤回、混合检索、知识图谱、技能和后台任务体系，不重新发明第二套记忆数据库。
-- 新建 ultrabrain 产品层，吸收 OpenViking 的统一上下文 URI、L0/L1/L2、目录式探索、分层召回和可观测检索。
-- PostgreSQL 随项目在本机安装并由项目管理，不要求外部数据库服务；不是 SQLite，也不是把 PGLite 冒充原生 PostgreSQL。数据库不直接暴露公网。
-- 对外提供经过授权的 MCP 读写接口，不开放任意 SQL、数据库超级用户或无约束远程命令执行。
-- 三个上游按完整提交 SHA 锁定。更新检查与生产升级分离，保留差异审查、兼容性测试、数据库备份与恢复路径；不自动合并任意上游变更。
-- 不修改 `youq616/qbrain`：它是独立的 Windows 项目。
+上游完整 SHA 锁定，更新检查、候选验证与生产升级分离。不自动合并上游变更，不修改独立 Windows 项目 youq616/qbrain。
 
-## 上游
+## 当前增量：0.4.0-alpha.1
+
+新增可选的代码版本绑定任务、只读执行回执查询、会话原始持久化与模型整理分离，以及使用当前 MCP 身份的独立整理客户端。旧回执不会自动成为代码认证，旧同步采集行为不默认改变。
+
+参阅 [部署](docs/DEPLOYMENT.md)、[可靠性接入](docs/RELIABILITY.md)、[版本证据](docs/REVISION-EVIDENCE.md)、[延后整理](docs/DEFERRED-SESSIONS.md) 与 [本版验收](docs/VALIDATION-0.4.md)。本版上游锁定版本未改变，语义摘要、多模态完整移植和用户服务器部署没有因此被宣布完成。
+
+0.3.0 的持久化 outbox、项目 CAS/历史/续接与 0.3.1 的接口合同、迁移账本、旧数据升级演练和候选 PR 流程继续保留，详见 [升级工程](docs/UPGRADE-ENGINEERING.md)、[功能覆盖](docs/FEATURES.md) 与 [产品计划](docs/ROADMAP.md)。
+
+## 上游与许可证
 
 - GBrain: https://github.com/youq616/gbrain — upstream https://github.com/garrytan/gbrain
 - OpenViking: https://github.com/youq616/OpenViking — upstream https://github.com/volcengine/OpenViking
 - PostgreSQL: https://github.com/postgres/postgres
+- pgvector: https://github.com/pgvector/pgvector
 
-上游保留各自许可证与署名。OpenViking 当前主项目使用 AGPLv3，GBrain 使用 MIT，PostgreSQL 使用 PostgreSQL License。合并或分发时必须保留对应许可证与完整来源记录。
-
-## 0.3.0-alpha.1 可靠性增量
-
-新增客户端持久化 outbox、带乐观并发控制的项目检查点、换会话项目续接、主机执行证据与检索回归评测。修复 JSONB 回执双编码及 PostgreSQL 同名 schema 搜索路径问题。
-
-详见 [可靠性接入](docs/RELIABILITY.md)、[完整产品计划](docs/ROADMAP.md) 和 [本版验收方法](docs/VALIDATION-P0.md)。版本仍是 alpha；真实语义摘要、多模态、完整上游兼容与目标服务器部署不因这些增量而被宣布完成。
-
-## 0.3.1-alpha.1 升级工程
-
-队列边界修复、损坏隔离、原生接口合同、迁移账本、真实旧应用升级演练和上游候选 PR 流程见 [升级工程说明](docs/UPGRADE-ENGINEERING.md)。本版本没有改变上游锁定提交，不将词法回归称为语义质量证明；候选和数据库升级都不自动发布到生产。
+各上游保留自身许可证及署名。锁定的 OpenViking 主项目为 AGPLv3、GBrain 为 MIT、PostgreSQL/pgvector 使用各自 PostgreSQL License 文件。引入具体代码或分发时需保留完整来源并审查相应许可证，参考源码指针不代表已完成代码移植。

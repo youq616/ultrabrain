@@ -1,7 +1,8 @@
 /** Append-only application metadata migrations; no PostgreSQL-major or native-engine upgrade magic. */
 import {readFileSync} from 'node:fs';
 import {requireThat,sha256} from './core.mjs';
-export const migrations=[JSON.parse(readFileSync(new URL('../migrations/0001-baseline.json',import.meta.url),'utf8'))];
+export const migrations=['0001-baseline','0002-revision-evidence','0003-deferred-sessions'].map(id =>
+  JSON.parse(readFileSync(new URL(`../migrations/${id}.json`,import.meta.url),'utf8')));
 export const checksum=m=>sha256(JSON.stringify(m.statements));
 export function validateHistory(rows, plan=migrations) {
   requireThat(Array.isArray(rows)&&Array.isArray(plan),'migration_invalid','Invalid migration history');
@@ -24,8 +25,6 @@ export async function migrationStatus(engine) {
 export async function applyMigrations(engine,{plan=migrations}={}) {
   validateHistory([],plan);
   return engine.transaction(async tx=>{
-    // Same global transaction lock in every release: serializes first creation and
-    // concurrent application migrations. Native GBrain maintains its own migration mechanism.
     await tx.executeRaw('SELECT pg_advisory_xact_lock(1431061074,1)');
     await tx.executeRaw('CREATE SCHEMA IF NOT EXISTS ultrabrain');
     await tx.executeRaw(`CREATE TABLE IF NOT EXISTS ultrabrain.schema_migrations (
@@ -34,8 +33,6 @@ export async function applyMigrations(engine,{plan=migrations}={}) {
     const rows=await tx.executeRaw('SELECT id,checksum FROM ultrabrain.schema_migrations ORDER BY id');
     const pending=validateHistory(rows,plan);
     for(const migration of pending) {
-      // Explicit statements support function bodies and semicolons inside literals;
-      // there is no naive SQL splitting at execution time.
       for(const statement of migration.statements) await tx.executeRaw(statement);
       await tx.executeRaw('INSERT INTO ultrabrain.schema_migrations(id,checksum) VALUES ($1,$2)',
         [migration.id,checksum(migration)]);

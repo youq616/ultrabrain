@@ -1,10 +1,11 @@
 import { contextTools } from './context.mjs';
+import { processSessions, sessionStatus } from './deferred-sessions.mjs';
+import { authorizeProjects } from './projects.mjs';
 import { commitSession } from './sessions.mjs';
 import { UltraError, requireThat } from './core.mjs';
 const string = (description, required = false) => ({ type: 'string', description, required });
 const number = description => ({ type: 'number', description });
 const URI = string('Canonical ultra://source/path. Root: ultra://default/', true);
-/** Native operations own validation, authentication, source/slug fences and privacy filtering. */
 export function registerPlugin(operations, native) {
   const names = new Set(operations.map(op => op.name));
   const base = new Map(operations.map(op => [op.name, op]));
@@ -13,6 +14,12 @@ export function registerPlugin(operations, native) {
   }
   const makeStore = ctx => ({
     source: ctx.sourceId, dryRun: ctx.dryRun,
+    transaction: fn => ctx.engine.transaction(fn),
+    async assertSessionAccess(mutating) {
+      authorizeProjects(ctx);
+      requireThat(!ctx.auth?.grantProjectionDegraded, 'permission_denied', 'Grant projection is degraded');
+      if (ctx.auth) requireThat(Array.isArray(ctx.auth.scopes) && (ctx.auth.scopes.includes('admin') || ctx.auth.scopes.includes(mutating ? 'write' : 'read')), 'permission_denied', 'Missing session scope');
+    },
     actor: `${ctx.auth?.principal?.kind ?? ctx.transport ?? 'local'}:${ctx.auth?.principal?.id ?? ctx.auth?.clientId ?? 'owner'}:${ctx.subagentId ?? ''}`,
     async assertWrite(slug) {
       requireThat(!ctx.viaSubagent, 'scope_denied', 'Session receipts are not exposed to delegated subagents');
@@ -21,14 +28,12 @@ export function registerPlugin(operations, native) {
       requireThat(ctx.engine.kind === 'postgres', 'unsupported_engine', 'ultrabrain requires native PostgreSQL');
       requireThat(!ctx.auth?.sourceId || ctx.auth.sourceId === ctx.sourceId, 'scope_denied', 'Source authority mismatch');
       native.enforceClientSlugFence(ctx, slug, 'put_page');
-      // put_page applies the remaining native subagent and grant guards before storing content.
     },
     sql: (query, params) => ctx.engine.executeRaw(query, params),
     async call(name, params) {
       const op = base.get(name);
       const error = native.validateParams(op, params);
       requireThat(!error, 'upstream_contract_changed', error ?? 'Native parameter mismatch');
-      // Preserve ctx in full, including delegated grants, visibility, remote=true and dryRun.
       return op.handler(ctx, params);
     },
   });
@@ -43,11 +48,16 @@ export function registerPlugin(operations, native) {
     ['ultra_write', 'write', 'Replace a canonical resource. Read L2 first; preserves native versions and write-through. Not a partial or compare-and-swap edit.',
       { uri: URI, content: string('Complete markdown with frontmatter', true) }, true],
     ['ultra_delete', 'remove', 'Native soft delete, not immediate physical erasure. Restoration follows the native recovery window.', { uri: URI }, true],
-    ['ultra_commit_session', 'session', 'Finalize one caller-owned session event synchronously. Records replay receipts; no model means needs_model, never fabricated extraction.',
+    ['ultra_commit_session', 'session', 'Finalize one caller-owned session event. Synchronous by default; opt in to deferred durable raw capture without a model call.',
       { session_id: string('Stable session identifier', true), event_id: string('Unique immutable event identifier', true),
         transcript: string('Consented transcript, maximum 64 KiB', true),
         visibility: { ...string('private (default) or world within your source grant'), enum: ['private','world'] },
-        retry: { type: 'boolean', description: 'Explicitly retry a failed or needs_model receipt' } }, true],
+        retry: { type: 'boolean', description: 'Explicitly retry a failed or needs_model receipt' },
+        defer_extraction: {type:'boolean',description:'Durable raw capture now; process later using the same authenticated actor. No model call during capture.'} }, true],
+    ['ultra_process_sessions','process', "Process this actor's deferred sessions with current permissions. At most five attempts; missing model remains needs_model.",
+      {expected_source:string('Must equal authenticated source; cannot select a different grant',true),limit:number('1..8, default 1'),retry:{type:'boolean',description:'Explicitly retry failed or missing-model events'}},true],
+    ['ultra_session_status','status','Read deferred delivery/extraction state for this actor. Never returns transcript text.',
+      {session_id:string('Session id',true),event_id:string('Event id',true)}],
   ];
   for (const [name, method, description, params, mutating] of definitions) {
     requireThat(!names.has(name), 'upstream_contract_changed', `Operation collision: ${name}`);
@@ -55,7 +65,10 @@ export function registerPlugin(operations, native) {
       area: 'ultrabrain', async handler(ctx, p) {
         try {
           const store = makeStore(ctx);
-          return method === 'session' ? await commitSession(store, p) : await contextTools(store)[method](p);
+          if (method === 'session') return await commitSession(store,p);
+          if (method === 'process') return await processSessions(store,p);
+          if (method === 'status') return await sessionStatus(store,p);
+          return await contextTools(store)[method](p);
         } catch (error) {
           if (error instanceof UltraError) throw new native.OperationError(error.code, error.message);
           throw error;

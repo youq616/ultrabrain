@@ -1,0 +1,12 @@
+{
+  "id": "0003-deferred-sessions",
+  "statements": [
+    "ALTER TABLE ultrabrain.session_receipts ADD COLUMN IF NOT EXISTS deferred boolean NOT NULL DEFAULT false",
+    "ALTER TABLE ultrabrain.session_receipts ADD COLUMN IF NOT EXISTS pending_payload jsonb CHECK (pending_payload IS NULL OR jsonb_typeof(pending_payload)='object')",
+    "ALTER TABLE ultrabrain.session_receipts ADD COLUMN IF NOT EXISTS attempts integer NOT NULL DEFAULT 0 CHECK (attempts>=0)",
+    "ALTER TABLE ultrabrain.session_receipts ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz NOT NULL DEFAULT now()",
+    "ALTER TABLE ultrabrain.session_receipts DROP CONSTRAINT session_receipts_state_check",
+    "ALTER TABLE ultrabrain.session_receipts ADD CONSTRAINT session_receipts_state_check CHECK (state IN ('queued','processing','completed','needs_model','failed'))",
+    "CREATE INDEX IF NOT EXISTS session_deferred_pending_idx ON ultrabrain.session_receipts (source_id,actor,state,next_attempt_at,created_at) WHERE deferred AND pending_payload IS NOT NULL"
+  ]
+}

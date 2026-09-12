@@ -11,6 +11,8 @@ queries = {
     'migration_ledger': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(id || ':' || checksum, ',' ORDER BY id)),'empty') FROM ultrabrain.schema_migrations",
     'projects': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(state::text, ',' ORDER BY source_id,project_id)),'empty') FROM ultrabrain.projects",
     'project_history': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(request_hash, ',' ORDER BY source_id,project_id,revision)),'empty') FROM ultrabrain.project_revisions",
+    'deferred_queue': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(content_hash || ':' || state || ':' || coalesce(pending_payload::text,''), ',' ORDER BY source_id,actor,session_id,event_id)),'empty') FROM ultrabrain.session_receipts WHERE deferred",
+    'workspace_evidence': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(workspace::text, ',' ORDER BY receipt_id)),'empty') FROM ultrabrain.verification_receipts WHERE workspace IS NOT NULL",
     'execution_evidence': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(subject_hash || ':' || exit_code::text, ',' ORDER BY receipt_id)),'empty') FROM ultrabrain.verification_receipts",
     'forgotten_projects': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(source_id || ':' || project_id, ',' ORDER BY source_id,project_id)),'empty') FROM ultrabrain.project_tombstones",
     'pages': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(id::text || ':' || coalesce(content_hash,''), ',' ORDER BY id)),'empty') FROM pages",

@@ -1,15 +1,9 @@
-/** Linux/local-filesystem journal. No second memory database, no stored credentials.
- * Delivery is at least once. Server receipt keys, NOT a local mutex, deduplicate writes.
- * Multiple drainers may submit the same event. An immutable ACK always wins over retries.
- */
+/** Linux/local-filesystem journal. At-least-once delivery; ACK tombstones win over retries. */
 import { constants, mkdirSync, lstatSync, openSync, closeSync, readFileSync,
   writeFileSync, fsyncSync, linkSync, unlinkSync, readdirSync, fstatSync, renameSync } from 'node:fs';
 import { resolve, join, dirname, parse } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { requireThat, text, integer, sha256, parseUri, UltraError } from './core.mjs';
-
-// 64 KiB of legal control characters can occupy six times as much in JSON.
-// One shared envelope limit is enforced on BOTH write and read paths.
 export const MAX_RECORD_BYTES = 512 * 1024;
 const isolatedErrors = new Set(['outbox_corrupt', 'insecure_outbox', 'ELOOP']);
 function encodeRecord(value) {
@@ -23,8 +17,6 @@ function id(value) {
   return value;
 }
 function secureDirectory(path) {
-  // Reject symlink ancestors, not just the final component. Shared parent directories
-  // such as /tmp are allowed; the journal itself must be private and owned by us.
   let cursor = resolve(path);
   while (cursor !== parse(cursor).root) {
     try { requireThat(!lstatSync(cursor).isSymbolicLink(), 'insecure_outbox', 'Symlinked journal path'); }
@@ -53,7 +45,7 @@ function syncDirectory(path) {
   try { fsyncSync(fd); } finally { closeSync(fd); }
 }
 function createImmutable(path, value) {
-  const encoded = encodeRecord(value); // reject before creating any file
+  const encoded = encodeRecord(value);
   const temp = join(dirname(path), `.pending-${randomUUID()}`);
   let fd;
   try {
@@ -74,7 +66,6 @@ function replacePrivate(path, value) {
 }
 const transient = new Set(['mcp_timeout','transport_error','busy','lease_lost','cancelled','unavailable','ECONNRESET','ECONNREFUSED','ETIMEDOUT']);
 const safeCode = e => typeof e?.code === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(e.code) ? e.code : 'transport_error';
-
 export class DurableOutbox {
   constructor({ directory, rootUri, principalId, serverId, maxEvents = 10000 } = {}) {
     text(directory, 'directory', 4096); text(principalId, 'principalId', 256); text(serverId, 'serverId', 512);
@@ -99,8 +90,9 @@ export class DurableOutbox {
   enqueue(input) {
     id(input.session_id); id(input.event_id); text(input.transcript, 'transcript', 65536);
     requireThat(['private','world'].includes(input.visibility), 'invalid_params', 'Invalid capture visibility');
+    requireThat(input.defer_extraction === undefined || typeof input.defer_extraction === 'boolean', 'invalid_params', 'Invalid processing mode');
     const payload = { session_id: input.session_id, event_id: input.event_id,
-      transcript: input.transcript, visibility: input.visibility };
+      transcript: input.transcript, visibility: input.visibility, ...(input.defer_extraction === true ? {defer_extraction:true} : {}) };
     const key = this.key(payload), digest = sha256(JSON.stringify(payload));
     requireThat(!this.isQuarantined(key), 'outbox_quarantined', 'Review the quarantined record before reusing this event');
     const ack = this.optional(key, 'ack');
@@ -113,8 +105,6 @@ export class DurableOutbox {
     if (!createImmutable(this.path(key, 'event'), record)) {
       requireThat(this.optional(key, 'event')?.digest === digest, 'conflict', 'Event id already queued with different content');
     }
-    // The producer count cap is advisory under concurrency, not a filesystem quota.
-    // Already durable unacknowledged events are never evicted to make space.
     return { key, queued: true, acknowledged: false };
   }
   keys() {
@@ -122,7 +112,6 @@ export class DurableOutbox {
       .map(n => n.slice(0,64)).sort();
   }
   isQuarantined(key) {
-    // Existence alone is fail-closed, even if the marker is corrupt or a symlink.
     try { lstatSync(this.path(key,'quarantine')); return true; }
     catch(e) { if(e.code === 'ENOENT') return false; throw e; }
   }
@@ -130,8 +119,6 @@ export class DurableOutbox {
     if (!isolatedErrors.has(error.code)) throw error;
     createImmutable(this.path(key,'quarantine'), {format:1,key,state:'quarantined',
       error:safeCode(error),detected_at:new Date().toISOString()});
-    // Preserve all original files in place for operator inspection. No raw contents
-    // or exception messages leave the journal, and no record is sent after isolation.
     return {key,state:'quarantined',error:safeCode(error)};
   }
   validatedEvent(key) {
@@ -152,7 +139,7 @@ export class DurableOutbox {
     if (!ack) return null;
     let valid = false;
     try { valid = ack.key === key && ack.digest === digest &&
-      ['completed','needs_model'].includes(ack.state) &&
+      (ack.deferred === true ? ack.storage === 'journaled' && ['queued','processing','completed','needs_model','failed'].includes(ack.state) : ['completed','needs_model'].includes(ack.state)) &&
       parseUri(ack.uri).source === parseUri(this.binding.root_uri).source; } catch {}
     requireThat(valid,'outbox_corrupt','Invalid ACK structure, digest or source');
     return ack;
@@ -176,22 +163,23 @@ export class DurableOutbox {
           state:ack ? ack.state : 'pending',retry,enqueued_at:event.enqueued_at});
       } catch(e) {
         if (!isolatedErrors.has(e.code)) throw e;
-        items.push({key,state:'corrupt',error:safeCode(e)}); // read-only, no mutation
+        items.push({key,state:'corrupt',error:safeCode(e)});
       }
     }
     return {binding:this.binding,pending:items.filter(x=>x.state==='pending').length,
       quarantined:items.filter(x=>['quarantined','corrupt'].includes(x.state)).length,items};
   }
   acknowledge(key, digest, receipt) {
-    requireThat(['completed','needs_model'].includes(receipt?.state) && typeof receipt.uri === 'string',
+    const event=this.optional(key,'event');
+    const deferred=event?.payload?.defer_extraction === true || this.optional(key,'ack')?.deferred === true;
+    requireThat((deferred ? receipt?.deferred === true && receipt.storage === 'journaled' && ['queued','processing','completed','needs_model','failed'].includes(receipt.state) : ['completed','needs_model'].includes(receipt?.state)) && typeof receipt.uri === 'string',
       'unconfirmed_capture', 'Server has not confirmed durable session storage');
     requireThat(parseUri(receipt.uri).source === parseUri(this.binding.root_uri).source, 'scope_denied', 'Receipt source mismatch');
     const ack = { key, digest, state: receipt.state, uri: receipt.uri,
-      storage: 'stored', extraction: receipt.state === 'completed' ? 'completed' : 'needs_model',
+      storage: deferred ? 'journaled' : 'stored', ...(deferred ? {deferred:true} : {}), extraction: receipt.state,
       acknowledged_at: new Date().toISOString() };
     createImmutable(this.path(key,'ack'), ack);
     requireThat(this.optional(key,'ack')?.digest === digest, 'conflict', 'Receipt digest conflict');
-    // ACK remains a small idempotency tombstone; no transcript is retained in it.
     try { unlinkSync(this.path(key,'event')); syncDirectory(this.directory); }
     catch (e) { if (e.code !== 'ENOENT') throw e; }
     return ack;
@@ -213,7 +201,7 @@ export class DurableOutbox {
         try {
           const receipt = await send({...event.payload,retry:true}, signal);
           this.acknowledge(key,event.digest,receipt);
-          results.push({key,state:receipt.state,storage:'stored'});
+          results.push({key,state:receipt.state,storage:receipt.storage??'stored'});
         } catch(e) {
           if (isolatedErrors.has(e.code)) throw e;
           const code = safeCode(e), attempts = (force ? 0 : retry?.attempts ?? 0) + 1;

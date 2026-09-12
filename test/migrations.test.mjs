@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validateHistory,checksum,migrations} from '../src/migrations.mjs';
 test('new install and adopted baseline have explicit pending migrations',()=>{
-  assert.equal(validateHistory([]).length,1);
+  assert.equal(validateHistory([]).length,migrations.length);
   assert.deepEqual(validateHistory(migrations.map(m=>({id:m.id,checksum:checksum(m)}))),[]);
 });
 test('unknown history, gaps and changed migrations are rejected',()=>{

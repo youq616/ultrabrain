@@ -21,6 +21,10 @@ jobs:
       - run: python3 -m unittest discover -s test -p 'test_*.py' -v
       - run: bash -n scripts/*.sh
   native-integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        upgrade_base: [38e0e6657561e17ba85c71d0783d604242a054e8, d7be484b445a893112d3a132c30f42282865a41a]
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
@@ -28,6 +32,7 @@ jobs:
       ULTRABRAIN_BUILD_JOBS: '2'
       ULTRABRAIN_DEBUG: '1'
       ULTRABRAIN_TEST_ALLOW_WRITE: '1'
+      ULTRABRAIN_UPGRADE_BASE: ${{ matrix.upgrade_base }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,7 +56,7 @@ jobs:
         run: bun src/cli.mjs compat
       - uses: actions/upload-artifact@v4
         with:
-          name: upgrade-regression-${{ github.sha }}
+          name: upgrade-regression-${{ github.sha }}-${{ matrix.upgrade_base }}
           path: ${{ runner.temp }}/ultrabrain-upgrade-gate.json
           retention-days: 30
           if-no-files-found: error
@@ -66,12 +71,12 @@ jobs:
       - name: Authenticated Streamable HTTP MCP
         run: bun test/http-integration.mjs
       - name: Durable capture, project concurrency and execution evidence
-        run: bun test/reliability-integration.mjs
+        run: bun test/reliability-integration.mjs && bun test/revision-evidence-integration.mjs && bun test/deferred-integration.mjs
       - name: Synthetic keyless retrieval regression (not semantic quality)
         run: ULTRABRAIN_EVAL_OUTPUT="$RUNNER_TEMP/memory-eval.json" bun test/memory-eval.mjs
       - uses: actions/upload-artifact@v4
         with:
-          name: memory-eval-${{ github.sha }}
+          name: memory-eval-${{ github.sha }}-${{ matrix.upgrade_base }}
           path: ${{ runner.temp }}/memory-eval.json
           retention-days: 30
           if-no-files-found: error
@@ -108,7 +113,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: diagnostic-runtime-${{ github.sha }}
+          name: diagnostic-runtime-${{ github.sha }}-${{ matrix.upgrade_base }}
           path: ${{ runner.temp }}/ub-fixture/
           retention-days: 3
           if-no-files-found: warn

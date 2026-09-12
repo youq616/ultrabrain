@@ -5,7 +5,7 @@ const args = process.argv.slice(2);
 const [command, ...rest] = args;
 try {
   if (!command || ['help','--help','-h'].includes(command)) {
-    console.log(`ultrabrain 0.3.1-alpha.1 — Linux / managed PostgreSQL
+    console.log(`ultrabrain 0.4.0-alpha.1 — Linux / managed PostgreSQL
   db init|start|stop|status|backup|restore-new   Manage local PostgreSQL
   db activate-runtime                        Switch a stopped cluster to reviewed same-major binaries
   verify --project ID --task ID -- command    Host-only execution evidence (no remote executor)
@@ -19,6 +19,7 @@ try {
 
 Setup: bash scripts/bootstrap-linux.sh
 No arbitrary SQL MCP endpoint is added. HTTP/OAuth: native serve --help.
+Deferred worker: bun scripts/consolidate.mjs --url URL --token-file PATH --source SOURCE
 Upstream-dependent features require their original providers/configuration.`);
   } else if (['db','upstream'].includes(command)) {
     const script = command === 'db' ? 'postgres.py' : 'upstreams.py';
@@ -51,8 +52,6 @@ Upstream-dependent features require their original providers/configuration.`);
       throw new Error('Use managed db init + migrate, or upstream prepare. Native self-update/init could bypass pins or replace PostgreSQL with PGLite.');
     }
     prepareEnvironment();
-    // Importing cli.ts is intentionally inert upstream. Use its real entrypoint,
-    // with a preload so our operation registrations exist before catalog creation.
     const child = spawn(process.execPath, ['--preload', `${ROOT}/src/preload.mjs`,
       `${ROOT}/vendor/gbrain/src/cli.ts`, ...forwarded], { stdio: 'inherit', env: process.env });
     const forwardTerm = () => child.kill('SIGTERM');
@@ -68,7 +67,6 @@ Upstream-dependent features require their original providers/configuration.`);
     }
   }
 } catch (error) {
-  // Native paths have their own redaction; do not print a connection URL or raw provider response here.
   console.error(`ultrabrain: ${error.code ?? error.name ?? 'error'}; ${['ENOENT','EACCES'].includes(error.code) ? 'Run db init and check private file permissions.' : 'Command failed; verify setup, configuration and upstream compatibility.'}`);
   if (process.env.ULTRABRAIN_DEBUG === '1') console.error(String(error.message).replace(/postgres(?:ql)?:\/\/\S+/g, '[database-url-redacted]'));
   process.exitCode = 1;

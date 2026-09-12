@@ -3,11 +3,14 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { requireThat, integer, sha256, sourceId } from './core.mjs';
 import { identifier, projectTools, recordExecution } from './projects.mjs';
+import { observeWorkspace, workspaceEvidence } from './workspace-evidence.mjs';
 export async function runObserved(argv,{ timeoutMs=300000,signal,cwd=process.cwd(),kind='test' }={}) {
   requireThat(Array.isArray(argv) && argv.length>0 && argv.length<=128 && argv.every(x => typeof x==='string'&&!x.includes('\0')),
     'invalid_params','Pass an executable and argument array');
   integer(timeoutMs,300000,10,3600000);
   requireThat(['test','build','check'].includes(kind),'invalid_params','kind must be test, build or check');
+  requireThat(!signal?.aborted,'cancelled','Cancelled before process start');
+  const before=await observeWorkspace(cwd);
   requireThat(!signal?.aborted,'cancelled','Cancelled before process start');
   const started_at=new Date().toISOString();
   const stdout=createHash('sha256'),stderr=createHash('sha256');
@@ -28,8 +31,10 @@ export async function runObserved(argv,{ timeoutMs=300000,signal,cwd=process.cwd
       child.once('close',(code)=>resolve(timed_out?124:cancelled?130:code??1));
     });
   } finally {clearTimeout(timer);clearTimeout(force);signal?.removeEventListener('abort',cancel);}
-  return {kind,exit_code,timed_out,command_sha256:sha256(JSON.stringify(argv)),
-    stdout_sha256:stdout.digest('hex'),stderr_sha256:stderr.digest('hex'),started_at,finished_at:new Date().toISOString()};
+  const finished_at=new Date().toISOString();
+  const workspace=workspaceEvidence(before,await observeWorkspace(cwd));
+  return {kind,exit_code,timed_out,workspace,command_sha256:sha256(JSON.stringify(argv)),
+    stdout_sha256:stdout.digest('hex'),stderr_sha256:stderr.digest('hex'),started_at,finished_at};
 }
 export async function verifyCLI(args,engine) {
   const split=args.indexOf('--');
@@ -52,5 +57,5 @@ export async function verifyCLI(args,engine) {
   finally { process.off('SIGINT',cancel); process.off('SIGTERM',cancel); }
   const receipt=await recordExecution(engine,options.source,options.project,task,execution);
   console.log(JSON.stringify(receipt,null,2));
-  return execution.exit_code;
+  return execution.exit_code || (receipt.code_revision_matched === false ? 2 : 0);
 }

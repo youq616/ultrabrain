@@ -1,16 +1,12 @@
 {
   "name": "ultrabrain",
-  "version": "0.3.1-alpha.1",
+  "version": "0.4.0-alpha.1",
   "private": true,
   "type": "module",
   "description": "Linux-native PostgreSQL agent memory with GBrain compatibility and hierarchical context",
   "license": "MIT",
-  "bin": {
-    "ultrabrain": "src/cli.mjs"
-  },
-  "engines": {
-    "bun": ">=1.3.11"
-  },
+  "bin": {"ultrabrain": "src/cli.mjs"},
+  "engines": {"bun": ">=1.3.11"},
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "test:integration": "bun test/integration.mjs",
@@ -21,6 +17,8 @@
     "test:reliability": "bun test/reliability-integration.mjs",
     "eval:memory": "bun test/memory-eval.mjs",
     "compat": "bun src/cli.mjs compat",
-    "test:upgrade": "bash scripts/test-upgrade.sh"
+    "test:upgrade": "bash scripts/test-upgrade.sh",
+    "test:evidence": "bun test/revision-evidence-integration.mjs",
+    "test:deferred": "bun test/deferred-integration.mjs"
   }
 }

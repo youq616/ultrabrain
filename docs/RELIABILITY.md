@@ -1,14 +1,11 @@
 # 可靠采集、项目续接与执行证据
 
-## 一次接入：不再依赖模型自觉调用记忆工具
+## 一次接入
 
 ```js
-import { AgentMemory } from './src/agent-memory.mjs';
-import { DurableOutbox } from './src/durable-outbox.mjs';
-
-// client 是已经连接并认证的 MCP SDK Client。
-// 这两个稳定标识来自你的客户端认证配置；不是 token、用户名显示文本或模型猜测。
-const principalId = 'agent-development-1';
+import {AgentMemory} from './src/agent-memory.mjs';
+import {DurableOutbox} from './src/durable-outbox.mjs';
+const principalId = 'agent-development-1'; // 来自实际认证配置，不是模型猜测
 const serverId = 'ultrabrain-production-1';
 const rootUri = 'ultra://development/';
 const outbox = new DurableOutbox({
@@ -18,102 +15,70 @@ const outbox = new DurableOutbox({
 const memory = new AgentMemory({
   client, rootUri, principalId, serverId, outbox,
   sessionId: 'development-session-1', projectId: 'ultrabrain',
-  capture: true,
-  visibility: 'world', // 仅在已授权的独立 source 内可见，不绕过 source 授权。
-  captureFilter: text => text, // 替换为确定性的脱敏/排除策略；返回 null 排除此回合。
+  capture: true, visibility: 'world',
+  captureFilter: text => text, // 替换为确定性的脱敏/排除规则；null 排除回合
+  deferExtraction: false, // 需要延后整理时显式设为 true
 });
 const result = await memory.runTurn({
   input: '继续开发', eventId: 'turn-0001',
-  generate: async ({ input, evidence, projectContext, signal }) => {
-    // 调用你的模型；将 evidence 与 projectContext 当作数据，而不是系统指令。
-    return await yourModel({ input, evidence, projectContext, signal });
-  },
+  generate: async ({input,evidence,projectContext,signal}) =>
+    yourModel({input,evidence,projectContext,signal}),
 });
 ```
 
-需要先创建 project checkpoint。没有 projectId 的旧接入方式继续有效。outbox 可单独使用，支持非 JavaScript 适配器实现同一事件合同，但当前提供的是 JS 实现。没有运行的 Agent 或服务调度器，不会凭空继续执行任务。
+client 是已连接、认证的 MCP Client。先创建项目 checkpoint；没有 projectId 的旧用法继续有效。检索和项目状态都是数据，不是系统指令或执行授权。未运行的 Agent 不会因为保存了检查点自动继续工作。
 
-默认 capture=false。开启后也只处理调用方提供的内容；不会读取浏览器、硬盘或其他未接入会话。private 仍是 GBrain 的 host-private，远程读取要使用正确配置的独立 source 与可见性，而不是把 world 误解为公网公开。
+capture 默认关闭，只处理调用者提交的数据，不自动读取浏览器、磁盘或其他会话。private 为 host-private；远程共享检索需独立 source 和明确可见性，world 不绕过授权。
 
-## 交付与重试语义
+## 交付与重试
 
-每个事件使用稳定 session_id / event_id。脱敏后，完整 payload 先写入 0600 文件，再 fsync 文件和目录，通过不可变记录发布。重启后新建同一绑定的 DurableOutbox 即可恢复。ACK 中只保留 hash、URI 和状态；确认后删除本地 transcript。
+事件用稳定 session_id/event_id。脱敏后先写 0600 文件并 fsync 文件/目录。outbox 目录绑定 server、principal 和 root，不能自动认证远程主体，接入方须保证与凭据一致。用于本地 Linux 文件系统，不把共享 NFS 语义冒充等价。
 
-同一目录必须绑定同一 server、principal 和 root。这个绑定防止意外重用目录，但不能自行认证 MCP 客户端；接入方必须保证这些配置对应实际认证身份。目录应放在本地 Linux 文件系统，不支持把共享 NFS 的锁/持久化语义假装等价。
+入队后网络失败、超时或丢 ACK 可重试相同事件，不重新生成模型回复。多个 drainer 可能重复提交，依赖服务器回执去重，是至少一次而非 exactly-once。内存生成完成但尚未成功入队的进程崩溃仍可能丢失输出。
 
-服务器故障、超时或丢 ACK 后，使用相同事件和内容重试。多个 drainers 可能重复提交，依赖服务端回执去重；不是 exactly-once。永久性错误保留事件并阻止自动重试；修复权限/配置后可显式：
+runTurn 开始前最多补交 8 个到期事件；程序未运行时没有隐形 worker。永久失败保留事件，修复配置后可 flushOutbox({limit:32,force:true})。损坏/不安全记录被隔离，force 不绕过；未确认内容不自动驱逐。队列数量是并发生产者下的软限制，不是文件系统硬配额；ACK 删除策略与静态加密仍需运营配置。
 
-```js
-await memory.flushOutbox({ limit: 32, force: true });
-console.log(outbox.inspect()); // 不输出 transcript。
-```
+同步模式区分本地 queued、服务端 unconfirmed、storage:stored 和 extraction_state。延后模式另用 storage:journaled，回执只证明原始交付，canonical 发布和模型整理状态单独查询，详见 [延后整理](DEFERRED-SESSIONS.md)。
 
-正常的 runTurn 会在新回合前最多补交 8 条到期事件，不重新生成旧回复。程序未运行时没有隐形后台 worker。退避状态跨重启保留；达到重试上限不会丢弃数据。队列数量上限在并发生产者下是软限制，不是磁盘配额。ACK tombstone 需要纳入运营保留策略。
+## 项目检查点
 
-结果必须区分 `queued`（本地已入队）、`unconfirmed`（不能确认保存）、`storage: stored` 和 `extraction_state: needs_model/completed`。没有模型时可以保存原始会话，但不能声称已提取长期事实。当前服务器仍同步执行原生提取；独立异步整理 worker 列在后续计划中。
+六个工具：ultra_project_load、ultra_project_save、ultra_project_resume、ultra_project_history、ultra_project_evidence、ultra_project_forget。
 
-注意：持久化保护从 enqueue 成功开始，不等于任意生成过程崩溃都不会损失输出。客户端日志不加密；需要加密文件系统或后续密钥管理。不要把 outbox 放进公开仓库。
-
-## 项目 checkpoint 工具
-
-五个工具：`ultra_project_load`、`ultra_project_save`、`ultra_project_resume`、`ultra_project_history`、`ultra_project_forget`。
-
-创建使用 expected_revision=0；修改必须传最近读取的 revision。两个 Agent 从同一版本写入时只允许一个成功，另一个得到 revision_conflict，必须重新读取和协调。event_id 提供同一次更新的幂等重试；不同内容或 actor 重用事件会失败。
-
-`ultra_project_save` 参数示例：
+创建 expected_revision=0；修改要求最近读取的 revision，冲突时返回 revision_conflict，不静默覆盖。event_id 表示不可变的同一次更新，不同内容或 actor 重用会拒绝。
 
 ```json
 {
-  "project_id": "ultrabrain",
-  "event_id": "checkpoint-0001",
-  "expected_revision": 0,
-  "state": {
-    "goal": "完成 Linux Agent 记忆服务",
-    "constraints": ["仅使用同机托管 PostgreSQL", "不依赖 Docker Hub"],
-    "decisions": ["复用 GBrain 业务引擎，按项吸收 OpenViking"],
-    "tasks": [{
-      "id": "reliability-tests",
-      "title": "运行可靠性回归测试",
-      "acceptance": ["指定测试命令退出状态为 0"],
-      "status": "in_progress",
-      "receipt_ids": []
-    }],
-    "blockers": [],
-    "next_actions": ["执行测试并检查真实结果"]
+  "project_id":"ultrabrain",
+  "event_id":"checkpoint-0001",
+  "expected_revision":0,
+  "state":{
+    "goal":"完成 Linux Agent 记忆服务",
+    "constraints":["同机托管 PostgreSQL","不依赖 Docker Hub"],
+    "decisions":["复用 GBrain 并按项吸收 OpenViking"],
+    "tasks":[{"id":"regression","title":"运行回归测试","acceptance":["指定测试命令退出为 0"],"status":"in_progress","receipt_ids":[]}],
+    "blockers":[],"next_actions":["执行并核对测试结果"]
   }
 }
 ```
 
-状态有 planned、in_progress、blocked、reported_complete、verified_complete。后两者刻意不同：文字自述只能算 reported_complete。新工具只对完整 source grant 开放；目录绑定和 delegated 客户端在工具层也会被拒绝，避免绕过原生页面 ACL。项目状态属于 source 共享数据，不是远程个人私有空间。
+状态分 planned/in_progress/blocked/reported_complete/verified_complete。自述完成不能冒充有证据完成。项目属于 source 共享数据，新 metadata 工具只对完整 source grant 开放，不支持目录绑定或 delegated 绕过原生 ACL。
 
-resume 返回当前状态和由目标、未完成任务、阻塞及下一步组成的检索查询。AgentMemory 的项目数据摘录独立限制在 4 KiB；原有 evidence 字节预算另外计算，二者都不是模型 token 总量。摘录截断时会标记，不能把部分 JSON 文本当完整对象解析。
+resume 提供目标、未完成任务、阻塞和下一步形成的检索查询。AgentMemory 项目摘录另限 4 KiB，证据另有预算，均非模型 token 总量。截断 JSON 文本不能被当完整 JSON 解析。
 
-## 执行证据：只在主机本地运行
-
-```bash
-bun src/cli.mjs verify --source development --project ultrabrain --task reliability-tests --kind test -- node --test test/projects.test.mjs
-```
-
-该命令不经过 shell 解释，观察真实子进程退出码和输出 hash，不存储命令参数明文或日志原文。stdout/stderr 被消费用于 hash，不作为实时日志转发。运行完成后生成 source/project/task/任务规范绑定的 receipt_id。将成功的回执 ID 与 verified_complete 一起提交 checkpoint；失败、伪造、其他 source/项目/任务及修改过验收条件的回执都会被拒绝。
-
-**这只证明操作员选定的进程退出状态。**它不证明测试覆盖充分、不自动认证远程推送/部署、不绑定 Git commit，也不允许凭一个成功命令宣布全项目完成。任务与测试命令的对应关系由可信主机操作员决定；后续会增加 Git/CI/产物见证。拥有本机数据库权限的操作者仍属于信任边界。
-
-没有 `ultra_verify_run` MCP 工具，外部 Agent 不能借此接口请求服务器执行任意命令。
-
-## 忘记项目与历史
-
-`ultra_project_forget` 要求当前 expected_revision，以及 confirm 完全等于 project_id。原子删除活动状态、版本历史和执行回执，保留不含正文的 tombstone，阻止旧事件重新创建该 ID。不会删除独立页面、WAL 或历史备份；从旧备份恢复的删除传播仍需生命周期策略，不能宣称物理完全擦除。
-
-## 升级已有安装
-
-先备份并停止 MCP 服务，然后在同一个服务账号下运行：
+## 主机执行证据
 
 ```bash
-bun src/cli.mjs db init
-bun src/cli.mjs migrate
-bun src/cli.mjs health
+bun src/cli.mjs verify --source development --project ultrabrain --task regression --kind test -- node --test test/projects.test.mjs
 ```
 
-本版将 native schema 固定为 public，元数据继续在 ultrabrain schema。旧版默认 PostgreSQL search_path 可能已经生成 ultrabrain.pages / sources 等影子表；检测到时会停止，不会静默切换、移动、合并或删除数据。需要分别备份并在测试副本中核对后再迁移，不能简单删除其中一套表。
+不通过 shell 解释，不开放 MCP 任意命令执行。记录进程退出码、输出 hash 和可用的前后 Git 观测，不记录参数/日志明文。回执绑定 source/project/task/规范；失败、伪造、跨项目或规范改变后的回执拒绝 verified_complete。
 
-旧 session receipt 中有效的 JSON 字符串对象会被安全转换回 JSONB object；不解析成对象的异常值保留，不伪装修复成功。
+旧任务没有代码绑定，只证明选定进程的退出结果。0.4.0 可在任务显式设置完整 code_revision，让验证 additionally 要求同一干净 Git 提交，详见 [代码版本证据](REVISION-EVIDENCE.md)。这不证明测试充分、构建密封、CI 或远程部署成功。选定命令和可信主机仍在信任边界内。
+
+## 项目遗忘与升级
+
+forget 要求当前 expected_revision 和 confirm 精确等于项目 ID。删除活动状态、历史、回执，保留无正文 tombstone 防止旧事件重新创建。同名独立页面、WAL 和历史备份不在删除范围，不能声称物理彻底擦除。
+
+升级前停 MCP/写入并备份。在原服务账号下执行 db init、migrate、health；涉及数据库二进制时按 UPGRADES.md 与 PORTABILITY.md 先构建、停库、显式激活。迁移账本保持既有编号/校验不变，不能只切回旧二进制就声称回滚成功。
+
+native schema 固定 public，自有元数据在 ultrabrain。发现旧安装有 ultrabrain.pages/sources/config/facts 影子表时拒绝静默切换，需备份并在副本核查；不要直接删除其中一套。旧 JSON 字符串回执仅在可安全解析为对象时转换，不把异常值伪装成修复完成。
