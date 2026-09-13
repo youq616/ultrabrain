@@ -36,7 +36,8 @@ export async function main(args=process.argv.slice(2)) {
       else if(command==='queue-recover-lock')result=queue.recoverLock(args[4],args[6],{writerStopped:true});
       else {
         let queued;
-        if(command==='queue-capture'){payload=await readBounded(process.stdin,220000);queued=await queue.enqueue(payload);}
+        if(command==='queue-capture'){payload=await readBounded(process.stdin,220000);captureRequest(payload,profile);writing=true;queued=await queue.enqueue(payload);}
+        else{requireThat(profile.allowCapture,'capture_disabled','Capture permission required before delivery');writing=true;}
         try {result={...(queued?{queued}:{}),delivery:await queue.flush(connectClient,{limit:4,retryBlocked:args[3]==='--retry-blocked',signal:controller.signal,
           authorize:()=>requireThat(JSON.stringify(readClientProfile(resolve(args[2])).input)===JSON.stringify(input),'capture_disabled','Profile changed; reload before delivery')})};}
         catch(e){if(!queued)throw e;result={queued,delivery:{delivered:0,retained:1,last_error:captureCode(e)}};}

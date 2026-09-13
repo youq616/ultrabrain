@@ -74,7 +74,7 @@ export function automaticCapture(profilePath,connect) {
       const controller=new AbortController();active.add(controller);const timer=setTimeout(()=>controller.abort(),5000);timer.unref();
       try {
         const delivery=await queue.flush(async(config,options)=>{current();return connect(config,options);},
-          {limit:1,eventId:payload.event_id,signal:controller.signal,authorize:()=>current()});
+          {limit:1,eventId:stored.event_id,signal:controller.signal,authorize:()=>current()});
         return {...stored,delivery};
       }catch(e){return {...stored,delivery:{delivered:0,retained:1,last_error:captureCode(e)}};}
       finally{clearTimeout(timer);active.delete(controller);}

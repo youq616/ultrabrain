@@ -5,3 +5,7 @@ Private local tgz; not a published registry package. Node.js 22.16+ and the offi
 ## Native read integrations (0.13)
 
 The package also ships native-adapters.cjs (OpenCode factory), openclaw.cjs plus openclaw.plugin.json (additive exact-session Hook), and hermes-ultrabrain (primary CLI read-only MemoryProvider). Automatic readers require an observed identity-pinned profile and exact workspace. They do not upload chats, run consolidation or replace memory slots. Use dist/native-adapter-config.py for plan/apply/rollback. Read docs/NATIVE-AGENT-ADAPTERS.md in the matching repository commit for installation and test boundaries. No package with this name is published to npm by this project.
+
+## 0.14 candidate — explicit automatic capture
+
+Automatic capture is disabled unless the trusted profile enables allow_capture, separate automatic_capture scopes, observed identity pins, an exact workspace and an outbox outside that workspace. The new queue-* commands persist pending personal capture events; direct capture retains its previous no-outbox contract. Claude hooks require a stable prompt_id (official schema v2.1.196+). OpenCode callbacks never collect attachment files, tools or hidden reasoning. See docs/AUTOMATIC-CAPTURE.md in the source repository. This candidate requires an independent reviewer before merge; CI success alone is not acceptance.

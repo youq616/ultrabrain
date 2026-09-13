@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "phase": "personal-0.14-automatic-capture",
+  "base_commit": "57852fed3d1839bab105c5b56632af1f65bb4b15",
+  "candidate_branch": "development/automatic-capture-review",
+  "independent_review": "pending",
+  "reviewer_run": null,
+  "verdict": null,
+  "merge_allowed": false,
+  "note": "Development checkpoint. Tests and self-checks do not satisfy the independent-agent gate. Consult the actual same-commit PR review."
+}

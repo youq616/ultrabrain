@@ -121,14 +121,15 @@ export class CaptureOutbox {
   }
   async enqueue(payload,{authorize=()=>{}}={}) {
     // Consent is checked BEFORE creating a new raw-text record, independent of the network.
-    const normalized=captureRequest(payload,this.profile);
+    const snapshot=structuredClone(payload);
+    const normalized=captureRequest(snapshot,this.profile);
     return this.#queue(()=>{
       authorize();
       const name=sha256(normalized.event_id)+'.entry',requestHash=digest(normalized);
       if(exists(this.#path(name))){const old=this.#record(name);requireThat(old.request_sha256===requestHash,'conflict','Event already exists with different content');return {storage:'client_journal',event_id:normalized.event_id,state:old.state,replayed:true,durability:this.durability};}
       const names=this.#names();let total=0;
       for(const f of readdirSync(this.directory).filter(n=>RECORD.test(n)||TEMP.test(n))){const st=lstatSync(this.#path(f));privateStat(st,'file');total+=st.size;}
-      const record={format:1,binding_sha256:this.bindingHash,request_sha256:requestHash,payload:structuredClone(payload),
+      const record={format:1,binding_sha256:this.bindingHash,request_sha256:requestHash,payload:snapshot,
         state:'pending',attempts:0,next_attempt_at:0,last_error:null,created_at:new Date().toISOString()};
       requireThat(names.length<MAX_FILES&&total+Buffer.byteLength(JSON.stringify(record))<=MAX_BYTES,'outbox_full','Queue full; existing events were preserved');
       this.#write(name,record,false);
@@ -185,7 +186,8 @@ export class CaptureOutbox {
           requireThat(!signal?.aborted,'aborted','Delivery cancelled');
           authorize();connection??=await connect(this.input,{signal});clientIdentity(connection.identity,this.profile);
           // capture() rechecks actual server identity before both register and capture calls.
-          authorize();const receipt=await connection.capture(captureRequest(r.payload,{...this.profile,allowCapture:true}));
+          authorize();requireThat(!signal?.aborted,'aborted','Delivery cancelled before submission');
+          const receipt=await connection.capture(captureRequest(r.payload,{...this.profile,allowCapture:true}));
           requireThat(receipt?.source_id===this.profile.source&&receipt.event_id===r.payload.event_id&&receipt.storage==='journaled'&&UUID.test(receipt.job_id??''),
             'mcp_contract_changed','No matching server journal acknowledgement');
           await this.#queue(()=>{const current=this.#record(name);requireThat(current.request_sha256===r.request_sha256,'outbox_corrupt','Journal changed during delivery');unlinkSync(this.#path(name));syncDirectory(this.directory);});

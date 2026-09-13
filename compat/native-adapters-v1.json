@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "client_version": "0.13.0-alpha.1",
+  "client_version": "0.14.0-alpha.1",
   "opencode": {
     "version": "1.18.30",
     "repository": "anomalyco/opencode",
