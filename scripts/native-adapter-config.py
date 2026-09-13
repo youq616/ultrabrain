@@ -99,7 +99,7 @@ def main(argv=None):
             new = patch(a.client, old, profile, library, node, cli, a.agent_id, a.session_key)
             result = {'client': a.client, 'mode': 'plan', 'changed': old != new,
                       'before_sha256': 'absent' if old is None else io.digest(old), 'after_sha256': io.digest(new),
-                      'capture_enabled_by_adapter': False, 'changes_existing_memory_slot': False}
+                      'capture_enabled_by_adapter': a.client=='opencode-native' and any(x in ('opencode-user','opencode-assistant') for x in parsed.get('automatic_capture',[])), 'changes_existing_memory_slot': False}
             if a.apply:
                 io.write_new(lock, b'local native adapter configuration\n'); lock_owned = True
                 result.update(io.apply(target, old, new, a.expected_sha)); result['mode'] = 'applied'

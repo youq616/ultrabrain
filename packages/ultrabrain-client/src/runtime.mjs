@@ -14,7 +14,7 @@ function decoded(r) {
 export const READ_TOOLS=Object.freeze(['ultra_identity','ultra_personal_context','ultra_memory_profile','ultra_memory_search','ultra_agent_list','ultra_personal_jobs']);
 export const WRITE_TOOLS=Object.freeze(['ultra_agent_register','ultra_memory_commit','ultra_personal_capture','ultra_personal_review','ultra_personal_update','ultra_personal_cancel']);
 export async function connectClient(input,{signal}={}) {
-  const profile=clientProfile(input),client=new Client({name:'ultrabrain-client',version:'0.13.0-alpha.1'});let transport;
+  const profile=clientProfile(input),client=new Client({name:'ultrabrain-client',version:'0.14.0-alpha.1'});let transport;
   try {
     if(profile.server.transport==='stdio') {
       // Explicitly avoid inheriting ambient database/provider/token variables.

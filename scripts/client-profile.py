@@ -39,13 +39,24 @@ def make_profile(a):
         check(bool(re.fullmatch(r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}',a.expected_instance)));result['expected_instance']=a.expected_instance
     if a.expected_actor:
         check(bool(re.fullmatch(r'[a-f0-9]{64}',a.expected_actor)));result['expected_actor']=a.expected_actor
+    outbox=getattr(a,'outbox',None); scopes=getattr(a,'automatic_capture',[]) or []
+    check(len(scopes)<=4 and len(set(scopes))==len(scopes) and all(x in ('claude-user','claude-assistant','opencode-user','opencode-assistant') for x in scopes))
+    if outbox:
+        check(Path(outbox).is_absolute() and a.workspace and a.expected_instance and a.expected_actor)
+        check(not re.search(r'[\x00-\x1f\x7f]',outbox))
+        candidate=Path(outbox).resolve(); workspace=Path(a.workspace).resolve()
+        check(candidate!=workspace and workspace not in candidate.parents)
+        result['outbox_directory']=str(Path(outbox).absolute())
+    if scopes:
+        check(a.allow_capture and outbox is not None)
+        result['automatic_capture']=scopes
     return result
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);g=p.add_mutually_exclusive_group(required=True)
     g.add_argument('--ssh');g.add_argument('--local',action='store_true');g.add_argument('--url')
     for name in ('repo','home','bun','bearer-env','project','workspace','expected-instance','expected-actor'):p.add_argument('--'+name)
-    p.add_argument('--source',default='default');p.add_argument('--output',required=True);p.add_argument('--allow-capture',action='store_true');a=p.parse_args()
+    p.add_argument('--outbox');p.add_argument('--automatic-capture',action='append',choices=['claude-user','claude-assistant','opencode-user','opencode-assistant'],default=[]);p.add_argument('--source',default='default');p.add_argument('--output',required=True);p.add_argument('--allow-capture',action='store_true');a=p.parse_args()
     try:
         result=make_profile(a);target=Path(os.path.abspath(a.output))
         for part in [target,*target.parents]:

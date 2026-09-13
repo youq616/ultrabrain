@@ -1,4 +1,5 @@
-/** Read-only host integrations. Never inspect prompts/transcripts or activate a memory. */
+/** Default read-only host integrations. Automatic observation capture is separately opt-in. */
+import {automaticCapture,openCodeCapture,captureCode} from '../../../src/automatic-capture.mjs';
 import {readClientProfile,matchingWorkspace} from '../../../src/client-profile-file.mjs';
 import {requireThat,UltraError} from '../../../src/core.mjs';
 const connectClient=(...args)=>import('./runtime.mjs').then(module=>module.connectClient(...args));
@@ -24,7 +25,7 @@ export function contextReader({profilePath,timeoutMs=10000},connect=connectClien
       const controller=new AbortController();controllers.add(controller);
       const timer=setTimeout(()=>controller.abort(),timeoutMs);let connection;
       try {
-        // Passing only context() ensures allow_capture in a profile cannot turn a Hook into a writer.
+        // This reader calls context() only; explicitly authorized capture uses a separate writer.
         connection=await connect(input,{signal:controller.signal});
         if(identity)requireThat(JSON.stringify(connection.identity)===identity,'identity_mismatch','Native adapter identity changed; reload and reauthenticate');
         else identity=JSON.stringify(connection.identity);
@@ -41,7 +42,7 @@ export function contextReader({profilePath,timeoutMs=10000},connect=connectClien
 }
 /** Factory for a local .opencode/plugins entry; options are trusted deployment config. */
 export function createOpenCodePlugin(options,connect=connectClient) {
-  return async ({directory})=>{
+  return async ({directory,client:hostClient})=>{
     const reader=contextReader(options,connect);
     // Fail before registration when globally loaded into the wrong workspace.
     reader.assertWorkspace(directory);
@@ -50,13 +51,36 @@ export function createOpenCodePlugin(options,connect=connectClient) {
       requireThat(Array.isArray(values)&&values.every(x=>typeof x==='string'),'adapter_contract_changed','Unexpected OpenCode output');
       let text;
       try {text=await reader.read(directory);}
-      catch(e){text=JSON.stringify({source:'Ultrabrain',status:safeAdapterCode(e),notice:'Personal memory was not recalled. Continue without it; nothing was captured.'});}
+      catch(e){text=JSON.stringify({source:'Ultrabrain',status:safeAdapterCode(e),notice:'Personal memory was not recalled. Continue without recalled memory; this read hook performed no capture.'});}
       values.push(text); // append only; never replace existing system instructions or compaction prompt
     };
+    const {profile}=readClientProfile(options.profilePath);
+    const writer=profile.automaticCapture.some(x=>x.startsWith('opencode-'))?automaticCapture(options.profilePath,connect):null;
+    let disposed=false;
+    const collect=async(kind,input,output)=>{
+      if(!writer?.scopes.includes('opencode-'+kind)||disposed)return;
+      try {
+        // Query only session metadata, never historical messages. Child sessions do not inherit consent.
+        requireThat(typeof hostClient?.session?.get==='function','adapter_contract_changed','Host session metadata unavailable');
+        const session=await hostClient.session.get({path:{id:input.sessionID},signal:AbortSignal.timeout(1500)});
+        requireThat(!session.error&&session.data?.id===input.sessionID&&session.data.parentID==null,'permission_denied','Only a primary host session is eligible');
+        reader.assertWorkspace(session.data.directory);
+        if(disposed)return;
+        const payload=openCodeCapture(kind,input,output,profile,directory);
+        if(!payload)return;
+        const result=await writer.submit(payload,directory,'opencode-'+kind);
+        if(!result.delivery.delivered)await hostClient.app?.log({body:{service:'ultrabrain-capture',level:'warn',message:'Observation retained in client journal; delivery not confirmed.'},signal:AbortSignal.timeout(1000)});
+      }catch(e){
+        // Never alter user/assistant text or tool policy merely because memory capture failed.
+        try{await hostClient?.app?.log({body:{service:'ultrabrain-capture',level:'warn',message:'Automatic observation not confirmed: '+captureCode(e)},signal:AbortSignal.timeout(1000)});}catch{}
+      }
+    };
     return {
+      ...(writer?{'chat.message':async(input,output)=>collect('user',input,output),
+        'experimental.text.complete':async(input,output)=>collect('assistant',input,output)}:{}),
       'experimental.chat.system.transform':async(input,output)=>add(input?.sessionID,output.system),
       'experimental.session.compacting':async(input,output)=>add(input?.sessionID,output.context),
-      dispose:async()=>reader.close(),
+      dispose:async()=>{disposed=true;writer?.close();reader.close();},
     };
   };
 }
