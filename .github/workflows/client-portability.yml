@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: node --test test/client-kit.test.mjs test/native-adapters.test.mjs test/capture-outbox.test.mjs test/automatic-capture.test.mjs test/capture-hardening.test.mjs
+      - run: node --test test/client-kit.test.mjs test/native-adapters.test.mjs test/capture-outbox.test.mjs test/automatic-capture.test.mjs test/capture-hardening.test.mjs test/capture-delivery.test.mjs
       - run: python -m unittest discover -s test -p test_client_config.py -v
       - run: python -m unittest discover -s test -p test_native_adapter_config.py -v
       - run: python -m unittest discover -s test -p test_hermes_provider.py -v

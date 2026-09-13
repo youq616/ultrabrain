@@ -54,7 +54,7 @@ export async function main(args=process.argv.slice(2)) {
     if(hook)output=claudeContext(event.hook_event_name,await connection.context());
     else if(args[0]==='probe')output=await connection.probe();
     else if(['context','bound-context'].includes(args[0]))output=await connection.context();
-    else{const p=captureRequest(payload,connection.profile);writing=true;const r=await connection.capture(p);
+    else{const p=captureRequest(payload,connection.profile);writing=true;const r=await connection.capture(p,{authorize:()=>requireThat(JSON.stringify(readClientProfile(resolve(args[2])).input)===JSON.stringify(input),'capture_disabled','Profile changed before transmission')});
       requireThat(r?.source_id===connection.profile.source&&r.event_id===p.event_id&&r.storage==='journaled'&&typeof r.job_id==='string','mcp_contract_changed','Unconfirmed capture receipt');output={ok:true,result:r};}
     process.stdout.write(JSON.stringify(output)+'\n');
   }catch(e){const code=e instanceof UltraError&&/^[a-z0-9_]{1,64}$/.test(e.code)?e.code:'client_failed';

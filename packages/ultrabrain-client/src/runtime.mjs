@@ -1,5 +1,6 @@
 /** Actual official MCP SDK client; profile command is trusted operator configuration. */
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
+import {deliverCapture} from '../../../src/capture-delivery.mjs';
 import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
 import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import {credentialFetch} from '../../../src/automation-transport.mjs';
@@ -47,7 +48,7 @@ export async function connectClient(input,{signal}={}) {
         decoded(r);return r;
       },
       async context(){await check();return clientContext(await invoke('ultra_personal_context',{limit:20,budget_bytes:profile.budgetBytes,...(profile.projectId?{project_id:profile.projectId}:{})}),profile);},
-      async capture(p){await check();await invoke('ultra_agent_register',{agent_id:p.agent_id,agent_type:'custom'});await check();return invoke('ultra_personal_capture',p);},
+      async capture(p,{authorize}={}){return deliverCapture(p,profile,{checkIdentity:check,invoke,signal,authorize});},
       async probe(){const required=requiredClientTools(profile),names=new Set();let cursor;for(let page=0;page<20;page++){
         const result=await client.listTools(cursor?{cursor}:{},{signal,timeout:profile.timeoutMs});for(const tool of result.tools)names.add(tool.name);
         if(!result.nextCursor){cursor=null;break;}requireThat(result.nextCursor!==cursor,'mcp_contract_changed','Repeated tool cursor');cursor=result.nextCursor;

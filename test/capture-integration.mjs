@@ -7,6 +7,8 @@ import {tmpdir} from 'node:os';import {join} from 'node:path';import {pathToFile
 import {spawn} from 'node:child_process';import {randomBytes} from 'node:crypto';
 import {connect,ROOT} from '../src/runtime.mjs';
 import {CaptureOutbox} from '../src/capture-outbox.mjs';
+import {connectClient} from '../packages/ultrabrain-client/src/runtime.mjs';
+import {UltraError} from '../src/core.mjs';
 assert.equal(process.env.ULTRABRAIN_TEST_ALLOW_WRITE,'1');
 const engine=await connect(),source='capture-'+randomBytes(5).toString('hex'),dir=mkdtempSync(join(tmpdir(),'ub-capture-e2e-'));
 const workspace=join(dir,'workspace'),profilePath=join(dir,'profile.json'),cli=join(ROOT,'packages/ultrabrain-client/dist/cli.cjs');mkdirSync(workspace,{mode:0o700});
@@ -52,5 +54,12 @@ try{
  const recovered=await run('queue-recover-lock',undefined,['--kind','delivery','--expected-sha',lock.data.result.sha256,'--confirm-writer-stopped']);assert.equal(recovered.code,0);assert.equal(recovered.data.result.payloads_deleted,0);pass();
  r=await run('queue-flush',undefined,['--retry-blocked']);assert.equal(r.code,0);assert.equal(r.data.result.delivery.delivered,1);assert.equal(await count(),5);pass();
  const states=await engine.executeRaw('SELECT state,attempts FROM ultrabrain.personal_consolidations WHERE source_id=$1',[source]);assert.ok(states.every(r=>r.state==='queued'&&r.attempts===0));pass();
+ // Recheck local authorization after asynchronous registration/identity calls, before plaintext transmission.
+ const guarded=await connectClient(profile);let authorized=0;
+ try {
+   await assert.rejects(guarded.capture({agent_id:'revoked-before-send',event_id:'must-not-send',transcript:'SYNTHETIC_REVOKED_INPUT',consent:true,project_id:profile.project_id},
+     {authorize:()=>{if(++authorized===2)throw new UltraError('capture_disabled','Synthetic revocation');}}),{code:'capture_disabled'});
+   assert.equal(await count(),5);pass();
+ } finally {await guarded.close();}
  console.log(`PASS ${checks} capture/outbox checks: packaged Node/Claude-event fixture/stdio/PostgreSQL, offline reopen and crash-after-commit replay`);
 }finally{await engine.disconnect();rmSync(dir,{recursive:true,force:true});}

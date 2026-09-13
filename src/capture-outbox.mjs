@@ -187,7 +187,7 @@ export class CaptureOutbox {
           authorize();connection??=await connect(this.input,{signal});clientIdentity(connection.identity,this.profile);
           // capture() rechecks actual server identity before both register and capture calls.
           authorize();requireThat(!signal?.aborted,'aborted','Delivery cancelled before submission');
-          const receipt=await connection.capture(captureRequest(r.payload,{...this.profile,allowCapture:true}));
+          const receipt=await connection.capture(captureRequest(r.payload,{...this.profile,allowCapture:true}),{authorize});
           requireThat(receipt?.source_id===this.profile.source&&receipt.event_id===r.payload.event_id&&receipt.storage==='journaled'&&UUID.test(receipt.job_id??''),
             'mcp_contract_changed','No matching server journal acknowledgement');
           await this.#queue(()=>{const current=this.#record(name);requireThat(current.request_sha256===r.request_sha256,'outbox_corrupt','Journal changed during delivery');unlinkSync(this.#path(name));syncDirectory(this.directory);});

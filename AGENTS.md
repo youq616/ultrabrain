@@ -26,6 +26,6 @@ The reviewer must independently inspect code and affected repository boundaries.
 
 Use an available repository-side independent reviewer first. If no actual execution path is available, keep the implementation in a development branch/draft PR with review PENDING and main unchanged. Delegate only the missing independent review through the one-paragraph local-agent handoff above; do not require a production install, WSL, secrets or duplicate Linux CI. Never fabricate reviewer identities, results or approvals.
 
-## Code review focus
+## Code Review Rules
 
 Check explicit capture consent, automatic scopes, server-derived identity, workspace and destination binding, revocation/cancellation before transmission, immutable event replay, journal durability, acknowledgement validation, bounded retries and crash recovery. Assistant observations are not user-confirmed facts. No implicit reading of transcript files, tools, attachments, secrets or hidden reasoning. A client queue is not server acceptance. Preserve original migrations, upstream pins, other Agent configuration and permission boundaries. Distinguish synthetic hook tests from actual client engines and real-model quality.

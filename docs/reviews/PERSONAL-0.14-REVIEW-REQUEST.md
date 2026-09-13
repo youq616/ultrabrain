@@ -15,7 +15,7 @@ Inspect the complete diff from the base and affected existing paths: capture-out
 Node.js 22.16+ and Python 3.11+ suffice for this synthetic subset, with no Bun, database, API key or WSL:
 
 ```sh
-node --test test/client-kit.test.mjs test/native-adapters.test.mjs test/capture-outbox.test.mjs test/automatic-capture.test.mjs test/capture-hardening.test.mjs
+node --test test/client-kit.test.mjs test/native-adapters.test.mjs test/capture-outbox.test.mjs test/automatic-capture.test.mjs test/capture-hardening.test.mjs test/capture-delivery.test.mjs
 python -m unittest discover -s test -p test_automatic_capture_config.py -v
 ```
 
