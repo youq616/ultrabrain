@@ -2,7 +2,7 @@
 /** Hook reads only event metadata, never prompt text, transcripts, or arbitrary event paths. */
 import {serveProxy} from './proxy.mjs';
 import {clientProfile} from '../../../src/client-kit.mjs';
-import {readFileSync,lstatSync,realpathSync} from 'node:fs';
+import {readClientProfile,matchingWorkspace} from '../../../src/client-profile-file.mjs';
 import {resolve,dirname,parse} from 'node:path';
 import {connectClient} from './runtime.mjs';
 import {claudeContext,captureRequest} from '../../../src/client-kit.mjs';
@@ -12,19 +12,17 @@ export async function main(args=process.argv.slice(2)) {
   let connection,hook=args[0]==='claude-hook',writing=false;
   const controller=new AbortController(),deadline=setTimeout(()=>{controller.abort();process.stdin.destroy();},25000);deadline.unref();
   try{
-    requireThat(args.length===3&&['probe','context','capture','claude-hook','mcp'].includes(args[0])&&args[1]==='--profile','invalid_params','Usage: ultrabrain-client probe|context|capture|claude-hook --profile PATH');
-    const file=resolve(args[2]);for(let parent=dirname(file);parent!==parse(parent).root;parent=dirname(parent))requireThat(!lstatSync(parent).isSymbolicLink(),'insecure_profile','Symlinked profile parent');const stat=lstatSync(file);requireThat(stat.isFile()&&!stat.isSymbolicLink()&&stat.size<=16384,'invalid_profile','Invalid profile file');
-    // Profiles may launch a process: do not accept group/world-writable configuration on Linux.
-    if(typeof process.getuid==='function')requireThat(stat.uid===process.getuid()&&!(stat.mode&0o022),'insecure_profile','Profile must be owned by this user and not writable by others');
-    const input=JSON.parse(readFileSync(file,'utf8'));const profile=clientProfile(input);let event,payload;
+    requireThat(args.length===3&&['probe','context','bound-context','capture','claude-hook','mcp'].includes(args[0])&&args[1]==='--profile','invalid_params','Usage: ultrabrain-client probe|context|bound-context|capture|claude-hook --profile PATH');
+    const {input,profile}=readClientProfile(resolve(args[2]));let event,payload;
+    if(args[0]==='bound-context'){event=await readBounded(process.stdin);requireThat(event&&typeof event==='object'&&!Array.isArray(event)&&Object.keys(event).every(k=>k==='workspace'),'invalid_params','Only workspace metadata is accepted');matchingWorkspace(profile,event.workspace);}
     if(hook){event=await readBounded(process.stdin);requireThat(['SessionStart','UserPromptSubmit'].includes(event?.hook_event_name),'unsupported_hook','Unsupported hook');
-      requireThat(typeof input.workspace==='string'&&typeof event.cwd==='string'&&realpathSync(input.workspace)===realpathSync(event.cwd),'workspace_mismatch','Hook workspace differs from trusted profile');}
+      matchingWorkspace(profile,event.cwd);}
     if(args[0]==='capture'){payload=await readBounded(process.stdin);captureRequest(payload,profile);}
     connection=await connectClient(input,{signal:controller.signal});let output;
     if(args[0]==='mcp'){clearTimeout(deadline);await serveProxy(connection);return;}
     if(hook)output=claudeContext(event.hook_event_name,await connection.context());
     else if(args[0]==='probe')output=await connection.probe();
-    else if(args[0]==='context')output=await connection.context();
+    else if(['context','bound-context'].includes(args[0]))output=await connection.context();
     else{const p=captureRequest(payload,connection.profile);writing=true;const r=await connection.capture(p);
       requireThat(r?.source_id===connection.profile.source&&r.event_id===p.event_id&&r.storage==='journaled'&&typeof r.job_id==='string','mcp_contract_changed','Unconfirmed capture receipt');output={ok:true,result:r};}
     process.stdout.write(JSON.stringify(output)+'\n');

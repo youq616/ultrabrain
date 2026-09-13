@@ -1,7 +1,28 @@
 {
-  "name":"ultrabrain-client","version":"0.12.0-alpha.1","private":true,
-  "description":"Personal MCP connection probe and explicit Claude Code context hooks",
-  "license":"MIT","type":"commonjs","engines":{"node":">=22.16.0"},
-  "bin":{"ultrabrain-client":"dist/cli.cjs"},"files":["dist","README.md","LICENSE"],
-  "dependencies":{"@modelcontextprotocol/sdk":"1.29.0"}
+  "name": "ultrabrain-client",
+  "version": "0.13.0-alpha.1",
+  "private": true,
+  "description": "Personal MCP client and workspace-bound read-only Agent integrations",
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "bin": {
+    "ultrabrain-client": "dist/cli.cjs"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "openclaw.plugin.json"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0"
+  },
+  "openclaw": {
+    "extensions": [
+      "./dist/openclaw.cjs"
+    ]
+  }
 }

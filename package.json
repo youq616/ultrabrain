@@ -1,6 +1,6 @@
 {
   "name": "ultrabrain",
-  "version": "0.12.0-alpha.1",
+  "version": "0.13.0-alpha.1",
   "private": true,
   "type": "module",
   "description": "Linux-native PostgreSQL agent memory with GBrain compatibility and hierarchical context",
@@ -40,6 +40,7 @@
     "test:personal-consolidation": "bun test/personal-consolidation-integration.mjs",
     "build:client": "bun scripts/build-client.mjs",
     "package:client": "bash scripts/package-client.sh",
-    "test:client": "bun test/client-kit-integration.mjs"
+    "test:client": "bun test/client-kit-integration.mjs",
+    "test:native-adapters": "bun test/native-adapters-integration.mjs"
   }
 }
