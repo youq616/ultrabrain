@@ -1,0 +1,40 @@
+/** Personal MCP tools are registered in compatibility mode; governed enterprise allowlist stays frozen. */
+import {PersonalMemoryStore} from './personal-memory-store.mjs';
+import {UltraError,requireThat} from './core.mjs';
+import {PERSONAL_MEMORY_TYPES,AGENT_TYPES} from './personal-memory.mjs';
+const str=(description,required=false)=>({type:'string',description,required});
+const num=(description,required=false)=>({type:'number',description,required});
+const query={agent_id:str('Optional label filter, never authentication'),project_id:str('Project label'),
+  query:str('Literal substring search'),task:str('Context query hint, not a model prompt'),
+  types:{type:'array',items:{type:'string',enum:PERSONAL_MEMORY_TYPES}},status:{...str('Search lifecycle state; context requires active'),enum:['active','candidate','archived']},
+  limit:num('1..100'),offset:num('Live page offset'),budget_bytes:num('512..131072 serialized UTF-8 bytes')};
+const revision={memory_id:str('Full memory UUID',true),expected_revision:num('Latest observed revision',true),event_id:str('Stable immutable request id',true)};
+const definitions=[
+ ['ultra_agent_register','register',true,{agent_id:str('Caller-owned client label',true),agent_type:{...str('Self-described type'),enum:AGENT_TYPES},
+   capabilities:{type:'array',items:{type:'string'}},workspace:str('Optional descriptive path, never executed'),expected_revision:num('0 to create; current revision for metadata changes')},'Register a client label under the authenticated source/principal, not a self-asserted identity.'],
+ ['ultra_agent_list','agents',false,{limit:num('1..100'),offset:num('Live page offset')},'List only this principal registered client labels.'],
+ ['ultra_memory_commit','commit',true,{agent_id:str('Registered label owned by this principal',true),event_id:str('Immutable request id',true),consent:{type:'boolean',required:true},
+   summary:str('Optional experience candidate instead of a memories array'),memories:{type:'array',items:{type:'object'},description:'1..16 typed items: type, content, confidence(optional caller estimate), importance, provenance, visibility(private/source), project_id'}},'Atomically store explicitly consented candidate memories. No automatic confirmation or model call.'],
+ ['ultra_memory_search','search',false,query,'Search authorized personal entries. Private by default; source-shared active entries require explicit sharing.'],
+ ['ultra_personal_context','context',false,query,'Return bounded active personal context for current source/principal and optional project. Not semantic ranking or truth certification.'],
+ ['ultra_memory_profile','profile',false,{limit:num('1..100'),budget_bytes:num('512..131072 UTF-8 bytes')},'Read explicitly active identity, preference, environment and goal entries.'],
+ ['ultra_personal_review','review',true,{...revision,status:{type:'string',required:true,enum:['active','archived']}},'Explicitly activate or archive an owned entry with revision checking. Does not change its confidence or certify truth.'],
+ ['ultra_personal_update','update',true,{...revision,memory:{type:'object',required:true}},'Replace an owned typed entry with revision checking; edits return it to candidate. Not physical erasure.'],
+];
+export const PERSONAL_TOOL_NAMES=Object.freeze(definitions.map(d=>d[0]));
+export function registerPersonalPlugin(operations,{OperationError}) {
+  requireThat(definitions.every(([name])=>!operations.some(o=>o.name===name)),'upstream_contract_changed','Personal tool collision');
+  for(const [name,method,mutating,params,description] of definitions)operations.push({name,params,description,mutating,scope:mutating?'write':'read',area:'ultrabrain',
+    async handler(ctx,p){
+      try {
+        const {dry_run,_meta,...input}=p;
+        requireThat(dry_run===undefined||typeof dry_run==='boolean','invalid_params','dry_run must be boolean');
+        return await new PersonalMemoryStore(ctx)[method](input);
+      }
+      catch(e){
+        if(e instanceof UltraError)throw new OperationError(e.code,e.message);
+        throw new OperationError('personal_storage_error','Personal operation failed; no raw SQL, credentials or memory content disclosed');
+      }
+    }});
+  return PERSONAL_TOOL_NAMES;
+}

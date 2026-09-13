@@ -1,3 +1,4 @@
+import {registerPersonalPlugin} from './personal-plugin.mjs';
 import {installResponseMetadataGuard} from './adapters/response-metadata.mjs';
 import {deploymentProfile} from './enterprise-policy.mjs';
 import {publishGovernedSurface} from './enterprise.mjs';
@@ -68,7 +69,7 @@ export function installPlugin() {
   // Session extraction may touch entity pages; never grant it to prefix-bound clients.
   context.CLIENT_FENCED_WRITE_OPS.add('ultra_write');
   context.CLIENT_FENCED_WRITE_OPS.add('ultra_delete');
-  registered = [...registered, ...facts.register(), ...registerProjectPlugin(operations, { OperationError })];
+  registered = [...registered, ...facts.register(), ...registerProjectPlugin(operations, { OperationError }), ...registerPersonalPlugin(operations,{OperationError})];
   if(profile==='governed')publishGovernedSurface(operations,{OperationError});
   return registered;
   })();

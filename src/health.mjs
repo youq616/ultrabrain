@@ -1,3 +1,4 @@
+import {PERSONAL_TOOL_NAMES} from './personal-plugin.mjs';
 import {deploymentProfile,GOVERNED_TOOLS} from './enterprise-policy.mjs';
 import {META_HOOK_SHA256} from './adapters/response-metadata.mjs';
 /** Read-only diagnostics: no credentials, memory contents or provider calls. */
@@ -21,7 +22,8 @@ export async function health() {
     const [governance]=await engine.executeRaw("SELECT to_regclass('ultrabrain.memory_policies') IS NOT NULL AS present,(SELECT count(*) FROM ultrabrain.instance_identity WHERE singleton)=1 AS identity_ready");
     const profile=deploymentProfile(process.env.ULTRABRAIN_MCP_PROFILE);
     const [enterprise]=await engine.executeRaw("SELECT to_regclass('ultrabrain.enterprise_sources') IS NOT NULL AS policy,to_regclass('ultrabrain.enterprise_audit') IS NOT NULL AS audit");
-    const checks={enterprise_schema:enterprise.policy&&enterprise.audit,governed_catalog:profile!=='governed'||operations.length===GOVERNED_TOOLS.length&&operations.every(o=>GOVERNED_TOOLS.includes(o.name)),memory_policy_present:governance.present,instance_identity_present:governance.identity_ready,deferred_schema_present:deferredSchema.present,non_superuser:role.rolsuper===false,no_role_or_database_creation:!role.rolcreatedb&&!role.rolcreaterole,
+    const [personal]=await engine.executeRaw("SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='ultrabrain' AND table_name='personal_memories' AND column_name='actor_key') AS scoped,to_regclass('ultrabrain.personal_events') IS NOT NULL AS events");
+    const checks={personal_schema:personal.scoped&&personal.events,personal_tools:profile==='governed'||PERSONAL_TOOL_NAMES.every(n=>operations.some(o=>o.name===n)),enterprise_schema:enterprise.policy&&enterprise.audit,governed_catalog:profile!=='governed'||operations.length===GOVERNED_TOOLS.length&&operations.every(o=>GOVERNED_TOOLS.includes(o.name)),memory_policy_present:governance.present,instance_identity_present:governance.identity_ready,deferred_schema_present:deferredSchema.present,non_superuser:role.rolsuper===false,no_role_or_database_creation:!role.rolcreatedb&&!role.rolcreaterole,
       database_loopback_only:server.listen_addresses==='127.0.0.1',
       postgres_version:server.version.split(' ')[0]===runtime.version,
       pgvector_version:extensions.some(x=>x.extname==='vector'&&x.extversion===pins.pgvector.version),

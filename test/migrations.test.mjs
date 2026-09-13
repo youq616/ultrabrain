@@ -12,3 +12,9 @@ test('unknown history, gaps and changed migrations are rejected',()=>{
 test('duplicate or unordered migration plans are rejected',()=>{
   assert.throws(()=>validateHistory([],[migrations[0],migrations[0]]),{code:'migration_invalid'});
 });
+
+// Every live migration file must be explicitly registered; abandoned drafts live outside migrations/.
+import {readdirSync} from 'node:fs';
+test('migration directory and executed plan have exactly the same files',()=>{
+  assert.deepEqual(readdirSync(new URL('../migrations/',import.meta.url)).filter(n=>n.endsWith('.json')).sort(),migrations.map(m=>m.id+'.json').sort());
+});

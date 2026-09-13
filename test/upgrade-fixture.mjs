@@ -58,10 +58,24 @@ try {
       const [dependencies]=await engine.executeRaw("SELECT to_regclass('ultrabrain.review_dependencies') IS NOT NULL AS present");
       writeFileSync(join(directory,'legacy-quote.json'),JSON.stringify({...reference,dependencies_present:dependencies.present}),{mode:0o600});
     }
+    const [personal]=await engine.executeRaw("SELECT to_regclass('ultrabrain.personal_memories') IS NOT NULL AS present");
+    if(personal.present) {
+      // Seed through the actual old schema, never from a guessed future DDL.
+      const [legacy]=await engine.executeRaw("INSERT INTO ultrabrain.personal_memories(type,content,content_hash,source,status) VALUES ('preference','legacy unscoped fixture','unverified-old-hash','caller-provided-not-auth','active') RETURNING id::text");
+      await engine.executeRaw("INSERT INTO ultrabrain.agent_registry(agent_id,type,identity_hash) VALUES ('legacy-client','custom','unverified')");
+      writeFileSync(join(directory,'legacy-personal.json'),JSON.stringify(legacy),{mode:0o600});
+    }
     writeFileSync(join(directory,'fingerprints.json'),JSON.stringify(await fingerprint()),{mode:0o600});
     writeFileSync(join(directory,'baseline-eval.json'),JSON.stringify(await evaluate()),{mode:0o600});
     console.log('PASS old-source seed: pages, privacy, project/history, session receipt, legacy oversized queue record');
   } else {
+    if(existsSync(join(directory,'legacy-personal.json'))) {
+      const old=JSON.parse(readFileSync(join(directory,'legacy-personal.json'),'utf8'));
+      const [preserved]=await engine.executeRaw('SELECT source_id,actor_key,content FROM ultrabrain.personal_memories WHERE id=$1::uuid',[old.id]);
+      assert.equal(preserved.content,'legacy unscoped fixture');assert.equal(preserved.source_id,null);assert.equal(preserved.actor_key,null);
+      assert.equal((await call('ultra_memory_search')).memories.length,0);
+      assert.equal((await call('ultra_agent_list')).agents.length,0);
+    }
     const legacy=JSON.parse(readFileSync(join(directory,'native-fact.json'),'utf8'));
     assert.equal((await call('ultra_fact_inspect',{fact_id:legacy.id})).evidence.status,'unlinked');
     assert.equal((await call('ultra_recall',{uri:`ultra://${source}/`})).facts.length,0);

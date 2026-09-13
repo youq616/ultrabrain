@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        upgrade_base: [38e0e6657561e17ba85c71d0783d604242a054e8, d7be484b445a893112d3a132c30f42282865a41a, 31f43aa1ff1343bb649e39cf44ca57203ce0ebac, 225fef02de4c3aa33d655c4b2dfde9f246571329, 32f97e8d45b312980ce6ab1784cf316feddd698e, b46c067f0ef110900af7fe8bb2334b4a9c509c3c, fb397f0f3a8ba12253f9e993bba93c387e6de57a, 115978df6069ad11d376f848d214654ba6adde16]
+        upgrade_base: [38e0e6657561e17ba85c71d0783d604242a054e8, d7be484b445a893112d3a132c30f42282865a41a, 31f43aa1ff1343bb649e39cf44ca57203ce0ebac, 225fef02de4c3aa33d655c4b2dfde9f246571329, 32f97e8d45b312980ce6ab1784cf316feddd698e, b46c067f0ef110900af7fe8bb2334b4a9c509c3c, fb397f0f3a8ba12253f9e993bba93c387e6de57a, 115978df6069ad11d376f848d214654ba6adde16, f8cc5b980c260cd61e66e032ebce94a5cdc065e3]
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
@@ -96,6 +96,8 @@ jobs:
           path: ${{ runner.temp }}/memory-eval.json
           retention-days: 30
           if-no-files-found: error
+      - name: Personal PostgreSQL, authenticated ownership and actual MCP transports
+        run: bun test/personal-integration.mjs
       - name: Packaged n8n client against real MCP (context fixture)
         run: |
           ln -s "$GITHUB_WORKSPACE/vendor/gbrain/node_modules" packages/n8n-nodes-ultrabrain/node_modules

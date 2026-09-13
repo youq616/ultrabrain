@@ -1,70 +1,160 @@
-import { requireThat, sha256, text, integer } from './core.mjs';
-
-/**
- * Personal memory service boundary.
- * Storage adapters are injected so the personal layer does not create a second database.
- */
-export class PersonalMemoryStore {
-  constructor(adapter) {
-    requireThat(adapter && typeof adapter.query === 'function', 'invalid_params', 'Personal memory adapter required');
-    this.adapter = adapter;
-  }
-
-  async create(input) {
-    const memory = normalizeMemory(input);
-    const result = await this.adapter.query(
-      `INSERT INTO ultrabrain.personal_memories
-      (memory_id,memory_type,content,confidence,importance,source,agent_id,project_id,content_hash,status)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-      RETURNING *`,
-      [memory.id,memory.type,memory.content,memory.confidence,memory.importance,
-       memory.source,memory.agent_id,memory.project_id,memory.hash,memory.status]
-    );
-    return result[0];
-  }
-
-  async search({ type, agent_id, project_id, limit = 20 } = {}) {
-    integer(limit, 20, 1, 100);
-    return this.adapter.query(
-      `SELECT * FROM ultrabrain.personal_memories
-       WHERE ($1::text IS NULL OR memory_type=$1)
-       AND ($2::text IS NULL OR agent_id=$2)
-       AND ($3::text IS NULL OR project_id=$3)
-       AND status='active'
-       ORDER BY confidence DESC, importance DESC, updated_at DESC
-       LIMIT $4`,
-      [type ?? null, agent_id ?? null, project_id ?? null, limit]
-    );
-  }
-
-  async updateConfirmation(id, confidence) {
-    integer(Math.round(confidence * 100), 0, 0, 100);
-    const rows = await this.adapter.query(
-      `UPDATE ultrabrain.personal_memories
-       SET confidence=$2,last_confirmed=now(),updated_at=now()
-       WHERE memory_id=$1 RETURNING *`,
-      [id, confidence]
-    );
-    return rows[0] ?? null;
-  }
+/** Real PostgreSQL service. Identity is server-derived; an agent_id is only an owned label. */
+import {sha256,requireThat,sourceId,integer} from './core.mjs';
+import {authorizeMemory} from './memory-policy.mjs';
+import {objectFields,personalId,memoryId,normalizePersonalMemory,contextQuery} from './personal-memory.mjs';
+import {agentIdentity,memoryCommit} from './agent-memory-protocol.mjs';
+import {buildPersonalContext} from './personal-context-engine.mjs';
+export {normalizePersonalMemory as normalizeMemory} from './personal-memory.mjs';
+export function personalPrincipal(ctx,write=false) {
+  authorizeMemory(ctx,write);
+  sourceId(ctx.sourceId);
+  requireThat(!ctx.localFederatedSourceIds?.length,'permission_denied','Personal operations require a single source');
+  if(!ctx.auth&&(ctx.remote===false||ctx.transport==='stdio'))return sha256(JSON.stringify(['host','owner']));
+  requireThat(ctx.auth&&ctx.auth.sourceId===ctx.sourceId&&ctx.auth.hasSourceGrant!==false&&
+    (!ctx.auth.allowedSources||(Array.isArray(ctx.auth.allowedSources)&&ctx.auth.allowedSources.length===1&&ctx.auth.allowedSources[0]===ctx.sourceId)),
+    'permission_denied','An explicit complete single-source grant is required');
+  const p=ctx.auth.principal;
+  const identity=p?[p.kind,p.id]:['client',ctx.auth.clientId];
+  requireThat(identity.every(x=>typeof x==='string'&&x.length>0&&x.length<=256),'permission_denied','Stable authenticated principal required');
+  return sha256(JSON.stringify(['authenticated',...identity]));
 }
-
-export function normalizeMemory(input = {}) {
-  const allowed = ['identity','preference','environment','project','decision','skill','error','goal','experience'];
-  requireThat(allowed.includes(input.type), 'invalid_params', 'Invalid personal memory type');
-  text(input.content, 'content', 65536);
-  const confidence = Number(input.confidence ?? 0.5);
-  requireThat(Number.isFinite(confidence) && confidence >= 0 && confidence <= 1, 'invalid_params', 'Invalid confidence');
-  return {
-    id: input.id ?? sha256(`${input.type}:${input.content}`).slice(0, 32),
-    type: input.type,
-    content: input.content,
-    confidence,
-    importance: Number(input.importance ?? 0.5),
-    source: input.source ?? 'agent',
-    agent_id: input.agent_id ?? null,
-    project_id: input.project_id ?? null,
-    hash: sha256(input.content),
-    status: 'active'
-  };
+const projection=`id::text,type,content,content_hash,confidence,importance,source AS provenance,agent_id,project_id,
+  status,visibility,revision,created_at,updated_at,last_confirmed,(actor_key=$2) AS owned_by_caller`;
+function rowView(row) {
+  return {...row,confidence:row.confidence===null?null:Number(row.confidence),trust:'untrusted-memory-data'};
+}
+function boundedRows(rows,budget,extra={}) {
+  const result={...extra,memories:[],dropped:0,trust:'untrusted-memory-data',budget_bytes:budget,
+    budget_scope:'this JSON result; whole entries only; UTF-8 bytes, not model tokens'};
+  for(const row of rows){result.memories.push(rowView(row));if(Buffer.byteLength(JSON.stringify(result))>budget){result.memories.pop();result.dropped++;}}
+  while(Buffer.byteLength(JSON.stringify(result))>budget&&result.memories.length){result.memories.pop();result.dropped++;}
+  return result;
+}
+export class PersonalMemoryStore {
+  constructor(ctx) {
+    this.ctx=ctx;this.source=sourceId(ctx.sourceId);this.actor=personalPrincipal(ctx);
+    requireThat(typeof ctx.engine.executeRaw==='function'&&typeof ctx.engine.transaction==='function','unsupported_engine','Native PostgreSQL adapter required');
+    this.engine=ctx.engine;
+  }
+  async #lock(tx) {
+    await tx.executeRaw("SET LOCAL lock_timeout='5s'");
+    await tx.executeRaw("SET LOCAL statement_timeout='15s'");
+    await tx.executeRaw('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[JSON.stringify(['ultra-personal',this.source,this.actor])]);
+  }
+  async #event(operation,event,input,action) {
+    personalPrincipal(this.ctx,true);personalId(event,'event_id');
+    const digest=sha256(JSON.stringify([operation,input]));
+    if(this.ctx.dryRun)return {dry_run:true,operation,storage:'not_stored'};
+    return this.engine.transaction(async tx=>{
+      await this.#lock(tx);
+      const [prior]=await tx.executeRaw('SELECT operation,request_hash,result FROM ultrabrain.personal_events WHERE source_id=$1 AND actor_key=$2 AND event_id=$3',[this.source,this.actor,event]);
+      if(prior){
+        requireThat(prior.operation===operation&&prior.request_hash===digest,'conflict','Event was used for a different request');
+        return {...prior.result,replayed:true};
+      }
+      const result=await action(tx);
+      await tx.executeRaw('INSERT INTO ultrabrain.personal_events(source_id,actor_key,event_id,operation,request_hash,result) VALUES($1,$2,$3,$4,$5,$6::text::jsonb)',
+        [this.source,this.actor,event,operation,digest,JSON.stringify(result)]);
+      return {...result,replayed:false};
+    });
+  }
+  async register(input) {
+    personalPrincipal(this.ctx,true);const p=agentIdentity(input);
+    // Metadata is untrusted caller description; it never grants permissions.
+    const digest=sha256(JSON.stringify([this.source,this.actor,p.agent_id,p.agent_type,p.capabilities,p.workspace]));
+    if(this.ctx.dryRun)return {dry_run:true,storage:'not_stored'};
+    return this.engine.transaction(async tx=>{
+      await this.#lock(tx);
+      const [old]=await tx.executeRaw('SELECT identity_hash,revision FROM ultrabrain.agent_registry WHERE source_id=$1 AND actor_key=$2 AND agent_id=$3',[this.source,this.actor,p.agent_id]);
+      const same=old?.identity_hash===digest;
+      requireThat(same||(old?.revision??0)===p.expected_revision,'revision_conflict','Agent metadata changed; reload its current revision');
+      const revision=old?(same?old.revision:old.revision+1):1;
+      await tx.executeRaw(`INSERT INTO ultrabrain.agent_registry(source_id,actor_key,agent_id,type,capabilities,workspace,identity_hash,revision)
+        VALUES($1,$2,$3,$4,$5::text::jsonb,$6,$7,$8) ON CONFLICT(source_id,actor_key,agent_id) DO UPDATE SET
+        type=EXCLUDED.type,capabilities=EXCLUDED.capabilities,workspace=EXCLUDED.workspace,identity_hash=EXCLUDED.identity_hash,
+        revision=EXCLUDED.revision,last_seen=now()`,[this.source,this.actor,p.agent_id,p.agent_type,JSON.stringify(p.capabilities),p.workspace,digest,revision]);
+      return {source_id:this.source,actor_key:this.actor,agent_id:p.agent_id,revision,replayed:same??false,
+        identity_basis:'authenticated principal; agent label/capabilities are self-described, not verified software identity'};
+    });
+  }
+  async agents(input={}) {
+    objectFields(input,['limit','offset']);const limit=integer(input.limit,20,1,100),offset=integer(input.offset,0,0,1000000);
+    const rows=await this.engine.executeRaw(`SELECT agent_id,type AS agent_type,capabilities,workspace,revision,last_seen FROM ultrabrain.agent_registry
+      WHERE source_id=$1 AND actor_key=$2 ORDER BY agent_id LIMIT $3 OFFSET $4`,[this.source,this.actor,limit,offset]);
+    return {source_id:this.source,agents:rows,next_offset:rows.length===limit?offset+rows.length:null};
+  }
+  async commit(input) {
+    const p=memoryCommit(input);
+    return this.#event('commit',p.event_id,p,async tx=>{
+      const [agent]=await tx.executeRaw('SELECT 1 FROM ultrabrain.agent_registry WHERE source_id=$1 AND actor_key=$2 AND agent_id=$3',[this.source,this.actor,p.agent_id]);
+      requireThat(agent,'agent_not_registered','Register this agent label under the current authenticated identity first');
+      const entries=[];
+      for(const m of p.memories){
+        const [row]=await tx.executeRaw(`INSERT INTO ultrabrain.personal_memories
+          (source_id,actor_key,type,content,content_hash,confidence,importance,source,agent_id,project_id,status,visibility)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'candidate',$11)
+          RETURNING id::text,revision,status`,[this.source,this.actor,m.type,m.content,m.content_hash,m.confidence,m.importance,m.provenance,p.agent_id,m.project_id,m.visibility]);
+        entries.push(row);
+      }
+      return {source_id:this.source,event_id:p.event_id,entries,storage:'stored',model_calls:0,
+        state:'candidate',review_required:true,assurance:'Structured caller statements, not automatically confirmed facts'};
+    });
+  }
+  async #owned(tx,id) {
+    const [row]=await tx.executeRaw('SELECT revision FROM ultrabrain.personal_memories WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid FOR UPDATE',[this.source,this.actor,id]);
+    requireThat(row,'not_found','Memory not found under this principal');return row;
+  }
+  async review(input) {
+    objectFields(input,['memory_id','expected_revision','event_id','status']);
+    memoryId(input.memory_id);personalId(input.event_id,'event_id');
+    requireThat(input.expected_revision!==undefined,'invalid_params','Current revision required');
+    integer(input.expected_revision,undefined,1,2147483646);
+    requireThat(['active','archived'].includes(input.status),'invalid_params','Review selects active or archived');
+    const p={memory_id:input.memory_id,expected_revision:input.expected_revision,event_id:input.event_id,status:input.status};
+    return this.#event('review',p.event_id,p,async tx=>{
+      const old=await this.#owned(tx,p.memory_id);requireThat(old.revision===p.expected_revision,'revision_conflict','Memory changed; reload instead of overwriting');
+      const [row]=await tx.executeRaw(`UPDATE ultrabrain.personal_memories SET status=$4,revision=revision+1,
+        last_confirmed=CASE WHEN $4='active' THEN now() ELSE last_confirmed END,updated_at=now()
+        WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid RETURNING id::text,revision,status`,[this.source,this.actor,p.memory_id,p.status]);
+      return {...row,assurance:'Explicit caller review, not independent truth verification'};
+    });
+  }
+  async update(input) {
+    objectFields(input,['memory_id','expected_revision','event_id','memory']);
+    memoryId(input.memory_id);personalId(input.event_id,'event_id');
+    requireThat(input.expected_revision!==undefined,'invalid_params','Current revision required');integer(input.expected_revision,undefined,1,2147483646);
+    const m=normalizePersonalMemory(input.memory),p={memory_id:input.memory_id,expected_revision:input.expected_revision,event_id:input.event_id,memory:m};
+    return this.#event('update',p.event_id,p,async tx=>{
+      const old=await this.#owned(tx,p.memory_id);requireThat(old.revision===p.expected_revision,'revision_conflict','Memory changed; reload instead of overwriting');
+      const [row]=await tx.executeRaw(`UPDATE ultrabrain.personal_memories SET type=$4,content=$5,content_hash=$6,confidence=$7,
+        importance=$8,source=$9,project_id=$10,visibility=$11,status='candidate',last_confirmed=NULL,revision=revision+1,updated_at=now()
+        WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid RETURNING id::text,revision,status`,
+        [this.source,this.actor,p.memory_id,m.type,m.content,m.content_hash,m.confidence,m.importance,m.provenance,m.project_id,m.visibility]);
+      return {...row,review_required:true};
+    });
+  }
+  async #rows(p,context=false) {
+    // All optional search filters are data, never identifiers or SQL fragments.
+    return this.engine.executeRaw(`SELECT ${projection} FROM ultrabrain.personal_memories
+      WHERE source_id=$1 AND (actor_key=$2 OR (visibility='source' AND status='active')) AND status=$3 AND type=ANY($4::text[])
+      AND (($9 AND (project_id IS NULL OR project_id=$5)) OR (NOT $9 AND ($5::text IS NULL OR project_id=$5)))
+      AND ($6::text IS NULL OR agent_id=$6) AND ($7='' OR strpos(lower(content),lower($7))>0)
+      ORDER BY updated_at DESC,id LIMIT $8 OFFSET $10`,
+      [this.source,this.actor,p.status,p.types,p.project_id,p.agent_id,p.query,context?100:p.limit,context,p.offset]);
+  }
+  async search(input={}) {
+    const p=contextQuery(input),rows=await this.#rows(p);
+    return boundedRows(rows,p.budget_bytes,{source_id:this.source,status:p.status,
+      next_offset:rows.length===p.limit?p.offset+rows.length:null,coverage:'bounded live page, not a snapshot'});
+  }
+  async context(input={}) {
+    const p=contextQuery(input);
+    requireThat(p.status==='active','invalid_params','Personal context contains only explicitly active entries');
+    const rows=await this.#rows(p,true);
+    return buildPersonalContext(rows.map(rowView),Object.fromEntries(Object.entries(p).filter(([,v])=>v!==null)));
+  }
+  async profile(input={}) {
+    objectFields(input,['limit','budget_bytes']);
+    return this.context({...input,types:['identity','preference','environment','goal']});
+  }
 }
