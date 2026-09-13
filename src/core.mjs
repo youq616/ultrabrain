@@ -14,7 +14,7 @@ export function integer(value, fallback, min, max) {
   return value;
 }
 export function text(value, name, max = 262144) {
-  requireThat(typeof value === 'string' && value.trim().length > 0 &&
+  requireThat(typeof value === 'string' && value.isWellFormed() && value.trim().length > 0 &&
     Buffer.byteLength(value, 'utf8') <= max && !value.includes('\0'),
     'invalid_params', `${name} must be nonempty UTF-8 text, at most ${max} bytes, without NUL`);
   return value;

@@ -102,7 +102,7 @@ export async function startPersonalConsole({engine,source,token,port=3132}) {
         requireThat(inflight<4,'busy','Too many console requests');inflight++;held=true;
         const body=await jsonBody(req);objectFields(body,['operation','input']);
         objectFields(body.input??{},body.operation==='info'?[]:Object.keys(body.input??{}));
-        if(body.operation==='info') {send(res,200,{ok:true,result:{source_id:source,identity_scope:'local Linux service owner, same as unauthenticated stdio',version:'0.11.0-alpha.1'}});return;}
+        if(body.operation==='info') {send(res,200,{ok:true,result:{source_id:source,identity_scope:'local Linux service owner, same as unauthenticated stdio',version:'0.12.0-alpha.1'}});return;}
         requireThat(Object.hasOwn(METHODS,body.operation),'invalid_params','Unknown personal operation');
         submitted=WRITES.has(body.operation);
         const method=METHODS[body.operation];

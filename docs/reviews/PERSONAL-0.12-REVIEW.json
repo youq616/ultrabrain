@@ -1,0 +1,80 @@
+{
+  "format": 1,
+  "version": "0.12.0-alpha.1",
+  "baseline": "a81374c1bc626623616a47358f7105c91a49dea5",
+  "review_method": "Separate fresh working copy and review phase by the same assistant; not third-party certification or a line-by-line audit of every vendor dependency",
+  "source_scope": "Application, adapters, CLI, server boundaries, operations scripts, tests, migrations, docs and CI. Reuses pinned upstream runtime.",
+  "results": {
+    "javascript": {
+      "passed": 369,
+      "failed": 0,
+      "skipped": 0
+    },
+    "python": {
+      "passed": 59,
+      "failed": 0
+    },
+    "client_real_node_stdio_http_postgres": 19,
+    "restoration_fingerprints": 25,
+    "pgvector_sql_upgrade": 17,
+    "local_n8n": "18 execution-context checks; real n8n engine is a separate CI gate",
+    "local_browser": "blocked by container browser policy ERR_BLOCKED_BY_ADMINISTRATOR; no policy bypass; mandatory Chromium CI gate retained",
+    "github_ci": "Read the workflows for this file revision commit. This local report does not predeclare CI success."
+  },
+  "fixed_findings": [
+    "R01 contradictory unauthenticated internal HTTP identity fallback",
+    "R02 ill-formed Unicode accepted before UTF-8 encoding",
+    "R03 read-only probe incorrectly requires write tools",
+    "R04 profile source grammar inconsistent with server",
+    "R05 Python-compatible reparse/junction checks and config transaction tests"
+  ],
+  "initial_failures_preserved": [
+    "audit-regressions-before.log",
+    "client-kit-final.log",
+    "python-all.log",
+    "browser.log"
+  ],
+  "log_sha256": {
+    "node-all-final.log": "78905f351c01177f8d4744fdb8e65fa084069b8deafa27747a0730c225d8fa81",
+    "client-config-final.log": "abeff09b197f3c6bdcbb72917e4b9bb1500ba455fbce30d6b0b3001103a955d8",
+    "client-kit-http-fixed.log": "e99c415ea347444555c8f61239aa318a4b205b1b47d13ad311b4c95f1e5ede29",
+    "audit-regressions-before.log": "7b858a63c5fee0893f8c84bf26448915d3f2d8874f5ba5d8595e4a2ca5d5216e",
+    "audit-regressions-after.log": "a5a8feedabed783e93ffd479fc8804aee8227eb0a31f458d2c1f6057beb2a45f",
+    "client-kit-final.log": "b8a8765416ead961cc2161856c5d838c63e5fe614d81294eb89409025304c5c1",
+    "python-all.log": "2185496100b8bdb002f3810fd13a154a1aa81f3b22d896628c0f1d3f9f989138",
+    "python-all-final.log": "7e1600bec345a60fcfce7f86cea93f44f808f58ef5b23ae960e20ea3b6f04634",
+    "compat.log": "dad45f07a9e4eed388ec1a0ce2f0df23610018fcc34c29c7aed973ce4fe0298d",
+    "integration.log": "fe4902a7b6b743aeb6c9f961095e447b020c44ee28e48b5729296231eb96f5ab",
+    "bound-integration.log": "0c4084a561288126e8dfae3ec2c9fceb7e5523dffcd3903fa5b6a7ffb0fdab5a",
+    "http-integration.log": "a229bfb5e5a954303917fe5206102eed9f6c52c511398b12ae6dedb470e65b52",
+    "reliability-integration.log": "2d5bb1ec9daf26f4d2a387b3da8a56791e52fa1eeb3071f11e9a114df5aa77c7",
+    "revision-evidence-integration.log": "e6309a2b54e10a09e62a47a74ee781374ce5185030b0a51a741b7b915b1910bd",
+    "deferred-integration.log": "bdec69c2aa31b88829e36532b28f0ec3eb2646d612b918677a1068c6630ef87f",
+    "semantic-integration.log": "acb78dc1cc13bfbc61e4dc474e1a8eb496fa75b872155e0fbd8b5f2e67fa1469",
+    "memory-policy-integration.log": "faa95e609fa72883ea92678cd09c82e8f36ca6df490dfcc39f112b4259b7463e",
+    "review-dependencies-integration.log": "f5e0cf0a9a2e1176f433ad2da2333facfb8c00bd78c4a76f2a64f05acd8bc9e8",
+    "fact-evidence-integration.log": "496df0644738e7ab4789bdfd83889ce1fd13a3aecd80d9edbbdd08df58e46122",
+    "response-metadata-integration.log": "fdb3aa3cddb96e2aba394b201e2cb6d3b0cb74e86e160b4adc745f829b4962ce",
+    "enterprise-integration.log": "59e15f527aa2a90bc429f2126165bd066a729c6f2c9eb40c7bd3d5a156df4331",
+    "personal-integration.log": "b159d14e1ad18a1f7ac37d135b2bad848cff5d68761be0edbb8e820068ec8e39",
+    "personal-console-integration.log": "5b9e4ffca9d6cb1aeb99db342a89f618bd49bf8dc12a82573f3fcef944c3f361",
+    "personal-consolidation-integration.log": "3395dbe2ad1273b1826117ec6d1128f7322da9617168824c3830fe16417553c4",
+    "personal-provider-integration.log": "6ff0b09dde307261fcd306b3b9965567dea1fb139900a87ce4ab0c36437503bc",
+    "n8n-integration.log": "8c17e3830bfb5893873ce7049539e5b850ca3cd16ab9df2e7d0a767b1fa272be",
+    "memory-eval.log": "3c3e011c3b76045b024fe4bf207ed96b0a00feae2d605fc45f53b5fe39f7eb68",
+    "vector-upgrade.log": "9af0407a0b675ad0b5202435744387f1dd0f027848b678b9ce013622e3ed8a80",
+    "restore-verify.log": "5d45a687c58def0e8690240cd228965cf5cdde78c271d1e66f5dec63e16327fc",
+    "health.log": "f9438145f18696575b6cfe519c77c7a525e9b0e87e38096a95474afb33c801a0",
+    "browser.log": "dea368e8a09f1c46c10e27db200f03277e54709bd73557d957a1032e9488f6cb"
+  },
+  "limits": [
+    "Not all installed desktop Agent model workflows tested",
+    "Claude hooks auto-read only; no transcript file collection",
+    "No real LLM semantic quality claim",
+    "No complete attachment/key disaster recovery",
+    "No immutability against host/database owner",
+    "Not complete Personal V1"
+  ],
+  "historical_migrations_unchanged": true,
+  "upstream_pins_unchanged": true
+}

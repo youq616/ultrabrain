@@ -71,6 +71,12 @@ PostgreSQL 随项目在本机安装和管理，不要求外部数据库，不是
 
 新增令牌保护的本机个人管理台（候选、确认、编辑、归档、查询和当前页导出），并将已确认的个人上下文接入 AgentMemory、通用事件桥与 n8n 0.8.1 开关。迁移和上游锁不变。详见 [个人管理台](docs/PERSONAL-CONSOLE.md)、[实际验收范围](docs/VALIDATION-0.10.1.md) 和 [个人 V1 完成检查表](docs/PERSONAL-V1-CHECKLIST.md)。个人 V1 尚未全部完成；没有宣布所有客户端已自动记忆。
 
-## 当前增量：0.11.0-alpha.1
+## 历史增量：0.11.0-alpha.1
 
 新增获准原文的个人整理任务：复用原个人记忆表，显式模型开关，周期 Worker，精确引用的私有候选，原文变更失效、租约与原子结果提交。管理台可入队、查询和逐条处理；旧记录不自动发送模型。见 [个人自动整理](docs/PERSONAL-CONSOLIDATION.md) 和 [验收范围](docs/VALIDATION-0.11.md)。客户端自动 Hooks、完整多模态与个人 V1 仍未全部完成。
+
+## 当前增量：0.12.0-alpha.1
+
+新增客户端专用 Node 安装包、六工具只读/显式十二工具读写的个人 MCP 转发器、真实连接预检、Codex/Claude Code/OpenCode/ZCode 配置计划/合并/回滚，以及 Claude Code 工作前只读 Hook。Windows 可通过已有 SSH 连接 Linux 服务，不需要先安装 WSL 或本地数据库。具体客户端实际模型验收和全部自动采集仍未完成。
+
+使用 [客户端安装与边界](docs/CLIENT-KIT.md)，查看 [分阶段独立复核与修复报告](docs/reviews/PERSONAL-0.12-REVIEW.md)。本轮还修复内部 HTTP 身份回退、不完整 Unicode 输入和只读凭据预检；既有迁移、上游 pins 与企业白名单不变。整体个人 V1 仍以完成检查表为准，不以连接配置代替最终验收。

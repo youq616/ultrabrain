@@ -10,7 +10,8 @@ export function personalPrincipal(ctx,write=false) {
   authorizeMemory(ctx,write);
   sourceId(ctx.sourceId);
   requireThat(!ctx.localFederatedSourceIds?.length,'permission_denied','Personal operations require a single source');
-  if(!ctx.auth&&(ctx.remote===false||ctx.transport==='stdio'))return sha256(JSON.stringify(['host','owner']));
+  // Native stdio intentionally uses remote:true; HTTP must always carry authentication.
+  if(!ctx.auth&&(ctx.transport==='stdio'||ctx.remote===false&&(ctx.transport===undefined||ctx.transport==='cli')))return sha256(JSON.stringify(['host','owner']));
   requireThat(ctx.auth&&ctx.auth.sourceId===ctx.sourceId&&ctx.auth.hasSourceGrant!==false&&
     (!ctx.auth.allowedSources||(Array.isArray(ctx.auth.allowedSources)&&ctx.auth.allowedSources.length===1&&ctx.auth.allowedSources[0]===ctx.sourceId)),
     'permission_denied','An explicit complete single-source grant is required');

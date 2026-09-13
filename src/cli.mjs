@@ -6,7 +6,7 @@ const args = process.argv.slice(2);
 const [command, ...rest] = args;
 try {
   if (!command || ['help','--help','-h'].includes(command)) {
-    console.log(`ultrabrain 0.11.0-alpha.1 — Linux / managed PostgreSQL
+    console.log(`ultrabrain 0.12.0-alpha.1 — Linux / managed PostgreSQL
   db init|start|stop|status|backup|restore-new   Manage local PostgreSQL
   db activate-runtime                        Switch a stopped cluster to reviewed same-major binaries
   db vector-plan|vector-upgrade|vector-recover   Review/upgrade pinned vector SQL objects
