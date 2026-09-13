@@ -29,10 +29,12 @@ export function automationSettings(input={}) {
   const summary=input.summary??'prefer';
   requireThat(['prefer','require','off'].includes(summary),'invalid_params','Invalid summary preference');
   const includeFacts=input.includeFacts??false;boolean(includeFacts,'includeFacts');
+  const includePersonal=input.includePersonal??false;boolean(includePersonal,'includePersonal');
+  requireThat(!includePersonal||!root.slug,'scope_denied','Personal context requires a source root');
   if(input.factEntity)text(input.factEntity,'factEntity',2048);
   return Object.freeze({rootUri:root.uri,source:root.source,rootSlug:root.slug,allowCapture,allowSharedCapture,
-    expectedInstance,expectedActor,includeFacts,factEntity:input.factEntity??'',memoryPolicy:mode(input.memoryPolicy??'current'),summary,
-    budgetBytes:integer(input.budgetBytes,16000,includeFacts?2048:512,131072),
+    expectedInstance,expectedActor,includeFacts,includePersonal,factEntity:input.factEntity??'',memoryPolicy:mode(input.memoryPolicy??'current'),summary,
+    budgetBytes:integer(input.budgetBytes,16000,includePersonal?4096:includeFacts?2048:512,131072),
     timeoutMs:integer(input.timeoutMs,30000,1000,120000),
     factRecall:includeFacts?Object.freeze(input.factEntity?{entity:input.factEntity,limit:8}:{limit:8}):null});
 }
@@ -104,7 +106,7 @@ export async function automationSession(client,input,{signal}={}) {
         if(operation==='identity')return {identity};
         const memory=new AgentMemory({client,rootUri:settings.rootUri,sessionId:request.session_id,
           projectId:request.project_id??null,budgetBytes:settings.budgetBytes,timeoutMs:settings.timeoutMs,
-          summary:settings.summary,memoryPolicy:settings.memoryPolicy,factRecall:settings.factRecall,
+          summary:settings.summary,memoryPolicy:settings.memoryPolicy,factRecall:settings.factRecall,personalContext:settings.includePersonal,
           capture:settings.allowCapture,deferExtraction:true});
         if(operation==='before_turn') {
           const project=request.project_id?await memory.resumeProject(request.query,{signal}):null;

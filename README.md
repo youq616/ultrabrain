@@ -61,8 +61,12 @@ PostgreSQL 随项目在本机安装和管理，不要求外部数据库，不是
 
 使用 [企业服务控制](docs/ENTERPRISE-CONTROLS.md)、[企业生产准入清单](docs/ENTERPRISE-READINESS.md) 和 [本版验收范围](docs/VALIDATION-0.9.md)。**当前仍为 alpha，不是已经具备大型公司生产资质的最终完成版。**高可用、容量、组织权限、不可变审计外送、完整恢复与真实语义质量还需独立证据。
 
-## 当前增量：Personal Core 0.10.0-alpha.1
+## 历史增量：Personal Core 0.10.0-alpha.1
 
 优先个人版本。修复开发分支迁移/Store 字段冲突，接通 8 个个人 MCP 工具、认证主体归属、显式共享、候选审核、事件幂等和版本冲突控制。旧无归属数据保留但不擅自绑定。企业扩展暂停，已有模式保持兼容。
 
 实际调用与迁移边界见 [个人核心](docs/PERSONAL-CORE.md)，测试范围见 [0.10 验收](docs/VALIDATION-0.10.md)，协作规则见 [AGENTS.md](AGENTS.md)。这不是所有客户端自动记忆或完整个人 V1 的完成声明。
+
+## 当前增量：0.10.1-alpha.1
+
+新增令牌保护的本机个人管理台（候选、确认、编辑、归档、查询和当前页导出），并将已确认的个人上下文接入 AgentMemory、通用事件桥与 n8n 0.8.1 开关。迁移和上游锁不变。详见 [个人管理台](docs/PERSONAL-CONSOLE.md)、[实际验收范围](docs/VALIDATION-0.10.1.md) 和 [个人 V1 完成检查表](docs/PERSONAL-V1-CHECKLIST.md)。个人 V1 尚未全部完成；没有宣布所有客户端已自动记忆。

@@ -1,6 +1,6 @@
 # n8n-nodes-ultrabrain — private self-hosted adapter
 
-Client-only package for Ultrabrain 0.8.0. It reuses AgentMemory and the official MCP SDK (direct dependency pinned at 1.29.0). No PostgreSQL, Bun server runtime, credentials, shell executor or paid-model implementation is bundled.
+Client-only package 0.8.1-alpha.1. Personal context requires Ultrabrain 0.10.1 or newer; existing lifecycle operations retain their prior compatibility. It reuses AgentMemory and the official MCP SDK (direct dependency pinned at 1.29.0). No PostgreSQL, Bun server runtime, credentials, shell executor or paid-model implementation is bundled.
 
 Operations: Check Connection, Get Context Before Turn, Save Consented Turn, Get Session Status, Resume Project. Context uses the current governance policy; historical selection is explicit. Source-bound facts are optional. Summary reading never generates a summary.
 
@@ -17,3 +17,5 @@ Test baseline: n8n 2.38.7, n8n-workflow 2.38.1, Node.js 24+. Full compatibility,
 Full instructions and boundaries: https://github.com/youq616/ultrabrain/blob/main/docs/N8N-INTEGRATION.md
 
 License: MIT for this adapter. MCP SDK and n8n remain separate dependencies under their own licenses.
+
+0.8.1 增加 Include Active Personal Memory，默认关闭。启用时需要 source 根目录和至少 4096 字节预算，读取此凭据身份可见的已激活全局/当前项目记忆；不是默认自动采集或自动学习。详见 docs/PERSONAL-CONSOLE.md。

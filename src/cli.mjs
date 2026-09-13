@@ -6,10 +6,11 @@ const args = process.argv.slice(2);
 const [command, ...rest] = args;
 try {
   if (!command || ['help','--help','-h'].includes(command)) {
-    console.log(`ultrabrain 0.10.0-alpha.1 — Linux / managed PostgreSQL
+    console.log(`ultrabrain 0.10.1-alpha.1 — Linux / managed PostgreSQL
   db init|start|stop|status|backup|restore-new   Manage local PostgreSQL
   db activate-runtime                        Switch a stopped cluster to reviewed same-major binaries
   db vector-plan|vector-upgrade|vector-recover   Review/upgrade pinned vector SQL objects
+  personal-ui [--source SOURCE --port 3132]   Local-owner browser console (token protected)
   enterprise configure|status|audit          Host-only source admission policy and audit
   verify --project ID --task ID -- command    Host-only execution evidence (no remote executor)
   summary-config --from-chat-model --revision ID   Explicitly enable source summaries
@@ -31,6 +32,10 @@ Upstream-dependent features require their original providers/configuration.`);
     const p = spawnSync('python3', [`${ROOT}/scripts/${script}`, ...rest], { stdio: 'inherit' });
     if (p.error) throw p.error;
     process.exitCode = p.status ?? 1;
+  } else if (command === 'personal-ui') {
+    const {personalConsoleCLI}=await import('./personal-console.mjs');
+    const {HOME}=await import('./runtime.mjs');
+    await personalConsoleCLI(rest,{connect,home:HOME});
   } else if (command === 'enterprise') {
     const engine=await connect();
     try {const {enterpriseCLI}=await import('./enterprise-cli.mjs');console.log(JSON.stringify(await enterpriseCLI(rest,engine),null,2));}

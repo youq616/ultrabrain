@@ -67,3 +67,5 @@ ULTRABRAIN_TEST_ALLOW_WRITE=1 bun test/personal-integration.mjs
 实际 PostgreSQL 测试检查 schema/Store 一致性、原子批量写入/回滚、事件重放、CAS、来源/主体隔离、显式共享和实时令牌撤销；同时启动真实 stdio/HTTP MCP 并核对 tools/list 和 tools/call。升级矩阵另外从旧 personal-core 提交 f8cc5b980c260cd61e66e032ebce94a5cdc065e3 建立旧结构与无归属数据，验证升级后保留且不暴露。
 
 一次验证成功不等于所有 Agent 已经自动使用新工具。自研 Agent 可按上述 MCP 合同接入；Codex/Claude Code/ZCode/OpenCode 等本机配置和 Hooks 需最终用户环境验收。本轮不要求 Windows 安装 WSL 或自行编译 PostgreSQL；仓库端可完成的测试由仓库端完成，协作规则见根目录 AGENTS.md。
+
+0.10.1 已加入本机管理台与显式个人上下文读取接线，使用及身份范围见 PERSONAL-CONSOLE.md；其余未完成项以 PERSONAL-V1-CHECKLIST.md 为准。

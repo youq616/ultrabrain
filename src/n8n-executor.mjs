@@ -41,7 +41,7 @@ export async function executeN8n(context,connect) {
           memoryPolicy:get('memoryPolicy','current'),summary:get('summary','prefer'),
           budgetBytes:integer(get('budgetBytes',16000),16000,512,131072),
           timeoutMs:integer(get('timeoutMs',30000),30000,1000,120000),
-          includeFacts:get('includeFacts',false),factEntity:get('factEntity','')});
+          includeFacts:get('includeFacts',false),includePersonal:get('includePersonal',false),factEntity:get('factEntity','')});
         const request=requestFor(context,operation,index);
         // Preflight before connecting prevents unconsented capture from touching the network.
         validateAutomationRequest(operation,request,settings);

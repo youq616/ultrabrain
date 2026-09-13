@@ -32,6 +32,8 @@ class Ultrabrain {
           displayOptions:{show:{operation:['before_turn']}},options:[{name:'Current',value:'current'},{name:'Reviewed Only',value:'reviewed'},{name:'Explicit History',value:'history'}]},
         {displayName:'Summary Cache',name:'summary',type:'options',default:'prefer',
           displayOptions:{show:{operation:['before_turn']}},options:[{name:'Prefer Existing Summary',value:'prefer'},{name:'Require Existing Summary',value:'require'},{name:'Use Source Text',value:'off'}],description:'Never generates a summary or calls a model.'},
+        {displayName:'Include Active Personal Memory',name:'includePersonal',type:'boolean',default:false,
+          displayOptions:{show:{operation:['before_turn']}},description:'Whether to read explicitly active global and selected-project personal entries from this credential identity. Requires a source root and at least 4096 bytes.'},
         {displayName:'Include Governed Facts',name:'includeFacts',type:'boolean',default:false,
           displayOptions:{show:{operation:['before_turn']}},description:'Whether to combine current source-bound facts with pages; facts are not semantic matches to the query.'},
         {displayName:'Fact Entity',name:'factEntity',type:'string',default:'',

@@ -151,7 +151,10 @@ export class PersonalMemoryStore {
     const p=contextQuery(input);
     requireThat(p.status==='active','invalid_params','Personal context contains only explicitly active entries');
     const rows=await this.#rows(p,true);
-    return buildPersonalContext(rows.map(rowView),Object.fromEntries(Object.entries(p).filter(([,v])=>v!==null)));
+    const result=buildPersonalContext(rows.map(rowView),Object.fromEntries(Object.entries(p).filter(([,v])=>v!==null)));
+    result.source_id=this.source;
+    while(Buffer.byteLength(JSON.stringify(result))>p.budget_bytes&&result.memories.length){result.memories.pop();result.dropped++;}
+    return result;
   }
   async profile(input={}) {
     objectFields(input,['limit','budget_bytes']);
