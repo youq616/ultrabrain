@@ -8,6 +8,8 @@ name = sys.argv[1] if len(sys.argv) == 2 else 'ub_restore_ci'
 if not name.startswith('ub_restore_'):
     raise SystemExit('Only isolated restoration targets are accepted')
 queries = {
+    'personal_consolidations': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(row_to_json(t)::text, ',' ORDER BY id)),'empty') FROM ultrabrain.personal_consolidations t",
+    'personal_derivations': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(id::text || ':' || derivation::text, ',' ORDER BY id)),'empty') FROM ultrabrain.personal_memories WHERE derivation IS NOT NULL",
     'personal_memories': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(row_to_json(t)::text, ',' ORDER BY id)),'empty') FROM ultrabrain.personal_memories t",
     'personal_agents': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(row_to_json(t)::text, ',' ORDER BY registry_id)),'empty') FROM ultrabrain.agent_registry t",
     'personal_events': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(row_to_json(t)::text, ',' ORDER BY source_id,actor_key,event_id)),'empty') FROM ultrabrain.personal_events t",

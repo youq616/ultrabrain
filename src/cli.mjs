@@ -6,10 +6,11 @@ const args = process.argv.slice(2);
 const [command, ...rest] = args;
 try {
   if (!command || ['help','--help','-h'].includes(command)) {
-    console.log(`ultrabrain 0.10.1-alpha.1 — Linux / managed PostgreSQL
+    console.log(`ultrabrain 0.11.0-alpha.1 — Linux / managed PostgreSQL
   db init|start|stop|status|backup|restore-new   Manage local PostgreSQL
   db activate-runtime                        Switch a stopped cluster to reviewed same-major binaries
   db vector-plan|vector-upgrade|vector-recover   Review/upgrade pinned vector SQL objects
+  personal-model-config --from-chat-model --revision ID   Enable personal candidate extraction
   personal-ui [--source SOURCE --port 3132]   Local-owner browser console (token protected)
   enterprise configure|status|audit          Host-only source admission policy and audit
   verify --project ID --task ID -- command    Host-only execution evidence (no remote executor)
@@ -27,8 +28,8 @@ No arbitrary SQL MCP endpoint is added. HTTP/OAuth: native serve --help.
 Lifecycle bridge: bun scripts/agent-bridge.mjs --url URL --token-file PATH --root ultra://SOURCE/ < event.json
 Deferred worker: bun scripts/consolidate.mjs --url URL --token-file PATH --source SOURCE
 Upstream-dependent features require their original providers/configuration.`);
-  } else if (['db','upstream','summary-config'].includes(command)) {
-    const script = command === 'db' ? (['vector-plan','vector-upgrade','vector-recover'].includes(rest[0]) ? 'vector-upgrade.py' : 'postgres.py') : command === 'summary-config' ? 'configure-summary.py' : 'upstreams.py';
+  } else if (['db','upstream','summary-config','personal-model-config'].includes(command)) {
+    const script = command === 'personal-model-config' ? 'configure-personal-model.py' : command === 'db' ? (['vector-plan','vector-upgrade','vector-recover'].includes(rest[0]) ? 'vector-upgrade.py' : 'postgres.py') : command === 'summary-config' ? 'configure-summary.py' : 'upstreams.py';
     const p = spawnSync('python3', [`${ROOT}/scripts/${script}`, ...rest], { stdio: 'inherit' });
     if (p.error) throw p.error;
     process.exitCode = p.status ?? 1;

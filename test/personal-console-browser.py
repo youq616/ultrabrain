@@ -122,6 +122,19 @@ with sync_playwright() as p:
     assert len(attempts) == 2 and attempts[0] == attempts[1]
     page.unroute('**/api/call', interrupt_ack)
     passed()
+    # Queueing stores raw text only; no configured model means no classification call.
+    page.locator('#content').fill('用户允许保存的合成原文：我喜欢完整的命令行。')
+    page.locator('#consent').check()
+    page.locator('#queue-personal').click()
+    expect(page.locator('#results article')).to_have_count(2)
+    page.locator('[data-view="jobs"]').click()
+    expect(page.locator('#results')).to_contain_text('queued')
+    page.get_by_role('button', name='整理此条（调用模型）', exact=True).click()
+    expect(page.locator('#message')).to_contain_text('尚未配置个人整理模型')
+    expect(page.locator('#results')).to_contain_text('queued')
+    page.get_by_role('button', name='取消整理，保留原文', exact=True).click()
+    expect(page.locator('#results')).to_contain_text('stale')
+    passed()
     page.locator('#logout').click()
     expect(page.locator('#workspace')).to_be_hidden()
     assert page.evaluate('localStorage.length') == 0

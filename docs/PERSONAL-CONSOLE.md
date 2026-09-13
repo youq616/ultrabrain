@@ -83,3 +83,5 @@ await memory.learnPersonalMemories({
 参考：OWASP CSRF Prevention Cheat Sheet（Origin/custom headers/simple content types）：https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html 。
 
 测试包含纯安全边界测试、真实 PostgreSQL/API/AgentMemory 联调和 Chromium 界面交互。浏览器用临时 profile 与合成内容，不读取用户浏览器或真实聊天。CI 的 Playwright 固定为 1.57.0，真实模型效果和用户部署均另行验收。
+
+0.11 新增原文入队与整理任务视图，个人模型独立授权、周期 Worker 和来源失效规则见 PERSONAL-CONSOLIDATION.md。

@@ -1,4 +1,6 @@
 /** Personal MCP tools are registered in compatibility mode; governed enterprise allowlist stays frozen. */
+import {PersonalConsolidator} from './personal-consolidation.mjs';
+import {configuredPersonalModel} from './adapters/personal-model.mjs';
 import {PersonalMemoryStore} from './personal-memory-store.mjs';
 import {UltraError,requireThat} from './core.mjs';
 import {PERSONAL_MEMORY_TYPES,AGENT_TYPES} from './personal-memory.mjs';
@@ -10,6 +12,10 @@ const query={agent_id:str('Optional label filter, never authentication'),project
   limit:num('1..100'),offset:num('Live page offset'),budget_bytes:num('512..131072 serialized UTF-8 bytes')};
 const revision={memory_id:str('Full memory UUID',true),expected_revision:num('Latest observed revision',true),event_id:str('Stable immutable request id',true)};
 const definitions=[
+ ['ultra_personal_capture','capture',true,{agent_id:str('Registered label',true),event_id:str('Stable capture event id',true),transcript:str('Explicitly consented raw text, at most 32 KiB',true),consent:{type:'boolean',required:true},project_id:str('Optional project label')},'Atomically retain a private source entry and queue it for personal consolidation. Does not call a model or activate memory.'],
+ ['ultra_personal_consolidate','job_process',true,{expected_source:str('Must match authenticated source',true),allow_model_call:{type:'boolean',required:true},limit:num('1..4 jobs, default 1'),retry:{type:'boolean'},job_id:str('Optional owned job UUID')},'Process explicitly queued owned personal jobs using a separately enabled host model. Produces quoted private candidates only. Model costs may repeat after explicit recovery.'],
+ ['ultra_personal_jobs','job_status',false,{job_id:str('Optional owned job UUID'),limit:num('1..100'),offset:num('Live list offset')},'Inspect owned personal consolidation state without transcript content, credentials or model calls.'],
+ ['ultra_personal_cancel','job_cancel',true,{job_id:str('Owned incomplete job UUID',true)},'Fence an incomplete consolidation job. Retain its original input; cannot undo a submitted provider call or charge.'],
  ['ultra_agent_register','register',true,{agent_id:str('Caller-owned client label',true),agent_type:{...str('Self-described type'),enum:AGENT_TYPES},
    capabilities:{type:'array',items:{type:'string'}},workspace:str('Optional descriptive path, never executed'),expected_revision:num('0 to create; current revision for metadata changes')},'Register a client label under the authenticated source/principal, not a self-asserted identity.'],
  ['ultra_agent_list','agents',false,{limit:num('1..100'),offset:num('Live page offset')},'List only this principal registered client labels.'],
@@ -22,16 +28,17 @@ const definitions=[
  ['ultra_personal_update','update',true,{...revision,memory:{type:'object',required:true}},'Replace an owned typed entry with revision checking; edits return it to candidate. Not physical erasure.'],
 ];
 export const PERSONAL_TOOL_NAMES=Object.freeze(definitions.map(d=>d[0]));
-export function registerPersonalPlugin(operations,{OperationError}) {
+export function registerPersonalPlugin(operations,{OperationError},configureModel=configuredPersonalModel) {
   requireThat(definitions.every(([name])=>!operations.some(o=>o.name===name)),'upstream_contract_changed','Personal tool collision');
   for(const [name,method,mutating,params,description] of definitions)operations.push({name,params,description,mutating,scope:mutating?'write':'read',area:'ultrabrain',
     async handler(ctx,p){
       try {
         const {dry_run,_meta,...input}=p;
         requireThat(dry_run===undefined||typeof dry_run==='boolean','invalid_params','dry_run must be boolean');
-        return await new PersonalMemoryStore(ctx)[method](input);
+        return method.startsWith('job_')?await new PersonalConsolidator(ctx,configureModel)[method.slice(4)](input):await new PersonalMemoryStore(ctx)[method](input);
       }
       catch(e){
+        if(e.code==='personal_commit_unconfirmed')throw new OperationError(e.code,'Personal job commit unconfirmed; inspect durable status before retry');
         if(e instanceof UltraError)throw new OperationError(e.code,e.message);
         throw new OperationError('personal_storage_error','Personal operation failed; no raw SQL, credentials or memory content disclosed');
       }

@@ -121,6 +121,10 @@ try {
     await rpc(c,'ultra_agent_register',{agent_id:'same-label'});
   }
   const httpCatalog=(await http[0].listTools()).tools.map(x=>x.name);assert.ok(PERSONAL_TOOL_NAMES.every(n=>httpCatalog.includes(n)));pass();
+  const queuedHttp=await rpc(http[0],'ultra_personal_capture',{agent_id:'same-label',event_id:'raw-http',transcript:'Synthetic owned input for consolidation',consent:true});
+  await assert.rejects(rpc(http[1],'ultra_personal_jobs',{job_id:queuedHttp.job_id}),{code:'not_found'});
+  assert.equal((await rpc(http[0],'ultra_personal_consolidate',{job_id:queuedHttp.job_id,expected_source:source,allow_model_call:true})).state,'needs_model');
+  await rpc(http[0],'ultra_personal_cancel',{job_id:queuedHttp.job_id});pass();
   const secret=await rpc(http[0],'ultra_memory_commit',{agent_id:'same-label',event_id:'private-wire',consent:true,memories:[sample]});
   assert.ok(!(await rpc(http[1],'ultra_memory_search',{status:'candidate'})).memories.some(x=>x.id===secret.entries[0].id));pass();
   const share=await rpc(http[0],'ultra_memory_commit',{agent_id:'same-label',event_id:'shared-wire',consent:true,memories:[{...sample,visibility:'source'}]});

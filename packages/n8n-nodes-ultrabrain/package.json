@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-ultrabrain",
-  "version": "0.8.1-alpha.1",
+  "version": "0.8.2-alpha.1",
   "description": "Governed Ultrabrain memory and explicit conversation capture for self-hosted n8n",
   "license": "MIT",
   "type": "commonjs",

@@ -1,6 +1,6 @@
 # n8n-nodes-ultrabrain — private self-hosted adapter
 
-Client-only package 0.8.1-alpha.1. Personal context requires Ultrabrain 0.10.1 or newer; existing lifecycle operations retain their prior compatibility. It reuses AgentMemory and the official MCP SDK (direct dependency pinned at 1.29.0). No PostgreSQL, Bun server runtime, credentials, shell executor or paid-model implementation is bundled.
+Client-only package 0.8.2-alpha.1. Personal context requires Ultrabrain 0.10.1 or newer; existing lifecycle operations retain their prior compatibility. It reuses AgentMemory and the official MCP SDK (direct dependency pinned at 1.29.0). No PostgreSQL, Bun server runtime, credentials, shell executor or paid-model implementation is bundled.
 
 Operations: Check Connection, Get Context Before Turn, Save Consented Turn, Get Session Status, Resume Project. Context uses the current governance policy; historical selection is explicit. Source-bound facts are optional. Summary reading never generates a summary.
 

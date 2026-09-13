@@ -3,6 +3,7 @@ import {sha256,requireThat,sourceId,integer} from './core.mjs';
 import {authorizeMemory} from './memory-policy.mjs';
 import {objectFields,personalId,memoryId,normalizePersonalMemory,contextQuery} from './personal-memory.mjs';
 import {agentIdentity,memoryCommit} from './agent-memory-protocol.mjs';
+import {captureRequest,MAX_PERSONAL_JOBS} from './personal-consolidation-core.mjs';
 import {buildPersonalContext} from './personal-context-engine.mjs';
 export {normalizePersonalMemory as normalizeMemory} from './personal-memory.mjs';
 export function personalPrincipal(ctx,write=false) {
@@ -18,8 +19,19 @@ export function personalPrincipal(ctx,write=false) {
   requireThat(identity.every(x=>typeof x==='string'&&x.length>0&&x.length<=256),'permission_denied','Stable authenticated principal required');
   return sha256(JSON.stringify(['authenticated',...identity]));
 }
+/** Fixed alias used only in reviewed internal SQL, never from request data. */
+export const PERSONAL_DERIVATION_CURRENT=`(m.derivation IS NULL OR EXISTS (
+  SELECT 1 FROM ultrabrain.personal_memories origin WHERE origin.source_id=m.source_id AND origin.actor_key=m.actor_key
+  AND origin.id::text=m.derivation->>'input_id' AND origin.revision::text=m.derivation->>'input_revision'
+  AND origin.content_hash=m.derivation->>'input_hash' AND origin.status!='archived'))`;
+export async function lockPersonal(tx,source,actor) {
+  await tx.executeRaw("SET LOCAL lock_timeout='5s'");
+  await tx.executeRaw("SET LOCAL statement_timeout='15s'");
+  await tx.executeRaw('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[JSON.stringify(['ultra-personal',source,actor])]);
+}
 const projection=`id::text,type,content,content_hash,confidence,importance,source AS provenance,agent_id,project_id,
-  status,visibility,revision,created_at,updated_at,last_confirmed,(actor_key=$2) AS owned_by_caller`;
+  status,visibility,revision,created_at,updated_at,last_confirmed,(actor_key=$2) AS owned_by_caller,
+  CASE WHEN actor_key=$2 THEN derivation ELSE NULL END AS derivation,${PERSONAL_DERIVATION_CURRENT} AS derivation_current`;
 function rowView(row) {
   return {...row,confidence:row.confidence===null?null:Number(row.confidence),trust:'untrusted-memory-data'};
 }
@@ -36,11 +48,7 @@ export class PersonalMemoryStore {
     requireThat(typeof ctx.engine.executeRaw==='function'&&typeof ctx.engine.transaction==='function','unsupported_engine','Native PostgreSQL adapter required');
     this.engine=ctx.engine;
   }
-  async #lock(tx) {
-    await tx.executeRaw("SET LOCAL lock_timeout='5s'");
-    await tx.executeRaw("SET LOCAL statement_timeout='15s'");
-    await tx.executeRaw('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[JSON.stringify(['ultra-personal',this.source,this.actor])]);
-  }
+  async #lock(tx) {return lockPersonal(tx,this.source,this.actor);}
   async #event(operation,event,input,action) {
     personalPrincipal(this.ctx,true);personalId(event,'event_id');
     const digest=sha256(JSON.stringify([operation,input]));
@@ -100,8 +108,26 @@ export class PersonalMemoryStore {
         state:'candidate',review_required:true,assurance:'Structured caller statements, not automatically confirmed facts'};
     });
   }
+  async capture(input) {
+    const p=captureRequest(input);
+    return this.#event('capture',p.event_id,p,async tx=>{
+      const [agent]=await tx.executeRaw('SELECT 1 FROM ultrabrain.agent_registry WHERE source_id=$1 AND actor_key=$2 AND agent_id=$3',[this.source,this.actor,p.agent_id]);
+      requireThat(agent,'agent_not_registered','Register this agent label first');
+      const [capacity]=await tx.executeRaw("SELECT count(*)::integer AS n FROM ultrabrain.personal_consolidations WHERE source_id=$1 AND actor_key=$2 AND state IN ('queued','processing','failed')",[this.source,this.actor]);
+      requireThat(capacity.n<MAX_PERSONAL_JOBS,'queue_full','Process or explicitly cancel pending jobs before accepting more; no records were removed');
+      const digest=sha256(p.transcript);
+      const [entry]=await tx.executeRaw(`INSERT INTO ultrabrain.personal_memories
+        (source_id,actor_key,type,content,content_hash,confidence,importance,source,agent_id,project_id,status,visibility)
+        VALUES($1,$2,'experience',$3,$4,NULL,'normal','Explicit personal consolidation input',$5,$6,'candidate','private') RETURNING id::text,revision`,
+        [this.source,this.actor,p.transcript,digest,p.agent_id,p.project_id]);
+      const [job]=await tx.executeRaw(`INSERT INTO ultrabrain.personal_consolidations(source_id,actor_key,input_id,input_revision,input_hash)
+        VALUES($1,$2,$3::uuid,$4,$5) RETURNING id::text,state`,[this.source,this.actor,entry.id,entry.revision,digest]);
+      return {source_id:this.source,event_id:p.event_id,input_id:entry.id,input_revision:entry.revision,job_id:job.id,
+        state:job.state,storage:'journaled',model_calls:0,review_required:true};
+    });
+  }
   async #owned(tx,id) {
-    const [row]=await tx.executeRaw('SELECT revision FROM ultrabrain.personal_memories WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid FOR UPDATE',[this.source,this.actor,id]);
+    const [row]=await tx.executeRaw('SELECT revision,derivation FROM ultrabrain.personal_memories WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid FOR UPDATE',[this.source,this.actor,id]);
     requireThat(row,'not_found','Memory not found under this principal');return row;
   }
   async review(input) {
@@ -113,6 +139,12 @@ export class PersonalMemoryStore {
     const p={memory_id:input.memory_id,expected_revision:input.expected_revision,event_id:input.event_id,status:input.status};
     return this.#event('review',p.event_id,p,async tx=>{
       const old=await this.#owned(tx,p.memory_id);requireThat(old.revision===p.expected_revision,'revision_conflict','Memory changed; reload instead of overwriting');
+      if(p.status==='active'&&old.derivation) {
+        const [origin]=await tx.executeRaw(`SELECT revision,content_hash,status FROM ultrabrain.personal_memories
+          WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid FOR SHARE`,[this.source,this.actor,old.derivation.input_id]);
+        requireThat(origin&&origin.status!=='archived'&&origin.revision===old.derivation.input_revision&&origin.content_hash===old.derivation.input_hash,
+          'stale_source','Consolidation input changed or was archived; reconcile this candidate before activation');
+      }
       const [row]=await tx.executeRaw(`UPDATE ultrabrain.personal_memories SET status=$4,revision=revision+1,
         last_confirmed=CASE WHEN $4='active' THEN now() ELSE last_confirmed END,updated_at=now()
         WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid RETURNING id::text,revision,status`,[this.source,this.actor,p.memory_id,p.status]);
@@ -127,7 +159,7 @@ export class PersonalMemoryStore {
     return this.#event('update',p.event_id,p,async tx=>{
       const old=await this.#owned(tx,p.memory_id);requireThat(old.revision===p.expected_revision,'revision_conflict','Memory changed; reload instead of overwriting');
       const [row]=await tx.executeRaw(`UPDATE ultrabrain.personal_memories SET type=$4,content=$5,content_hash=$6,confidence=$7,
-        importance=$8,source=$9,project_id=$10,visibility=$11,status='candidate',last_confirmed=NULL,revision=revision+1,updated_at=now()
+        importance=$8,source=$9,project_id=$10,visibility=$11,status='candidate',derivation=NULL,last_confirmed=NULL,revision=revision+1,updated_at=now()
         WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid RETURNING id::text,revision,status`,
         [this.source,this.actor,p.memory_id,m.type,m.content,m.content_hash,m.confidence,m.importance,m.provenance,m.project_id,m.visibility]);
       return {...row,review_required:true};
@@ -135,8 +167,9 @@ export class PersonalMemoryStore {
   }
   async #rows(p,context=false) {
     // All optional search filters are data, never identifiers or SQL fragments.
-    return this.engine.executeRaw(`SELECT ${projection} FROM ultrabrain.personal_memories
+    return this.engine.executeRaw(`SELECT ${projection} FROM ultrabrain.personal_memories m
       WHERE source_id=$1 AND (actor_key=$2 OR (visibility='source' AND status='active')) AND status=$3 AND type=ANY($4::text[])
+      AND (status!='active' OR (NOT $9 AND actor_key=$2) OR ${PERSONAL_DERIVATION_CURRENT})
       AND (($9 AND (project_id IS NULL OR project_id=$5)) OR (NOT $9 AND ($5::text IS NULL OR project_id=$5)))
       AND ($6::text IS NULL OR agent_id=$6) AND ($7='' OR strpos(lower(content),lower($7))>0)
       ORDER BY updated_at DESC,id LIMIT $8 OFFSET $10`,

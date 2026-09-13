@@ -34,7 +34,7 @@ export class AgentMemory extends BaseAgentMemory {
     requireThat(Buffer.byteLength(JSON.stringify(result))<=budgetBytes,'mcp_contract_changed','Personal context exceeded budget');
     for(const row of result.memories) {
       requireThat(row&&PERSONAL_MEMORY_TYPES.includes(row.type)&&typeof row.content==='string'&&row.content_hash===sha256(row.content)&&
-        row.status==='active'&&(row.project_id==null||row.project_id===this.projectId)&&
+        row.status==='active'&&row.derivation_current!==false&&(row.project_id==null||row.project_id===this.projectId)&&
         (row.owned_by_caller===true||row.visibility==='source'),'mcp_contract_changed','Personal context includes ineligible, stale or out-of-project data');
     }
     return {...result,trust:'untrusted-memory-data'};
@@ -43,6 +43,15 @@ export class AgentMemory extends BaseAgentMemory {
     requireThat(this.capture&&!this.root.slug,'capture_disabled','Personal registration requires capture opt-in and a source root');
     identifier(agentId,'agentId');
     return this.invoke('ultra_agent_register',{agent_id:agentId,agent_type:agentType,capabilities,expected_revision:expectedRevision},signal);
+  }
+  async queuePersonalTranscript({agentId,eventId,transcript,consent=false,signal}={}) {
+    requireThat(this.capture&&consent===true&&!this.root.slug,'capture_disabled','Personal capture requires explicit consent and a source root');
+    identifier(agentId,'agentId');identifier(eventId,'eventId');
+    const result=await this.invoke('ultra_personal_capture',{agent_id:agentId,event_id:eventId,transcript,consent:true,
+      ...(this.projectId?{project_id:this.projectId}:{})},signal);
+    requireThat(result.source_id===this.root.source&&result.event_id===eventId&&result.storage==='journaled'&&typeof result.job_id==='string',
+      'mcp_contract_changed','Personal capture receipt does not match the request');
+    return result;
   }
   async learnPersonalMemories({agentId,eventId,memories,summary,consent=false,signal}={}) {
     requireThat(this.capture&&consent===true&&!this.root.slug,'capture_disabled','Personal learning requires explicit per-call consent and capture opt-in on a source root');

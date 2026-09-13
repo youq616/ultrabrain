@@ -7,7 +7,7 @@ import {UltraError} from '../../../src/core.mjs';
 
 export async function connectN8n(credentials,{signal}={}) {
   const endpoint=automationEndpoint(credentials.endpoint);
-  const client=new Client({name:'ultrabrain-n8n',version:'0.8.1-alpha.1'});
+  const client=new Client({name:'ultrabrain-n8n',version:'0.8.2-alpha.1'});
   let transport;
   try {
     const authenticated=credentialFetch(endpoint,credentials.token,{signal});

@@ -1,4 +1,4 @@
-# 0.8.1-alpha.1：可安装的私有 n8n 节点
+# 0.8.2-alpha.1：可安装的私有 n8n 节点
 
 本版提供客户端 npm 安装包，不是新增数据库、HTTP 服务或通用命令执行器。复用现有 AgentMemory、来源治理和固定版本 MCP SDK，适用于自托管 n8n。它尚未发布到 npm 或通过 n8n Cloud 验证；不要把 npm 上的同名包当成本仓库发行物。
 
@@ -10,7 +10,7 @@
 bash scripts/package-n8n.sh
 ```
 
-生成 `dist/n8n/n8n-nodes-ultrabrain-0.8.1-alpha.1.tgz` 和 SHA-256 文件。构建脚本不会安装到你的服务或重启服务，也不会覆盖已有同名包。安装包包含编译后的客户端、凭据/节点定义、manifest 和许可证，不包含 vendor、数据库、模型密钥或 node_modules。MCP SDK 的直接版本固定，npm 安装时解析其传递依赖，不将 tgz 称为完整离线环境。
+生成 `dist/n8n/n8n-nodes-ultrabrain-0.8.2-alpha.1.tgz` 和 SHA-256 文件。构建脚本不会安装到你的服务或重启服务，也不会覆盖已有同名包。安装包包含编译后的客户端、凭据/节点定义、manifest 和许可证，不包含 vendor、数据库、模型密钥或 node_modules。MCP SDK 的直接版本固定，npm 安装时解析其传递依赖，不将 tgz 称为完整离线环境。
 
 将包传到 **n8n 所在主机**，使用运行 n8n 的账户安装到独立目录，例如：
 
@@ -18,7 +18,7 @@ bash scripts/package-n8n.sh
 INSTALL_ROOT="$HOME/.local/share/ultrabrain-n8n-adapter"
 mkdir -p "$INSTALL_ROOT"
 npm install --prefix "$INSTALL_ROOT" --omit=dev --ignore-scripts \
-  /实际路径/n8n-nodes-ultrabrain-0.8.1-alpha.1.tgz
+  /实际路径/n8n-nodes-ultrabrain-0.8.2-alpha.1.tgz
 ```
 
 把下列路径加入 n8n 服务的 `N8N_CUSTOM_EXTENSIONS` 并重启该 n8n 服务：

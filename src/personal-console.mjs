@@ -8,12 +8,13 @@ import {resolve,dirname,parse,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {requireThat,sourceId,integer,UltraError} from './core.mjs';
 import {objectFields} from './personal-memory.mjs';
+import {PersonalConsolidator} from './personal-consolidation.mjs';
 import {PersonalMemoryStore} from './personal-memory-store.mjs';
 const WEB=fileURLToPath(new URL('../web/personal/',import.meta.url));
-const METHODS=Object.freeze({search:'search',profile:'profile',context:'context',agents:'agents',register:'register',commit:'commit',review:'review',update:'update'});
-const WRITES=new Set(['register','commit','review','update']);
+const METHODS=Object.freeze({capture:'capture',jobs:'job_status',consolidate:'job_process',cancel_job:'job_cancel',search:'search',profile:'profile',context:'context',agents:'agents',register:'register',commit:'commit',review:'review',update:'update'});
+const WRITES=new Set(['register','commit','review','update','capture','consolidate','cancel_job']);
 const ASSETS=new Map([['/',['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']]]);
-const SAFE_CODES=new Set(['invalid_params','not_found','revision_conflict','conflict','agent_not_registered','capture_disabled','permission_denied']);
+const SAFE_CODES=new Set(['invalid_params','not_found','revision_conflict','conflict','agent_not_registered','capture_disabled','permission_denied','queue_full','model_consent_required','stale_source','invalid_personal_model']);
 export function consoleOptions(args) {
   const out={source:'default',port:3132};
   for(let i=0;i<args.length;i+=2) {
@@ -101,10 +102,11 @@ export async function startPersonalConsole({engine,source,token,port=3132}) {
         requireThat(inflight<4,'busy','Too many console requests');inflight++;held=true;
         const body=await jsonBody(req);objectFields(body,['operation','input']);
         objectFields(body.input??{},body.operation==='info'?[]:Object.keys(body.input??{}));
-        if(body.operation==='info') {send(res,200,{ok:true,result:{source_id:source,identity_scope:'local Linux service owner, same as unauthenticated stdio',version:'0.10.1-alpha.1'}});return;}
+        if(body.operation==='info') {send(res,200,{ok:true,result:{source_id:source,identity_scope:'local Linux service owner, same as unauthenticated stdio',version:'0.11.0-alpha.1'}});return;}
         requireThat(Object.hasOwn(METHODS,body.operation),'invalid_params','Unknown personal operation');
         submitted=WRITES.has(body.operation);
-        const result=await store[METHODS[body.operation]](body.input??{});
+        const method=METHODS[body.operation];
+        const result=method.startsWith('job_')?await new PersonalConsolidator(store.ctx)[method.slice(4)](body.input??{}):await store[method](body.input??{});
         send(res,200,{ok:true,result});
       }catch(e){
         const local=e instanceof UltraError;
