@@ -96,6 +96,32 @@ with sync_playwright() as p:
     expect(page.locator('#results article')).to_have_count(1)
     if os.environ.get('ULTRABRAIN_BROWSER_SCREENSHOT'):
         page.screenshot(path=os.environ['ULTRABRAIN_BROWSER_SCREENSHOT'], full_page=True)
+    # Drop the response only after the real server committed it; retry must reuse the event.
+    page.locator('[data-view="candidate"]').click()
+    expect(page.locator('#results article')).to_have_count(0)
+    page.locator('#content').fill('合成网络重试：只保存一次，不改变事件编号。')
+    page.locator('#consent').check()
+    attempts = []
+    def interrupt_ack(route):
+        body = route.request.post_data_json
+        if body.get('operation') == 'commit':
+            attempts.append(body['input']['event_id'])
+            if len(attempts) == 1:
+                response = route.fetch()
+                assert response.ok, 'Synthetic commit failed before response interruption'
+                route.abort('failed')
+                return
+        route.continue_()
+    page.route('**/api/call', interrupt_ack)
+    page.locator('#save').click()
+    expect(page.locator('#pending-panel')).to_be_visible()
+    expect(page.locator('#save')).to_be_disabled()
+    page.locator('#retry').click()
+    expect(page.locator('#pending-panel')).to_be_hidden()
+    expect(page.locator('#results article')).to_have_count(1)
+    assert len(attempts) == 2 and attempts[0] == attempts[1]
+    page.unroute('**/api/call', interrupt_ack)
+    passed()
     page.locator('#logout').click()
     expect(page.locator('#workspace')).to_be_hidden()
     assert page.evaluate('localStorage.length') == 0

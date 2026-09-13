@@ -10,6 +10,8 @@ import {tmpdir} from 'node:os';
 import {join,resolve,dirname} from 'node:path';
 import {randomBytes,createHash} from 'node:crypto';
 import {connect,ROOT} from '../src/runtime.mjs';
+import {Client} from '../vendor/gbrain/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js';
+import {StreamableHTTPClientTransport} from '../vendor/gbrain/node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.js';
 assert.equal(process.env.ULTRABRAIN_TEST_ALLOW_WRITE,'1','Isolated test installation required');
 const require=createRequire(import.meta.url);
 const adapter=require('../packages/n8n-nodes-ultrabrain/dist/runtime.cjs');
@@ -18,7 +20,7 @@ const source='n8n-'+randomBytes(5).toString('hex'),secret='gbrain_'+randomBytes(
 const readerSecret='gbrain_'+randomBytes(32).toString('hex');
 const temp=mkdtempSync(join(tmpdir(),'ub-n8n-'));
 let hostVersion=null,hostNodeVersion=null;
-let server,checks=0;const proof=()=>checks++;
+let seedClient,server,checks=0;const proof=()=>checks++;
 const free=createServer();free.listen(0,'127.0.0.1');await once(free,'listening');const port=free.address().port;await new Promise(r=>free.close(r));
 const endpoint=`http://127.0.0.1:${port}/mcp`;
 const creds={endpoint,token:secret,rootUri:`ultra://${source}/`,allowCapture:true,allowSharedCapture:false};
@@ -86,6 +88,23 @@ try{
   assert.ok(reads.every(x=>x.json.result.context.items.length===0));proof();
   const mixed=await adapter.execute(context([{operation:'after_turn',captureConsent:false},{operation:'identity'}],creds,true));
   assert.equal(mixed[0].json.error,'capture_disabled');assert.equal(mixed[1].json.ok,true);proof();
+  // Establish personal data through the same authenticated HTTP principal, not SQL impersonation.
+  seedClient=new Client({name:'ultrabrain-n8n-personal-fixture',version:'0.10.1'});
+  await seedClient.connect(new StreamableHTTPClientTransport(new URL(endpoint),{requestInit:{headers:{Authorization:`Bearer ${secret}`}},reconnectionOptions:{maxRetries:0}}));
+  const personalCall=async(name,args)=>{
+    const response=await seedClient.callTool({name,arguments:args});
+    assert.ok(!response.isError,'Personal fixture operation was rejected');
+    return JSON.parse(response.content[0].text);
+  };
+  await personalCall('ultra_agent_register',{agent_id:'n8n-personal',agent_type:'custom'});
+  const learned=await personalCall('ultra_memory_commit',{agent_id:'n8n-personal',event_id:'personal-fixture',consent:true,
+    memories:[{type:'preference',content:'Synthetic personal rule: retain stable event identifiers.',provenance:'n8n fixture',importance:'high'}]});
+  const personalId=learned.entries[0].id;
+  await personalCall('ultra_personal_review',{memory_id:personalId,expected_revision:1,event_id:'personal-activate',status:'active'});
+  const withPersonal=await adapter.execute(context([{operation:'before_turn',includePersonal:true,query:'unrelated-task'}]));
+  assert.equal(withPersonal[0].json.result.context.personal_context.memories[0].id,personalId);proof();
+  const anotherPersonal=await adapter.execute(context([{operation:'before_turn',includePersonal:true}],{...creds,token:readerSecret}));
+  assert.equal(anotherPersonal[0].json.result.context.personal_context.memories.length,0);proof();
   if(process.argv.includes('--engine')){
     const binary=process.env.ULTRABRAIN_N8N_BIN,packageDir=process.env.ULTRABRAIN_N8N_INSTALLED;
     assert.ok(binary&&existsSync(binary),'--engine requires the pinned installed n8n CLI');
@@ -111,8 +130,9 @@ try{
     const save={parameters:{...defaults,operation:'after_turn',sessionId:'real-n8n-cli',eventId:'stable-event'},
       name:'Capture',type:'CUSTOM.ultrabrain',typeVersion:1,position:[260,0],id:'save',credentials:{ultrabrainApi:{id:credentialId,name:'Ultrabrain Fixture'}}};
     const status={...save,name:'Status',id:'status',position:[520,0],parameters:{...save.parameters,operation:'session_status'}};
+    const personal={...save,name:'Personal',id:'personal',position:[780,0],parameters:{...save.parameters,operation:'before_turn',includePersonal:true,query:'unrelated-task'}};
     const workflow={id:'ubN8nFlow00000001',name:'Ultrabrain real n8n fixture',active:false,settings:{executionOrder:'v1'},
-      nodes:[manual,save,status],connections:{Start:{main:[[{node:'Capture',type:'main',index:0}]]},Capture:{main:[[{node:'Status',type:'main',index:0}]]}}};
+      nodes:[manual,save,status,personal],connections:{Start:{main:[[{node:'Capture',type:'main',index:0}]]},Capture:{main:[[{node:'Status',type:'main',index:0}]]},Status:{main:[[{node:'Personal',type:'main',index:0}]]}}};
     const file=join(temp,'workflow.json');
     const importWorkflow=async()=>{
       writeFileSync(file,JSON.stringify(workflow),{mode:0o600});
@@ -137,13 +157,16 @@ try{
       assert.equal(last.result.status.session_id,'real-n8n-cli');
       assert.equal(last.result.status.event_id,'stable-event');proof();
       assert.equal(await sessionCount('real-n8n-cli'),1);proof();
+      const personalOutput=execution.data.resultData.runData.Personal?.[0]?.data?.main?.[0]?.[0]?.json;
+      assert.equal(personalOutput?.ok,true,'Actual n8n Personal node did not produce a result');
+      assert.equal(personalOutput.result.context.personal_context.memories[0].id,personalId);proof();
     }
     workflow.nodes[1].parameters.captureConsent=false;workflow.nodes[1].parameters.eventId='no-consent';
     await importWorkflow();
     const blocked=await executeProcess('node',[binary,'execute',`--id=${workflow.id}`,'--rawOutput'],{env:executionEnv});
     assert.match(blocked.output,/capture_disabled/,'Non-consented actual workflow lacked the expected consent rejection');
     assert.equal(await sessionCount('real-n8n-cli'),1);proof();
-    console.log('PASS real n8n CLI: private node loading, credential import, Capture -> Status workflow, replay, consent refusal');
+    console.log('PASS real n8n CLI: private node loading, credential import, Capture -> Status -> Personal workflow, replay, consent refusal');
   }
   await engine.executeRaw('UPDATE access_tokens SET revoked_at=now() WHERE name=$1',[source+'-writer']);
   await assert.rejects(adapter.execute(context([{operation:'after_turn',eventId:'revoked'}])));assert.equal(await sessionCount('n8n-session'),1);proof();
@@ -151,6 +174,7 @@ try{
   if(process.env.ULTRABRAIN_N8N_REPORT)writeFileSync(process.env.ULTRABRAIN_N8N_REPORT,JSON.stringify({checks,passed:true,
     engine:process.argv.includes('--engine')?'n8n 2.38.7 CLI':'execution-context fixture',harnessRuntime:typeof Bun==='undefined'?'Node.js '+process.version:'Bun '+Bun.version,hostVersion,hostNodeVersion,sdk:'1.29.0'},null,2)+'\n');
 }finally{
+  if(seedClient)try{await seedClient.close();}catch{}
   if(server&&server.exitCode===null){server.kill('SIGTERM');const forced=setTimeout(()=>server.kill('SIGKILL'),5000);forced.unref();await once(server,'exit');clearTimeout(forced);}
   await engine.executeRaw('DELETE FROM access_tokens WHERE name=ANY($1::text[])',[[source+'-writer',source+'-reader']]);
   await engine.disconnect();
