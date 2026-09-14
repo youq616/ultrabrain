@@ -183,6 +183,38 @@ class RecoveryTests(unittest.TestCase):
         lock.unlink()
         with r.managed_lock(self.pg):
             with self.assertRaises(BlockingIOError):self.create()
+    def test_unreadable_nested_directory_must_not_be_silently_omitted(self):
+        path=self.home/'gbrain/locked';path.mkdir(mode=0o700);(path/'retained').write_bytes(b'synthetic')
+        path.chmod(0)
+        try:
+            with self.assertRaisesRegex(r.RecoveryError,'unreadable_directory'):self.create()
+        finally:path.chmod(0o700)
+    def test_runtime_is_checked_after_obtaining_manager_lock(self):
+        sha=self.create()
+        @contextlib.contextmanager
+        def change_at_lock(_):
+            self.runtime={**self.runtime,'version':'18.7'}
+            yield
+        with patch.object(r,'managed_lock',side_effect=change_at_lock):
+            with self.assertRaisesRegex(r.RecoveryError,'runtime_mismatch'):
+                r.restore_database(self.pg,self.target,sha,'ub_restore_fixture',True)
+        self.pg.restore_new.assert_not_called()
+    def test_dump_and_manifest_are_fsynced_before_completion(self):
+        calls=[];original=r.sync_file
+        def record(root,name):calls.append(name);return original(root,name)
+        with patch.object(r,'sync_file',side_effect=record):self.create()
+        self.assertEqual(calls,['database.dump','manifest.json'])
+        self.assertFalse((self.target/'INCOMPLETE').exists())
+    def test_dump_size_limit_is_inherited_and_restored_after_failure(self):
+        import resource,subprocess,sys
+        original=resource.getrlimit(resource.RLIMIT_FSIZE)
+        with self.assertRaises(RuntimeError):
+            with r.dump_file_limit(1024):
+                child=subprocess.run([sys.executable,'-c',
+                    'import resource; print(resource.getrlimit(resource.RLIMIT_FSIZE)[0])'],capture_output=True,text=True)
+                self.assertEqual(child.returncode,0);self.assertLessEqual(int(child.stdout),1024)
+                raise RuntimeError('synthetic interruption')
+        self.assertEqual(resource.getrlimit(resource.RLIMIT_FSIZE),original)
     def test_manifest_duplicate_keys_rejected(self):
         with self.assertRaisesRegex(r.RecoveryError,'duplicate_key'):r.load_json(b'{"format":1,"format":2}')
 

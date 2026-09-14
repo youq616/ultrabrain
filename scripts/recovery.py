@@ -15,7 +15,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
-import secrets
+import resource
 import stat
 import sys
 import tempfile
@@ -173,13 +173,23 @@ def new_directory(target, forbidden=()):
     sync_dir(target.parent)
     return target
 
+def unreadable_directory(_error):
+    raise RecoveryError('unreadable_directory')
+
+def sync_file(root, name):
+    fd = open_under(root, name)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
 def inventory(home):
     """Only selected managed state, never ~/.ssh, arbitrary sources, PGDATA or runtime."""
     no_links(home, private=True)
     names, directories = [], []
     native = home / 'gbrain'
     no_links(native)
-    for base, dirs, files in os.walk(native, followlinks=False):
+    for base, dirs, files in os.walk(native, followlinks=False, onerror=unreadable_directory):
         for name in dirs:
             path = Path(base) / name
             st = path.lstat()
@@ -224,6 +234,19 @@ def managed_lock(pg):
     finally:
         os.close(fd)
 
+@contextlib.contextmanager
+def dump_file_limit(remaining):
+    # pg_dump inherits this file-size ceiling. Restore the caller's stricter limit
+    # even on failure; do not let an oversized database fill disk before rejection.
+    need(remaining > 0, 'size_limit')
+    original = resource.getrlimit(resource.RLIMIT_FSIZE)
+    soft = remaining if original[0] == resource.RLIM_INFINITY else min(original[0], remaining)
+    resource.setrlimit(resource.RLIMIT_FSIZE, (soft, original[1]))
+    try:
+        yield
+    finally:
+        resource.setrlimit(resource.RLIMIT_FSIZE, original)
+
 def no_clients(pg):
     value = pg.pg('psql', '-X', '-tAc', "SELECT count(*) FROM pg_stat_activity WHERE datname='ultrabrain' "
                   "AND pid<>pg_backend_pid() AND backend_type='client backend'").stdout.strip()
@@ -246,8 +269,12 @@ def create(pg, destination, *, consent=False, writers_stopped=False):
             rows.append({'path': name, 'object': f'private/{index:06d}.bin', **entry})
         sync_dir(target / 'private')
         # Reuse the managed dump implementation; never copy live PGDATA.
-        with contextlib.redirect_stdout(io.StringIO()):
+        with dump_file_limit(MAX_BYTES - total), contextlib.redirect_stdout(io.StringIO()):
             pg.backup(str(target / 'database'))
+        # A durable top-level manifest must not outlive undurable dump directory entries.
+        for name in ('database.dump', 'manifest.json'):
+            sync_file(target / 'database', name)
+        sync_dir(target / 'database')
         db = load_json(small_read(target / 'database', 'manifest.json'))
         need(db.get('kind') == 'database-only' and db.get('format') == 2, 'unsupported_database_backup')
         database_manifest = transfer(target / 'database', 'manifest.json')
@@ -346,7 +373,7 @@ def stage(directory, destination, expected):
     need(hashlib.sha256(raw).hexdigest() == expected, 'manifest_checksum_mismatch')
     write_new(dest / 'source-manifest.json', raw)
     write_new(dest / 'STAGED-NOT-ACTIVE', b'Private files are inactive evidence. Do not point ULTRABRAIN_HOME here.\n')
-    for base, _, _ in os.walk(dest, topdown=False):
+    for base, _, _ in os.walk(dest, topdown=False, onerror=unreadable_directory):
         sync_dir(Path(base))
     (dest / 'INCOMPLETE').unlink(); sync_dir(dest)
     return {'staged': True, 'configuration_applied': False, 'services_started': False, 'files': len(m['private_files'])}
@@ -355,9 +382,9 @@ def restore_database(pg, directory, expected, database, trust_source=False):
     need(trust_source is True, 'backup_origin_trust_required')
     need(isinstance(database, str) and re.fullmatch(r'ub_restore_[a-z0-9_]{1,40}', database), 'invalid_restore_database')
     m = verify(directory, expected)
-    need(m.get('application_sha256') == app_fingerprint() and m.get('upstreams') == pg.LOCK
-         and m.get('postgres') == pg.read_runtime(), 'recovery_runtime_mismatch')
     with managed_lock(pg):
+        need(m.get('application_sha256') == app_fingerprint() and m.get('upstreams') == pg.LOCK
+             and m.get('postgres') == pg.read_runtime(), 'recovery_runtime_mismatch')
         # Recopy and revalidate the dump into private local staging before SQL execution.
         with tempfile.TemporaryDirectory(prefix='recovery-', dir=pg.HOME / 'postgres') as temp:
             for filename, key in [('database.dump', 'dump'), ('manifest.json', 'manifest')]:
