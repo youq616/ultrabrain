@@ -150,7 +150,7 @@ with sync_playwright() as p:
     page.evaluate('window.releaseFileRead()')
     expect(page.locator('#message')).to_contain_text('document_consent_or_selection_changed')
     expect(page.locator('#results article')).to_have_count(0)
-    page.evaluate('File.prototype.arrayBuffer=window.originalArrayBuffer')
+    page.evaluate('() => { File.prototype.arrayBuffer=window.originalArrayBuffer; }')
     passed()
     def revoke_after_register(route):
         data = route.request.post_data_json

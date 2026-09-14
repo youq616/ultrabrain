@@ -27,18 +27,18 @@ test('fingerprint, canonical encoding and declared metadata are checked before n
   await assert.rejects(deliverDocumentImport({...file(),...change},profile,{checkIdentity:()=>assert.fail('No network'),invoke:()=>assert.fail('No network')}));
 });
 test('the selected original and consent are frozen before asynchronous work',async()=>{
- const input=file();let sent;const r=await deliverDocumentImport(input,profile,{checkIdentity:async()=>{input.consent=false;input.content_base64='Yg==';},invoke:async(n,p)=>{if(n.endsWith('_import'))sent=p;return receipt();}});
+ const input=file();let sent;const r=await deliverDocumentImport(input,profile,{checkIdentity:async()=>{input.consent=false;input.content_base64='Yg==';},invoke:async(n,p)=>{if(n.endsWith('_import'))sent=p;return n==='ultra_agent_list'?{source_id:'default',agents:[],next_offset:null}:receipt();}});
  assert.equal(sent.content_base64,file().content_base64);assert.equal(r.document_id,receipt().document_id);
 });
 test('revocation while registering prevents the later document write',async()=>{
- let allowed=true,sent=false;await assert.rejects(deliverDocumentImport(file(),profile,{checkIdentity:async()=>{},authorize:()=>{if(!allowed)throw Error('revoked');},invoke:async n=>{if(n==='ultra_agent_register')allowed=false;else sent=true;}}));assert.equal(sent,false);
+ let allowed=true,sent=false;await assert.rejects(deliverDocumentImport(file(),profile,{checkIdentity:async()=>{},authorize:()=>{if(!allowed)throw Error('revoked');},invoke:async n=>{if(n==='ultra_agent_list')return {source_id:'default',agents:[],next_offset:null};if(n==='ultra_agent_register')allowed=false;else sent=true;}}));assert.equal(sent,false);
 });
 test('cancellation or asynchronous authorization is not permission',async()=>{
  const c=new AbortController();c.abort();await assert.rejects(deliverDocumentImport(file(),profile,{signal:c.signal,checkIdentity:()=>assert.fail('No network'),invoke:()=>assert.fail('No network')}),{code:'aborted'});
  await assert.rejects(deliverDocumentImport(file(),profile,{authorize:async()=>true,checkIdentity:()=>assert.fail('No network'),invoke:()=>assert.fail('No network')}),{code:'invalid_params'});
 });
 for(const change of [{event_id:'wrong'},{source_id:'foreign'},{project_id:'other'},{content_sha256:'0'.repeat(64)}])test('receipt mismatch is unconfirmed '+JSON.stringify(change),async()=>{
- await assert.rejects(deliverDocumentImport(file(),profile,{checkIdentity:async()=>{},invoke:async()=>({...receipt(),...change})}),{code:'mcp_contract_changed'});
+ await assert.rejects(deliverDocumentImport(file(),profile,{checkIdentity:async()=>{},invoke:async n=>n==='ultra_agent_list'?{source_id:'default',agents:[],next_offset:null}:({...receipt(),...change})}),{code:'mcp_contract_changed'});
 });
 test('planner preserves exact large Chinese, BOM, CRLF and emoji bytes',()=>{
  const bytes=Buffer.from('\uFEFF不要删除。🙂\r\n'.repeat(4000));const ranges=planDocumentFragments(bytes),parts=[];
@@ -59,4 +59,28 @@ test('selected path replacement is detected before descriptor reads',t=>{
 test('parent directory symlinks and Windows junctions are refused',t=>{
  const dir=temp(t),real=join(dir,'real'),alias=join(dir,'alias');fs.mkdirSync(real);fs.writeFileSync(join(real,'a.txt'),'text');
  fs.symlinkSync(real,alias,process.platform==='win32'?'junction':'dir');assert.throws(()=>readLocalDocument(join(alias,'a.txt')),{code:'invalid_path'});
+});
+
+test('existing Agent metadata is left untouched even across a paged listing',async()=>{
+ const calls=[];
+ const response=await deliverDocumentImport(file(),profile,{checkIdentity:async()=>{},invoke:async(name,args)=>{
+   calls.push(name);
+   if(name==='ultra_agent_list')return args.offset===0?{source_id:'default',agents:[{agent_id:'another'}],next_offset:1}:
+     {source_id:'default',agents:[{agent_id:'doc-agent',agent_type:'coding_agent',revision:4,capabilities:['code'],workspace:'/other'}],next_offset:null};
+   assert.equal(name,'ultra_personal_document_import');return receipt();
+ }});
+ assert.equal(response.document_id,receipt().document_id);assert.deepEqual(calls,['ultra_agent_list','ultra_agent_list','ultra_personal_document_import']);
+});
+for(const result of [{source_id:'foreign',agents:[],next_offset:null},{source_id:'default',agents:[],next_offset:0}])test('malformed Agent listing never authorizes default registration '+JSON.stringify(result),async()=>{
+ await assert.rejects(deliverDocumentImport(file(),profile,{checkIdentity:async()=>{},invoke:async n=>{assert.equal(n,'ultra_agent_list');return result;}}),{code:'mcp_contract_changed'});
+});
+test('truncated Agent lookup fails closed rather than overwriting an unknown existing label',async()=>{
+ let calls=0;await assert.rejects(deliverDocumentImport(file(),profile,{checkIdentity:async()=>{},invoke:async(n,args)=>{
+   assert.equal(n,'ultra_agent_list');calls++;return {source_id:'default',agents:[{agent_id:'other'}],next_offset:args.offset+1};
+ }}),{code:'agent_lookup_limit'});assert.equal(calls,16);
+});
+test('permission revoked during Agent lookup prevents all writes',async()=>{
+ let allowed=true;await assert.rejects(deliverDocumentImport(file(),profile,{checkIdentity:async()=>{},authorize:()=>{if(!allowed)throw Error('revoked');},invoke:async name=>{
+   assert.equal(name,'ultra_agent_list');allowed=false;return {source_id:'default',agents:[],next_offset:null};
+ }}));
 });

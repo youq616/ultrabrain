@@ -6,6 +6,7 @@ import {join} from 'node:path';
 import {spawn} from 'node:child_process';
 import {randomBytes,createHash} from 'node:crypto';
 import {connect,ROOT} from '../src/runtime.mjs';
+import {PersonalMemoryStore} from '../src/personal-memory-store.mjs';
 import {Client} from '../vendor/gbrain/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js';
 import {StdioClientTransport} from '../vendor/gbrain/node_modules/@modelcontextprotocol/sdk/dist/esm/client/stdio.js';
 assert.equal(process.env.ULTRABRAIN_TEST_ALLOW_WRITE,'1');
@@ -32,8 +33,12 @@ try{
  let p=await run('probe');assert.equal(p.code,0);Object.assign(profile,{expected_instance:p.result.identity.instance_id,expected_actor:p.result.identity.actor_key});save();pass();
  p=await run('document-import',input);assert.equal(p.result.error,'capture_disabled');assert.equal(await count(),0);pass();
  profile.allow_documents=true;save();
+ const store=new PersonalMemoryStore({engine,sourceId:source,remote:false,transport:'stdio'});
+ await store.register({agent_id:'document-cli',agent_type:'coding_agent',capabilities:['code','files'],workspace:'/synthetic/workspace'});
+ const prior=(await store.agents()).agents[0];
  p=await run('document-import',{...input,consent:false});assert.equal(p.result.error,'capture_disabled');assert.equal(await count(),0);pass();
  p=await run('document-import',input);assert.equal(p.code,0);const document=p.result.result;assert.equal(document.content_sha256,hash);assert.equal(document.project_id,'file-project');assert.ok(!p.raw.includes(bytes.toString('utf8').slice(0,20)));pass();
+ const after=(await store.agents()).agents[0];assert.deepEqual(after,prior,'Import must not mutate existing Agent metadata or revision');pass();
  p=await run('document-import',input);assert.equal(p.result.result.document_id,document.document_id);assert.equal(await count(),1);pass();
  await proxy(async c=>{
    const names=(await c.listTools()).tools.map(t=>t.name);for(const suffix of ['import','read','list','queue','archive'])assert.ok(names.includes('ultra_personal_document_'+suffix));
