@@ -7,10 +7,10 @@ const clean=(x,max=4096)=>typeof x==='string'&&x.length>0&&x.length<=max&&!/[\x0
 const uuid=x=>typeof x==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(x);
 export const CLIENT_REQUIRED_TOOLS=Object.freeze(['ultra_identity','ultra_personal_context','ultra_personal_jobs']);
 export function requiredClientTools(profile) {
-  return profile.allowCapture?[...CLIENT_REQUIRED_TOOLS,'ultra_agent_register','ultra_personal_capture']:[...CLIENT_REQUIRED_TOOLS];
+  return [...new Set([...CLIENT_REQUIRED_TOOLS,...(profile.allowCapture?['ultra_agent_register','ultra_personal_capture']:[]),...(profile.allowDocuments?['ultra_agent_list','ultra_agent_register','ultra_personal_document_import','ultra_personal_document_read','ultra_personal_document_list','ultra_personal_document_queue','ultra_personal_document_archive']:[])])];
 }
 export function clientProfile(input) {
-  objectFields(input,['format','source','project_id','workspace','server','expected_instance','expected_actor','budget_bytes','timeout_ms','allow_capture','outbox_directory','automatic_capture']);
+  objectFields(input,['format','source','project_id','workspace','server','expected_instance','expected_actor','budget_bytes','timeout_ms','allow_capture','outbox_directory','automatic_capture','allow_documents']);
   requireThat(input.format===1,'invalid_profile','Client profile format must be 1');
   const source=sourceId(input.source);
   const projectId=input.project_id??null;if(projectId!==null)personalId(projectId,'project_id');
@@ -18,6 +18,7 @@ export function clientProfile(input) {
   requireThat(input.expected_instance===undefined||uuid(input.expected_instance),'invalid_profile','Invalid instance pin');
   requireThat(input.expected_actor===undefined||/^[a-f0-9]{64}$/.test(input.expected_actor),'invalid_profile','Invalid actor pin');
   requireThat(input.allow_capture===undefined||typeof input.allow_capture==='boolean','invalid_profile','allow_capture must be boolean');
+  requireThat(input.allow_documents===undefined||typeof input.allow_documents==='boolean','invalid_profile','allow_documents must be boolean');
   const automaticCapture=input.automatic_capture??[];
   requireThat(Array.isArray(automaticCapture)&&automaticCapture.length<=4&&new Set(automaticCapture).size===automaticCapture.length&&
     automaticCapture.every(x=>['claude-user','claude-assistant','opencode-user','opencode-assistant'].includes(x)), 'invalid_profile','Unknown or duplicate automatic capture scope');
@@ -40,7 +41,7 @@ export function clientProfile(input) {
   return Object.freeze({source,projectId,workspace:input.workspace??null,server:structuredClone(server),
     expectedInstance:input.expected_instance??null,expectedActor:input.expected_actor??null,
     outboxDirectory:input.outbox_directory??null,automaticCapture:Object.freeze([...automaticCapture]),
-    budgetBytes:integer(input.budget_bytes,6000,512,8192),timeoutMs:integer(input.timeout_ms,10000,1000,30000),allowCapture:input.allow_capture===true});
+    budgetBytes:integer(input.budget_bytes,6000,512,8192),timeoutMs:integer(input.timeout_ms,10000,1000,30000),allowCapture:input.allow_capture===true,allowDocuments:input.allow_documents===true});
 }
 export function clientIdentity(value,profile) {
   requireThat(value?.format===1&&uuid(value.instance_id)&&typeof value.actor_key==='string'&&/^[a-f0-9]{64}$/.test(value.actor_key)&&value.source_id===profile.source,

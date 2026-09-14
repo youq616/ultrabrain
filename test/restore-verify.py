@@ -9,6 +9,8 @@ if not name.startswith('ub_restore_'):
     raise SystemExit('Only isolated restoration targets are accepted')
 queries = {
     'personal_consolidations': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(row_to_json(t)::text, ',' ORDER BY id)),'empty') FROM ultrabrain.personal_consolidations t",
+    'personal_documents': "SELECT count(*)::text || ':' || encode(sha256(convert_to(coalesce(string_agg(row_to_json(t)::text, ',' ORDER BY id),'empty'),'UTF8')),'hex') FROM ultrabrain.personal_documents t",
+    'personal_document_fragments': "SELECT count(*)::text || ':' || encode(sha256(convert_to(coalesce(string_agg(row_to_json(t)::text, ',' ORDER BY id),'empty'),'UTF8')),'hex') FROM ultrabrain.personal_document_fragments t",
     'personal_derivations': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(id::text || ':' || derivation::text, ',' ORDER BY id)),'empty') FROM ultrabrain.personal_memories WHERE derivation IS NOT NULL",
     'personal_memories': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(row_to_json(t)::text, ',' ORDER BY id)),'empty') FROM ultrabrain.personal_memories t",
     'personal_agents': "SELECT count(*)::text || ':' || coalesce(md5(string_agg(row_to_json(t)::text, ',' ORDER BY registry_id)),'empty') FROM ultrabrain.agent_registry t",

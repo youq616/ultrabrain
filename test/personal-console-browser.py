@@ -135,6 +135,80 @@ with sync_playwright() as p:
     page.get_by_role('button', name='取消整理，保留原文', exact=True).click()
     expect(page.locator('#results')).to_contain_text('stale')
     passed()
+    # Real file input: explicit consent, revocation during async read/registration, byte round-trip.
+    page.locator('[data-view="documents"]').click()
+    expect(page.locator('#document-panel')).to_be_visible()
+    original = ('\ufeff不要删除。🙂\r\n' * 4000).encode('utf8')
+    selection = {'name': '合成原文.md', 'mimeType': 'text/plain', 'buffer': original}
+    page.locator('#document-file').set_input_files(selection)
+    expect(page.locator('#document-consent')).not_to_be_checked()
+    page.locator('#document-consent').check()
+    page.evaluate("""() => {window.originalArrayBuffer=File.prototype.arrayBuffer; File.prototype.arrayBuffer=async function(){const bytes=await window.originalArrayBuffer.call(this);document.documentElement.dataset.fileReadWaiting='true';await new Promise(r=>window.releaseFileRead=r);delete document.documentElement.dataset.fileReadWaiting;return bytes;};}""")
+    page.locator('#document-import').click()
+    expect(page.locator('html')).to_have_attribute('data-file-read-waiting', 'true')
+    page.locator('#document-consent').uncheck()
+    page.evaluate('window.releaseFileRead()')
+    expect(page.locator('#message')).to_contain_text('document_consent_or_selection_changed')
+    expect(page.locator('#results article')).to_have_count(0)
+    page.evaluate('() => { File.prototype.arrayBuffer=window.originalArrayBuffer; }')
+    passed()
+    def revoke_after_register(route):
+        data = route.request.post_data_json
+        if data.get('operation') == 'register':
+            response = route.fetch()
+            page.evaluate("document.getElementById('document-consent').checked=false")
+            route.fulfill(response=response)
+        else:
+            route.continue_()
+    page.evaluate("document.getElementById('message').textContent=''")
+    page.route('**/api/call', revoke_after_register)
+    page.locator('#document-consent').check()
+    page.locator('#document-import').click()
+    expect(page.locator('#message')).to_contain_text('document_consent_or_selection_changed')
+    expect(page.locator('#pending-panel')).to_be_hidden()
+    page.unroute('**/api/call', revoke_after_register)
+    page.locator('#refresh').click()
+    expect(page.locator('#results article')).to_have_count(0)
+    passed()
+    page.locator('#document-consent').check()
+    page.locator('#document-import').click()
+    expect(page.locator('#results article')).to_have_count(1)
+    expect(page.locator('#document-original')).to_be_hidden()
+    with page.expect_response(lambda response: response.request.method == 'POST' and response.request.post_data_json.get('operation') == 'document_read') as original_response:
+        page.get_by_role('button', name='查看原文', exact=True).click()
+    original_result = original_response.value.json()
+    assert original_result.get('ok') is True, 'Original document API rejected the synthetic read'
+    try:
+        expect(page.locator('#document-original')).to_be_visible()
+    except AssertionError:
+        status = page.locator('#message').inner_text()
+        print(json.dumps({'preview_failed': True,
+                          'fingerprint_error': 'fingerprint_mismatch_after_download' in status,
+                          'changed_view': 'document_view_changed' in status,
+                          'javascript_error_count': len(errors),
+                          'raw_status_omitted': True}))
+        raise
+    assert page.locator('#document-original-text').inner_text().startswith('不要删除')
+    assert page.locator('#document-original-text img').count() == 0
+    passed()
+    with page.expect_download() as original_download:
+        page.get_by_role('button', name='下载原文', exact=True).click()
+    assert Path(original_download.value.path()).read_bytes() == original
+    passed()
+    with page.expect_response(lambda response: response.request.method == 'POST' and response.request.post_data_json.get('operation') == 'document_queue') as queued_response:
+        page.get_by_role('button', name='排队整理（之后才会调用模型）', exact=True).click()
+    queued = queued_response.value.json()
+    assert queued['ok'] is True
+    assert len(queued['result']['fragments']) > 1
+    assert queued['result']['fragments'][-1]['byte_end'] == len(original)
+    assert queued['result']['model_calls'] == 0
+    passed()
+    page.get_by_role('button', name='归档文档', exact=True).click()
+    expect(page.locator('#results')).to_contain_text('已归档')
+    with page.expect_download() as archived_download:
+        page.get_by_role('button', name='下载原文', exact=True).click()
+    assert Path(archived_download.value.path()).read_bytes() == original
+    passed()
     page.locator('#logout').click()
     expect(page.locator('#workspace')).to_be_hidden()
     assert page.evaluate('localStorage.length') == 0

@@ -108,7 +108,7 @@ Hook 只读取事件类型与 cwd，不读取 `prompt`、`transcript_path` 或�
 
 `capture --profile PATH` 从 stdin 读取完整 JSON：`agent_id`、稳定 `event_id`、`transcript`、`consent:true`。没有 profile 级授权即在联网前拒绝；有授权后登记当前身份自己的标签并调用现有 `ultra_personal_capture`。原文最多 32 KiB、拒绝 NUL 和不完整 Unicode；不得传入 source/模型端点/命令覆盖。
 
-同一事件重试保持相同内容，回执表示原文和任务已持久化，不表示模型提取已完成。直接 `capture` 命令没有额外 fsync outbox，未确认之前事件必须由生产系统保留；0.14 的 `queue-capture` 是另一个明确选择的持久交付入口，见 `AUTOMATIC-CAPTURE.md`。禁止只为重试交付重新运行模型。`mcp` 转发器默认仅六个只读个人工具；明确开启写模式后最多增加六个写工具，仍不公开任意 SQL、shell、企业管理或模型整理执行。服务端原有采集与审核权限继续有效。
+同一事件重试保持相同内容，回执表示原文和任务已持久化，不表示模型提取已完成。直接 `capture` 命令没有额外 fsync outbox，未确认之前事件必须由生产系统保留；0.14 的 `queue-capture` 是另一个明确选择的持久交付入口，见 `AUTOMATIC-CAPTURE.md`。禁止只为重试交付重新运行模型。`mcp` 转发器默认提供只读个人/文档工具；聊天写入和文件写入分别授权，具体工具以当前 `tools/list` 为准，仍不公开任意 SQL、shell、企业管理或模型整理执行。服务端原有采集与审核权限继续有效。
 
 ## 官方配置依据和验收
 
@@ -119,3 +119,8 @@ Hook 只读取事件类型与 cwd，不读取 `prompt`、`transcript_path` 或�
 - MCP SDK 接口采用仓库锁定的 `@modelcontextprotocol/sdk` 1.29.0。
 
 `test/client-kit-integration.mjs` 执行真实编译后的 Node 客户端、标准 SDK 客户端、原生 stdio/HTTP 与 PostgreSQL。Claude 事件输入为受控 fixture，不是启动用户已安装的 Claude。跨系统 workflow 只验证客户端合同和配置工具，不声称 Windows 服务端或所有桌面 Agent 已认证。独立复核范围与已修复问题见 `docs/reviews/PERSONAL-0.12-REVIEW.md`。
+
+
+## 个人文件导入（personal-documents 增量）
+
+匹配本提交的客户端包新增 `document-import --profile PATH`（JSON stdin：`path`、`agent_id`、稳定 `event_id`、`consent:true`）。文件写入须另开 profile 的 `allow_documents` 或生成器 `--allow-documents`；默认关闭，不继承聊天 `allow_capture`。此开关公开文档导入/排队/归档及必要的标签注册，但不开放聊天采集/审核/模型执行。文档列表和读取属于同身份只读工具。原有代理工具总数增加，能力请以当前 `tools/list` 为准，不沿用旧版本数量。详情、大小编码限制、权限与可靠性边界见 [PERSONAL-DOCUMENTS.md](PERSONAL-DOCUMENTS.md)。安装包仍是本仓库构建的私有 tgz；相同版本字符串不意味着历史构建具有新功能。

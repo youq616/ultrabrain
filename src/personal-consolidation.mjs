@@ -37,6 +37,42 @@ export class PersonalConsolidator {
       return {...row,note:'Input retained. An already submitted provider call may still incur cost, but its output cannot commit.'};
     });
   }
+  /** Linearize invocation admission with archive/cancel using the same short owner lock.
+   * Never hold a DB transaction while waiting for the external response. The nested settled
+   * promise prevents rejection leaks if admission commit fails after invocation has started.
+   */
+  async #dispatch(row,lease,request,generate,onInvoke) {
+    let invoked=false,admitted;
+    try {
+      admitted=await this.engine.transaction(async tx=>{
+        await lockPersonal(tx,this.source,this.actor);
+        const [job]=await tx.executeRaw(`SELECT state,lease_id,lease_until>clock_timestamp() AS live
+          FROM ultrabrain.personal_consolidations WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid FOR UPDATE`,
+          [this.source,this.actor,row.id]);
+        requireThat(job?.state==='processing'&&job.lease_id===lease&&job.live,'lease_lost','Job no longer owns provider admission');
+        const [original]=await tx.executeRaw(`SELECT content,revision,content_hash,status FROM ultrabrain.personal_memories
+          WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid FOR SHARE`,[this.source,this.actor,row.input_id]);
+        requireThat(original&&original.status!=='archived'&&original.revision===row.input_revision&&
+          original.content_hash===row.input_hash&&sha256(original.content)===row.input_hash,'stale_source','Source changed before provider admission');
+        requireThat(!request.signal?.aborted,'personal_model_timeout','Cancelled before provider admission');
+        personalPrincipal(this.ctx,true);
+        // Invoke synchronously under the lock. Do not await the provider's returned promise here.
+        // After this boundary an external request may still be pending; archive fences its output,
+        // but cannot promise to undo SDK scheduling, remote processing or a charge already begun.
+        invoked=true;onInvoke();
+        let outcome;
+        try{outcome=Promise.resolve(generate(request)).then(value=>({value}),error=>({error}));}
+        catch(error){outcome=Promise.resolve({error});}
+        return {outcome};
+      });
+    }catch(error){
+      if(invoked)throw Object.assign(new Error('Provider admission confirmation unknown; inspect the durable job'),{code:'personal_commit_unconfirmed'});
+      throw error;
+    }
+    const settled=await admitted.outcome;
+    if(settled.error)throw settled.error;
+    return settled.value;
+  }
   async process(input={}, {signal}={}) {
     objectFields(input,['expected_source','allow_model_call','limit','retry','job_id']);
     personalPrincipal(this.ctx,true);
@@ -84,11 +120,15 @@ export class PersonalConsolidator {
         // Re-read host opt-in between jobs, before data leaves the process and before applying output.
         const current=await this.configure();
         requireThat(current.profile&&personalProfileHash(current.profile)===profileHash,'model_profile_changed','Personal model profile changed');
-        modelCalls++;
-        generated=await generatePersonalCandidates(row.original.content,model.profile,model.generate,{signal});
+        generated=await generatePersonalCandidates(row.original.content,current.profile,
+          request=>this.#dispatch(row,lease,request,current.generate,()=>modelCalls++),{signal});
         const final=await this.configure();
         requireThat(final.profile&&personalProfileHash(final.profile)===profileHash,'model_profile_changed','Personal model profile changed during generation');
-      }catch(e){error=safeErrors.has(e.code)?e.code:'personal_processing_failed';}
+      }catch(e){
+        if(e.code==='personal_commit_unconfirmed')throw e; // Never automatically redo ambiguous admission.
+        if(e.code==='lease_lost'){results.push({job_id:row.id,state:'lease_lost',result:null});continue;}
+        error=safeErrors.has(e.code)?e.code:'personal_processing_failed';
+      }
       try {
         const result=await this.engine.transaction(async tx=>{
           await lockPersonal(tx,this.source,this.actor);

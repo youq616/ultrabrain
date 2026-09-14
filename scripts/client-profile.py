@@ -31,7 +31,7 @@ def make_profile(a):
         check(not (u.username or u.password or u.query or u.fragment) and u.hostname and (u.scheme=='https' or u.scheme=='http' and u.hostname in ('127.0.0.1','::1','localhost')))
         check(bool(re.fullmatch(r'[A-Z][A-Z0-9_]{2,95}',a.bearer_env or '')))
         server={'transport':'http','url':a.url,'bearer_env':a.bearer_env}
-    result={'format':1,'source':a.source,'server':server,'allow_capture':a.allow_capture,'budget_bytes':6000,'timeout_ms':10000}
+    result={'allow_documents':getattr(a,'allow_documents',False),'format':1,'source':a.source,'server':server,'allow_capture':a.allow_capture,'budget_bytes':6000,'timeout_ms':10000}
     if a.project:result['project_id']=a.project
     if a.workspace:
         check(Path(a.workspace).is_absolute() and Path(a.workspace).is_dir());result['workspace']=str(Path(a.workspace).resolve())
@@ -56,7 +56,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);g=p.add_mutually_exclusive_group(required=True)
     g.add_argument('--ssh');g.add_argument('--local',action='store_true');g.add_argument('--url')
     for name in ('repo','home','bun','bearer-env','project','workspace','expected-instance','expected-actor'):p.add_argument('--'+name)
-    p.add_argument('--outbox');p.add_argument('--automatic-capture',action='append',choices=['claude-user','claude-assistant','opencode-user','opencode-assistant'],default=[]);p.add_argument('--source',default='default');p.add_argument('--output',required=True);p.add_argument('--allow-capture',action='store_true');a=p.parse_args()
+    p.add_argument('--outbox');p.add_argument('--automatic-capture',action='append',choices=['claude-user','claude-assistant','opencode-user','opencode-assistant'],default=[]);p.add_argument('--source',default='default');p.add_argument('--output',required=True);p.add_argument('--allow-documents',action='store_true');p.add_argument('--allow-capture',action='store_true');a=p.parse_args()
     try:
         result=make_profile(a);target=Path(os.path.abspath(a.output))
         for part in [target,*target.parents]:

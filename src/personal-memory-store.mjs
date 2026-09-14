@@ -30,7 +30,7 @@ export async function lockPersonal(tx,source,actor) {
   await tx.executeRaw("SET LOCAL statement_timeout='15s'");
   await tx.executeRaw('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[JSON.stringify(['ultra-personal',source,actor])]);
 }
-const projection=`id::text,type,content,content_hash,confidence,importance,source AS provenance,agent_id,project_id,
+const projection=`id::text,type,origin_kind,content,content_hash,confidence,importance,source AS provenance,agent_id,project_id,
   status,visibility,revision,created_at,updated_at,last_confirmed,(actor_key=$2) AS owned_by_caller,
   CASE WHEN actor_key=$2 THEN derivation ELSE NULL END AS derivation,${PERSONAL_DERIVATION_CURRENT} AS derivation_current`;
 function rowView(row) {
@@ -128,8 +128,12 @@ export class PersonalMemoryStore {
     });
   }
   async #owned(tx,id) {
-    const [row]=await tx.executeRaw('SELECT revision,derivation FROM ultrabrain.personal_memories WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid FOR UPDATE',[this.source,this.actor,id]);
-    requireThat(row,'not_found','Memory not found under this principal');return row;
+    const [row]=await tx.executeRaw('SELECT revision,derivation,origin_kind FROM ultrabrain.personal_memories WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid FOR UPDATE',[this.source,this.actor,id]);
+    requireThat(row,'not_found','Memory not found under this principal');
+    // Imported document fragments are immutable snapshots: edits and lifecycle changes go
+    // through the document interfaces so fragments never diverge from their original bytes.
+    requireThat(row.origin_kind!=='document_fragment','document_bound','This entry is an immutable imported-document fragment; queue or archive it through the document interfaces instead');
+    return row;
   }
   async review(input) {
     objectFields(input,['memory_id','expected_revision','event_id','status']);

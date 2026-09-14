@@ -81,6 +81,10 @@ PostgreSQL 随项目在本机安装和管理，不要求外部数据库，不是
 
 使用 [客户端安装与边界](docs/CLIENT-KIT.md)，查看 [分阶段独立复核与修复报告](docs/reviews/PERSONAL-0.12-REVIEW.md)。本轮还修复内部 HTTP 身份回退、不完整 Unicode 输入和只读凭据预检；既有迁移、上游 pins 与企业白名单不变。整体个人 V1 仍以完成检查表为准，不以连接配置代替最终验收。
 
+## 开发候选：个人文本文件导入（development/personal-documents）
+
+新增单文件显式导入（首批 UTF-8 的 TXT/MD/JSON/CSV/LOG，≤128 KiB 整体拒绝不截断）、原始字节与 SHA-256 追溯、明确排队整理片段（复用既有队列与事件重放）与归档围档（保留原文、失效派生、阻止旧任务写回）。个人管理台与受限 MCP 工具同步接入，恢复校验为字节级。**不包含 PDF、图片、OCR 或任何多模态格式；本候选未获独立子代理审核批准前不合入 main。**详见 [个人文档](docs/PERSONAL-DOCUMENTS.md) 与 [审核任务书](docs/REVIEW-PERSONAL-DOCUMENTS.md)。
+
 ## 当前增量：0.13.0-alpha.1
 
 增加 OpenCode 原生工作前/压缩前只读 Hook、Hermes 主 CLI 外部 MemoryProvider 和 OpenClaw 精确 Agent/session/workspace 限定的附加插件；复用现有客户端与 PostgreSQL，不自动上传聊天或替换原生 memory slot。安装与测试层次见 [原生 Agent 接入](docs/NATIVE-AGENT-ADAPTERS.md)。Hermes/OpenClaw 全引擎、所有自动采集和完整个人 V1 尚未全部验收。
