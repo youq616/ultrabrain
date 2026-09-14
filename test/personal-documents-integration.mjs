@@ -98,8 +98,9 @@ try {
     memory:{type:'experience',content:'rewritten',importance:'normal',visibility:'private'}}),{code:'document_bound'});pass();
   await assert.rejects(call('ultra_personal_review',{memory_id:queued.fragments[0].memory_id,event_id:'review-frag',expected_revision:1,status:'active'}),{code:'document_bound'});pass();
   // Queue capacity rejects whole requests without removing existing records.
+  // Fixture digests concatenate two md5() calls to satisfy the 64-hex CHECK constraints from 0012/0013.
   await engine.executeRaw(`INSERT INTO ultrabrain.personal_memories(source_id,actor_key,type,content,content_hash,importance,source,agent_id,status,visibility,origin_kind)
-    SELECT $1,$2,'experience','capacity probe '||g,md5('capacity probe '||g),'normal','capacity-probe','codex','candidate','private','agent' FROM generate_series(1,300) g`,
+    SELECT $1,$2,'experience','capacity probe '||g,md5('capacity probe '||g)||md5('second-half '||g),'normal','capacity-probe','codex','candidate','private','agent' FROM generate_series(1,300) g`,
     [source,actor]);
   await engine.executeRaw(`INSERT INTO ultrabrain.personal_consolidations(source_id,actor_key,input_id,input_revision,input_hash)
     SELECT source_id,actor_key,id,1,content_hash FROM ultrabrain.personal_memories WHERE source_id=$1 AND actor_key=$2 AND source='capacity-probe'`,
@@ -125,7 +126,7 @@ try {
     WHERE source_id=$1 AND actor_key=$2 AND id=$4::uuid`,[source,actor,lease,queued.fragments[1].job_id]);
   // Derived entries reference the fragment; they are current while the fragment is live.
   await engine.executeRaw(`INSERT INTO ultrabrain.personal_memories(source_id,actor_key,type,content,content_hash,importance,source,agent_id,status,visibility,derivation,origin_kind)
-    VALUES($1,$2,'preference','Synthetic derived preference',md5('synthetic derived preference'),'normal','synthetic model-derived fixture','codex','active','private',
+    VALUES($1,$2,'preference','Synthetic derived preference',md5('synthetic derived preference')||md5('synthetic derived preference salt'),'normal','synthetic model-derived fixture','codex','active','private',
     jsonb_build_object('input_id',$3::text,'input_revision',1,'input_hash',$4,'job_id',$5::text),'agent')`,
     [source,actor,queued.fragments[0].memory_id,queued.fragments[0].fragment_sha256,queued.fragments[0].job_id]);
   const activeContext=await call('ultra_personal_context');

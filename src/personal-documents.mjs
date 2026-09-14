@@ -35,8 +35,10 @@ export function documentFormat(label) {
   return format;
 }
 export function decodeDocumentContent(encoded) {
-  requireThat(typeof encoded==='string'&&encoded.length>0&&encoded.length<=200000&&BASE64.test(encoded)&&encoded.length%4===0,
-    'invalid_params','File content must be standard unpadded-every-4 base64 of at most 128 KiB');
+  requireThat(typeof encoded==='string'&&encoded.length>0,'invalid_params','File content must be provided as nonempty standard base64 text');
+  requireThat(encoded.length<=200000,'file_too_large',
+    `Personal documents are limited to ${PERSONAL_DOCUMENT_MAX_BYTES} bytes; larger files are rejected whole, never truncated`);
+  requireThat(BASE64.test(encoded)&&encoded.length%4===0,'invalid_params','File content must be standard base64 in groups of four');
   const bytes=Buffer.from(encoded,'base64');
   requireThat(bytes.toString('base64')===encoded,'invalid_params','File content is not canonical base64');
   requireThat(bytes.length>=1&&bytes.length<=PERSONAL_DOCUMENT_MAX_BYTES,'file_too_large',
@@ -216,7 +218,7 @@ export class PersonalDocumentStore {
         fencedJobs=fenced.length;
       }
       const [derived]=await tx.executeRaw(`SELECT count(*)::integer AS n FROM ultrabrain.personal_memories m
-        WHERE m.source_id=$1 AND m.actor_key=$2 AND m.status='active' AND m.derivation->>'input_id'=ANY($3::text[])`,
+        WHERE m.source_id=$1 AND m.actor_key=$2 AND m.status IN ('active','candidate') AND m.derivation->>'input_id'=ANY($3::text[])`,
         [this.source,this.actor,memoryIds]);
       const [row]=await tx.executeRaw(`UPDATE ultrabrain.personal_documents SET status='archived',revision=revision+1,archived_at=now(),updated_at=now()
         WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid RETURNING revision,archived_at`,

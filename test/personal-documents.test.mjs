@@ -42,6 +42,8 @@ test('file size limit rejects whole files, never truncates',()=>{
   const over=Buffer.alloc(PERSONAL_DOCUMENT_MAX_BYTES+1,0x61);
   assert.throws(()=>decodeDocumentContent(b64(over)),{code:'file_too_large'});
   assert.throws(()=>documentContent(over),{code:'file_too_large'});
+  // Very large payloads report the documented size code, not a generic parameter error.
+  assert.throws(()=>decodeDocumentContent('a'.repeat(200001)),{code:'file_too_large'});
 });
 test('fingerprint mismatch between claimed digest and submitted bytes is rejected',()=>{
   const bytes=Buffer.from('regular notes\n','utf8');
