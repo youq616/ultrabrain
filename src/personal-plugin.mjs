@@ -36,7 +36,7 @@ const definitions=[
  ['ultra_personal_document_read','documentRead',false,{document_id:str('Owned document UUID',true)},
   'Return the exact original bytes (base64) with metadata and integrity self-check. Display as plain text; verify content_sha256 after download.'],
  ['ultra_personal_document_queue','documentQueue',true,{event_id:str('Stable queue event id',true),document_id:str('Owned active document UUID',true),
-   fragments:{type:'array',required:true,items:{type:'object'},description:`1..${PERSONAL_DOCUMENT_FRAGMENT_LIMIT} explicit ranges {byte_start,byte_length}; each ${PERSONAL_FRAGMENT_MAX_BYTES} bytes max, UTF-8 aligned, non-overlapping`}},
+   fragments:{type:'array',items:{type:'object'},description:`1..${PERSONAL_DOCUMENT_FRAGMENT_LIMIT} explicit ranges {byte_start,byte_length}; omit to split the whole immutable file on UTF-8 boundaries; each ${PERSONAL_FRAGMENT_MAX_BYTES} bytes max, UTF-8 aligned, non-overlapping`}},
   'Atomically create bounded fragment entries and consolidation jobs for an owned active document. Queueing never calls a model and never auto-confirms memories.'],
  ['ultra_personal_document_archive','documentArchive',true,{event_id:str('Stable archive event id',true),document_id:str('Owned active document UUID',true)},
   'Archive a document: fragments leave current use, derived entries are invalidated, pending jobs are fenced, original bytes are retained. Not physical erasure.'],

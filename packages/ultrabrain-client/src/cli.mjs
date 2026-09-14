@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import {readLocalDocument,documentImportRequest} from '../../../src/client-document.mjs';
+import {objectFields,personalId} from '../../../src/personal-memory.mjs';
 /** Read-only hooks remain separate from explicitly authorized capture hooks. No event file paths are read. */
 import {CaptureOutbox} from '../../../src/capture-outbox.mjs';
 import {automaticCapture,claudeCapture,captureCode} from '../../../src/automatic-capture.mjs';
@@ -15,13 +17,24 @@ export async function main(args=process.argv.slice(2)) {
   const controller=new AbortController(),deadline=setTimeout(()=>{controller.abort();process.stdin.destroy();},25000);deadline.unref();
   try{
     const command=args[0];
-    const regular=['probe','context','bound-context','capture','claude-hook','claude-capture-hook','mcp','queue-capture','queue-status','queue-flush'];
+    const regular=['document-import','probe','context','bound-context','capture','claude-hook','claude-capture-hook','mcp','queue-capture','queue-status','queue-flush'];
     const valid=regular.includes(command)&&(args.length===3||command==='queue-flush'&&args.length===4&&args[3]==='--retry-blocked')||
       command==='queue-lock'&&args.length===5&&args[3]==='--kind'||
       command==='queue-recover-lock'&&args.length===8&&args[3]==='--kind'&&args[5]==='--expected-sha'&&args[7]==='--confirm-writer-stopped';
     requireThat(valid&&args[1]==='--profile','invalid_params','Use a supported client command and --profile PATH');
     const {input,profile}=readClientProfile(resolve(args[2]));let event,payload;
     const assertProfile=()=>requireThat(JSON.stringify(readClientProfile(resolve(args[2])).input)===JSON.stringify(input),'capture_disabled','Profile changed; reload before capture');
+    if(command==='document-import') {
+      const chosen=await readBounded(process.stdin);
+      objectFields(chosen,['path','agent_id','event_id','consent']);
+      requireThat(chosen.consent===true&&profile.allowDocuments,'capture_disabled','Explicit per-file and profile permission required');
+      personalId(chosen.agent_id,'agent_id');personalId(chosen.event_id,'event_id');assertProfile();
+      const selected=readLocalDocument(chosen.path);assertProfile();
+      const request=documentImportRequest({...selected,agent_id:chosen.agent_id,event_id:chosen.event_id,consent:chosen.consent},profile);
+      connection=await connectClient(input,{signal:controller.signal});assertProfile();writing=true;
+      const result=await connection.importDocument(request,{authorize:assertProfile});
+      process.stdout.write(JSON.stringify({ok:true,result})+'\n');return;
+    }
     if(command==='claude-capture-hook'){
       event=await readBounded(process.stdin,220000);payload=claudeCapture(event,profile);
       if(!payload){process.stdout.write(JSON.stringify({systemMessage:'Ultrabrain: no eligible automatic observation; nothing captured.'})+'\n');return;}

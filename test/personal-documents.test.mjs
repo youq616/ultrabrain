@@ -94,7 +94,7 @@ test('readLocalDocument reads one explicit regular file and refuses symlinks',()
 });
 test('client import requests pin the project to the trusted profile and freeze consent',async()=>{
   const bytes=Buffer.from('k','utf8'),sha=await SHA(bytes);
-  const profile={projectId:'proj-a',allowCapture:false};
+  const profile={projectId:'proj-a',allowCapture:false,allowDocuments:true};
   const request=documentImportRequest({agent_id:'ag',event_id:'e2',consent:true,label:'k.txt',
     content_base64:b64(bytes),content_sha256:sha},profile);
   assert.equal(request.project_id,'proj-a');

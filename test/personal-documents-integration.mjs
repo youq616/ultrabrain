@@ -26,12 +26,14 @@ const call=async(name,p={},extra={})=>{
 const b64=bytes=>Buffer.from(bytes).toString('base64');
 const SHA=bytes=>createHash('sha256').update(bytes).digest('hex');
 const original=Buffer.concat([Buffer.from([0xEF,0xBB,0xBF]),Buffer.from('# 笔记\r\n\r\n用户明确表示：不要使用 Docker Hub；偏好完整命令行。\r\n否定样本：这不是授权自动采集。\r\n','utf8')]);
+let split=64;while((original[split]&0xc0)===0x80)split--;
 let actor=null,checks=0;const pass=()=>checks++;
 const clients=[],transports=[],children=[];
 try {
   await engine.executeRaw('INSERT INTO sources(id,name) VALUES($1,$1)',[source]);
   await call('ultra_agent_register',{agent_id:'codex',agent_type:'coding_agent'});
-  [actor]=await engine.executeRaw('SELECT actor_key FROM ultrabrain.agent_registry WHERE source_id=$1 ORDER BY created_at LIMIT 1',[source]);
+  const [registered]=await engine.executeRaw('SELECT actor_key FROM ultrabrain.agent_registry WHERE source_id=$1 ORDER BY created_at LIMIT 1',[source]);
+  actor=registered.actor_key;
   // Import keeps the exact original bytes (BOM, CRLF, negations, multibyte) and round-trips.
   const imported=await call('ultra_personal_document_import',{agent_id:'codex',event_id:'imp-1',consent:true,
     label:'笔记-2026.md',content_base64:b64(original),content_sha256:SHA(original)});
@@ -80,7 +82,7 @@ try {
   await assert.rejects(call('ultra_personal_document_queue',{event_id:'q-bad',document_id:imported.document_id,
     fragments:[{byte_start:1,byte_length:3}]}),{code:'invalid_utf8'});pass(); // splits a multibyte code point
   const queued=await call('ultra_personal_document_queue',{event_id:'q-1',document_id:imported.document_id,
-    fragments:[{byte_start:0,byte_length:64},{byte_start:64,byte_length:original.length-64}]});
+    fragments:[{byte_start:0,byte_length:split},{byte_start:split,byte_length:original.length-split}]});
   assert.equal(queued.fragments.length,2);assert.equal(queued.model_calls,0);assert.equal(queued.review_required,true);
   for(const f of queued.fragments){
     const [link]=await engine.executeRaw('SELECT byte_start,byte_end,fragment_sha256,offset_unit FROM ultrabrain.personal_document_fragments WHERE memory_id=$1::uuid',[f.memory_id]);
@@ -90,17 +92,17 @@ try {
   }
   pass();
   const queuedReplay=await call('ultra_personal_document_queue',{event_id:'q-1',document_id:imported.document_id,
-    fragments:[{byte_start:0,byte_length:64},{byte_start:64,byte_length:original.length-64}]});
+    fragments:[{byte_start:0,byte_length:split},{byte_start:split,byte_length:original.length-split}]});
   assert.equal(queuedReplay.replayed,true);assert.equal(queuedReplay.fragments.length,2);
   assert.equal((await engine.executeRaw('SELECT count(*)::integer AS n FROM ultrabrain.personal_document_fragments WHERE source_id=$1 AND actor_key=$2',[source,actor]))[0].n,2);pass();
   // Document fragments are fenced from the plain personal-memory edit interfaces.
   await assert.rejects(call('ultra_personal_update',{memory_id:queued.fragments[0].memory_id,event_id:'edit-frag',expected_revision:1,
-    memory:{type:'experience',content:'rewritten',importance:'normal',visibility:'private'}}),{code:'document_bound'});pass();
+    memory:{type:'experience',content:'rewritten',importance:'normal',visibility:'private',provenance:'synthetic rewrite'}}),{code:'document_bound'});pass();
   await assert.rejects(call('ultra_personal_review',{memory_id:queued.fragments[0].memory_id,event_id:'review-frag',expected_revision:1,status:'active'}),{code:'document_bound'});pass();
   // Queue capacity rejects whole requests without removing existing records.
-  // Fixture digests concatenate two md5() calls to satisfy the 64-hex CHECK constraints from 0012/0013.
+  // Synthetic fixture content fingerprints are the actual SHA-256 of their exact text.
   await engine.executeRaw(`INSERT INTO ultrabrain.personal_memories(source_id,actor_key,type,content,content_hash,importance,source,agent_id,status,visibility,origin_kind)
-    SELECT $1,$2,'experience','capacity probe '||g,md5('capacity probe '||g)||md5('second-half '||g),'normal','capacity-probe','codex','candidate','private','agent' FROM generate_series(1,300) g`,
+    SELECT $1,$2,'experience','capacity probe '||g,encode(sha256(convert_to('capacity probe '||g,'UTF8')),'hex'),'normal','capacity-probe','codex','candidate','private','agent' FROM generate_series(1,300) g`,
     [source,actor]);
   await engine.executeRaw(`INSERT INTO ultrabrain.personal_consolidations(source_id,actor_key,input_id,input_revision,input_hash)
     SELECT source_id,actor_key,id,1,content_hash FROM ultrabrain.personal_memories WHERE source_id=$1 AND actor_key=$2 AND source='capacity-probe'`,
@@ -126,8 +128,8 @@ try {
     WHERE source_id=$1 AND actor_key=$2 AND id=$4::uuid`,[source,actor,lease,queued.fragments[1].job_id]);
   // Derived entries reference the fragment; they are current while the fragment is live.
   await engine.executeRaw(`INSERT INTO ultrabrain.personal_memories(source_id,actor_key,type,content,content_hash,importance,source,agent_id,status,visibility,derivation,origin_kind)
-    VALUES($1,$2,'preference','Synthetic derived preference',md5('synthetic derived preference')||md5('synthetic derived preference salt'),'normal','synthetic model-derived fixture','codex','active','private',
-    jsonb_build_object('input_id',$3::text,'input_revision',1,'input_hash',$4,'job_id',$5::text),'agent')`,
+    VALUES($1,$2,'preference','Synthetic derived preference',encode(sha256(convert_to('Synthetic derived preference','UTF8')),'hex'),'normal','synthetic model-derived fixture','codex','active','private',
+    jsonb_build_object('input_id',$3::text,'input_revision',1,'input_hash',$4::text,'job_id',$5::text),'agent')`,
     [source,actor,queued.fragments[0].memory_id,queued.fragments[0].fragment_sha256,queued.fragments[0].job_id]);
   const activeContext=await call('ultra_personal_context');
   assert.ok(activeContext.memories.some(m=>m.content==='Synthetic derived preference'));pass();
@@ -158,6 +160,25 @@ try {
     label:'rollback.txt',content_base64:b64(small),content_sha256:SHA(small)}));
   assert.equal((await engine.executeRaw("SELECT count(*)::integer AS n FROM ultrabrain.personal_documents WHERE source_id=$1 AND actor_key=$2 AND label='rollback.txt'",[source,actor]))[0].n,0);
   assert.equal((await engine.executeRaw("SELECT count(*)::integer AS n FROM ultrabrain.personal_events WHERE source_id=$1 AND actor_key=$2 AND event_id='rollback'",[source,actor]))[0].n,0);pass();
+  // Same content/label in another project or Agent MUST produce a distinct destination snapshot.
+  const otherProject=await call('ultra_personal_document_import',{agent_id:'codex',event_id:'project-two',consent:true,
+    label:'笔记-2026.md',content_base64:b64(original),content_sha256:SHA(original),project_id:'second-project'});
+  const anotherProject=await call('ultra_personal_document_import',{agent_id:'codex',event_id:'project-three',consent:true,
+    label:'笔记-2026.md',content_base64:b64(original),content_sha256:SHA(original),project_id:'third-project'});
+  assert.notEqual(otherProject.document_id,anotherProject.document_id);pass();
+  const full=await call('ultra_personal_document_queue',{event_id:'whole-file',document_id:otherProject.document_id});
+  const [provenance]=await engine.executeRaw('SELECT agent_id,project_id FROM ultrabrain.personal_memories WHERE id=$1::uuid',[full.fragments[0].memory_id]);
+  assert.deepEqual(provenance,{agent_id:'codex',project_id:'second-project'});pass();
+  const reader={auth:{...auth,scopes:['read']}};
+  await assert.rejects(call('ultra_personal_document_queue',{event_id:'reader-write',document_id:anotherProject.document_id},reader),{code:'permission_denied'});pass();
+  // Fail after a fragment and job have been created: all three tables and event must roll back.
+  const queueFault={...options,engine:{kind:'postgres',executeRaw:(...a)=>engine.executeRaw(...a),transaction:fn=>engine.transaction(tx=>fn({executeRaw:async(sql,params)=>{
+    if(sql.includes('INSERT INTO ultrabrain.personal_document_fragments'))throw Error('synthetic link failure');return tx.executeRaw(sql,params);
+  }}))}};
+  const beforeJobs=Number((await engine.executeRaw('SELECT count(*)::int AS n FROM ultrabrain.personal_consolidations WHERE source_id=$1',[source]))[0].n);
+  await assert.rejects(new PersonalDocumentStore(queueFault).documentQueue({document_id:anotherProject.document_id,event_id:'link-failure'}));
+  assert.equal(Number((await engine.executeRaw('SELECT count(*)::int AS n FROM ultrabrain.personal_consolidations WHERE source_id=$1',[source]))[0].n),beforeJobs);
+  assert.equal((await engine.executeRaw("SELECT count(*)::int AS n FROM ultrabrain.personal_events WHERE source_id=$1 AND event_id='link-failure'",[source]))[0].n,0);pass();
   // Actual stdio MCP: the five document tools appear in tools/list and import round-trips on the wire.
   const stdio=new Client({name:'pdocs-stdio-test',version:'1'});clients.push(stdio);
   const stdioTransport=new StdioClientTransport({command:process.execPath,args:[ROOT+'/src/cli.mjs','mcp'],cwd:ROOT,
@@ -167,6 +188,8 @@ try {
   for(const name of ['ultra_personal_document_import','ultra_personal_document_list','ultra_personal_document_read','ultra_personal_document_queue','ultra_personal_document_archive'])
     assert.ok(catalog.includes(name),name+' missing from tools/list');
   pass();
+  const stdioRegistration=await stdio.callTool({name:'ultra_agent_register',arguments:{agent_id:'codex'}});
+  assert.ok(!stdioRegistration.isError);
   const wire=await stdio.callTool({name:'ultra_personal_document_import',arguments:{agent_id:'codex',event_id:'stdio-imp',consent:true,
     label:'stdio.md',content_base64:b64(original),content_sha256:SHA(original)}});
   const wireResult=JSON.parse(wire.content[0].text);assert.ok(!wire.isError);assert.equal(wireResult.byte_size,original.length);pass();

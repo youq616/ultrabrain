@@ -1,3 +1,4 @@
+import {deliverDocumentImport,documentImportRequest} from '../../../src/client-document.mjs';
 /** Actual official MCP SDK client; profile command is trusted operator configuration. */
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {deliverCapture} from '../../../src/capture-delivery.mjs';
@@ -12,8 +13,9 @@ function decoded(r) {
   if(r.isError)throw new UltraError(['permission_denied','capture_disabled','conflict','revision_conflict','agent_not_registered','not_found'].includes(value?.error)?value.error:'mcp_rejected','Memory request rejected');
   requireThat(!r._meta?.brain_hot_memory,'mcp_contract_changed','Unexpected ungoverned metadata');return value;
 }
-export const READ_TOOLS=Object.freeze(['ultra_identity','ultra_personal_context','ultra_memory_profile','ultra_memory_search','ultra_agent_list','ultra_personal_jobs']);
-export const WRITE_TOOLS=Object.freeze(['ultra_agent_register','ultra_memory_commit','ultra_personal_capture','ultra_personal_review','ultra_personal_update','ultra_personal_cancel']);
+export const READ_TOOLS=Object.freeze(['ultra_identity','ultra_personal_context','ultra_memory_profile','ultra_memory_search','ultra_agent_list','ultra_personal_jobs','ultra_personal_document_list','ultra_personal_document_read']);
+export const WRITE_TOOLS=Object.freeze(['ultra_agent_register','ultra_memory_commit','ultra_personal_capture','ultra_personal_review','ultra_personal_update','ultra_personal_cancel','ultra_personal_document_import','ultra_personal_document_queue','ultra_personal_document_archive']);
+export const clientAllowsTool=(profile,name)=>READ_TOOLS.includes(name)||(WRITE_TOOLS.includes(name)&&(name.startsWith('ultra_personal_document_')?profile.allowDocuments:(name==='ultra_agent_register'?(profile.allowCapture||profile.allowDocuments):profile.allowCapture)));
 export async function connectClient(input,{signal}={}) {
   const profile=clientProfile(input),client=new Client({name:'ultrabrain-client',version:'0.14.0-alpha.1'});let transport;
   try {
@@ -37,17 +39,19 @@ export async function connectClient(input,{signal}={}) {
     return {profile,identity,
       async catalog(){const tools=[];let cursor;for(let page=0;page<20;page++){
         const r=await client.listTools(cursor?{cursor}:{},{signal,timeout:profile.timeoutMs});tools.push(...r.tools);
-        if(!r.nextCursor)return tools.filter(t=>READ_TOOLS.includes(t.name)||(profile.allowCapture&&WRITE_TOOLS.includes(t.name)));
+        if(!r.nextCursor)return tools.filter(t=>clientAllowsTool(profile,t.name));
         requireThat(r.nextCursor!==cursor,'mcp_contract_changed','Repeated tool cursor');cursor=r.nextCursor;
       }throw new UltraError('mcp_contract_changed','Tool listing exceeded page limit');},
       async callAllowed(name,args,requestSignal){
-        requireThat(READ_TOOLS.includes(name)||(profile.allowCapture&&WRITE_TOOLS.includes(name)),'permission_denied','Tool not enabled in client profile');
+        requireThat(clientAllowsTool(profile,name),'permission_denied','Tool not enabled in client profile');
         if(['ultra_memory_commit','ultra_personal_capture'].includes(name))requireThat(args?.consent===true,'capture_disabled','Capture consent required');
+        if(name==='ultra_personal_document_import')args=documentImportRequest(args,profile);
         await check();
         const r=await client.callTool({name,arguments:args},undefined,{signal:requestSignal?AbortSignal.any([requestSignal,signal].filter(Boolean)):signal,timeout:profile.timeoutMs});
         decoded(r);return r;
       },
       async context(){await check();return clientContext(await invoke('ultra_personal_context',{limit:20,budget_bytes:profile.budgetBytes,...(profile.projectId?{project_id:profile.projectId}:{})}),profile);},
+      async importDocument(p,{authorize}={}){return deliverDocumentImport(p,profile,{checkIdentity:check,invoke,signal,authorize});},
       async capture(p,{authorize}={}){return deliverCapture(p,profile,{checkIdentity:check,invoke,signal,authorize});},
       async probe(){const required=requiredClientTools(profile),names=new Set();let cursor;for(let page=0;page<20;page++){
         const result=await client.listTools(cursor?{cursor}:{},{signal,timeout:profile.timeoutMs});for(const tool of result.tools)names.add(tool.name);

@@ -1,64 +1,66 @@
-/** Client-side explicitly selected personal text documents.
- * Reads only one user-chosen regular file: no directory scans, no chat-history
- * paths, no symlink or Windows junction following. Mirrors the server bounds so
- * obviously ineligible files are rejected before any bytes leave the machine.
- */
-import {lstatSync,readFileSync} from 'node:fs';
-import {basename} from 'node:path';
-import {requireThat,UltraError,sha256} from './core.mjs';
+/** One explicitly selected file. No scan, URL fetch, transcript discovery or implicit consent. */
+import {constants,lstatSync,openSync,fstatSync,readSync,closeSync} from 'node:fs';
+import {basename,resolve,dirname,parse} from 'node:path';
+import {requireThat} from './core.mjs';
 import {objectFields,personalId} from './personal-memory.mjs';
-import {documentLabel,documentFormat,documentContent,PERSONAL_DOCUMENT_MAX_BYTES} from './personal-documents.mjs';
+import {documentLabel,documentFormat,documentContent,importDocumentRequest,PERSONAL_DOCUMENT_MAX_BYTES} from './personal-document-core.mjs';
+function parentSnapshots(path) {
+  const rows=[];
+  for(let p=dirname(path);p!==parse(p).root;p=dirname(p)){
+    const st=lstatSync(p);requireThat(st.isDirectory()&&!st.isSymbolicLink(),'invalid_path','Linked parent directories are not accepted');
+    rows.push([p,st.dev,st.ino]);
+  }
+  return rows;
+}
+function sameFile(a,b){return a.dev===b.dev&&a.ino===b.ino&&a.size===b.size&&a.mtimeMs===b.mtimeMs&&a.ctimeMs===b.ctimeMs;}
 export function readLocalDocument(path) {
-  requireThat(typeof path==='string'&&path.length>0&&!path.includes('\0'),'invalid_params','One explicit file path is required');
-  const stats=lstatSync(path); // lstat, never stat: a symlink or junction is rejected, not followed.
-  requireThat(!stats.isSymbolicLink(),'invalid_path','Symlinks and Windows junctions are not followed; import the real file');
-  requireThat(stats.isFile(),'invalid_path','Only one explicitly selected regular file can be imported');
-  requireThat(stats.size>=1&&stats.size<=PERSONAL_DOCUMENT_MAX_BYTES,'file_too_large',
-    `Personal documents are limited to ${PERSONAL_DOCUMENT_MAX_BYTES} bytes; this file is rejected whole`);
+  requireThat(typeof path==='string'&&path.length>0&&!path.includes('\0'),'invalid_params','One explicit local file path is required');
+  path=resolve(path);const parents=parentSnapshots(path),before=lstatSync(path);
+  requireThat(!before.isSymbolicLink()&&before.isFile(),'invalid_path','Select a regular file, not a symlink or junction');
+  requireThat(before.size>=1&&before.size<=PERSONAL_DOCUMENT_MAX_BYTES,'file_too_large','File exceeds 128 KiB or is empty; nothing is truncated');
   const label=documentLabel(basename(path));documentFormat(label);
-  const bytes=readFileSync(path);
-  const content=documentContent(bytes); // Strict UTF-8; BOM and line endings preserved.
-  requireThat(stats.size===bytes.length&&sha256(bytes)===content.content_sha256,'invalid_params','File changed while being read');
-  return {label,content_base64:bytes.toString('base64'),content_sha256:content.content_sha256,
-    byte_size:bytes.length,has_bom:content.has_bom};
+  const fd=openSync(path,constants.O_RDONLY|(constants.O_NOFOLLOW??0)|(constants.O_NONBLOCK??0));
+  try {
+    const opened=fstatSync(fd);
+    // On platforms without O_NOFOLLOW, matching inode identity is still required BEFORE reading.
+    requireThat(opened.isFile()&&sameFile(before,opened),'file_changed','Selected file was replaced before reading');
+    requireThat(JSON.stringify(parentSnapshots(path))===JSON.stringify(parents),'file_changed','Parent directory changed');
+    requireThat(!lstatSync(path).isSymbolicLink(),'invalid_path','Selected file became a link');
+    const buffer=Buffer.alloc(opened.size+1);let n=0;
+    while(n<buffer.length){const got=readSync(fd,buffer,n,buffer.length-n,null);if(!got)break;n+=got;}
+    requireThat(n===opened.size&&sameFile(opened,fstatSync(fd))&&sameFile(opened,lstatSync(path)),
+      'file_changed','File changed during bounded descriptor read');
+    requireThat(JSON.stringify(parentSnapshots(path))===JSON.stringify(parents),'file_changed','Parent directory changed');
+    const bytes=buffer.subarray(0,n),content=documentContent(bytes);
+    return {label,content_base64:bytes.toString('base64'),content_sha256:content.content_sha256,byte_size:n,has_bom:content.has_bom};
+  }finally{closeSync(fd);}
 }
 export function documentImportRequest(input,profile) {
-  objectFields(input,['agent_id','event_id','consent','label','content_base64','content_sha256','project_id']);
-  // Document import is per-file consent; it is independent of the automatic
-  // conversation-capture switch and never enabled by it alone.
-  requireThat(input.consent===true,'capture_disabled',
-    'Explicit per-file consent is required to import a personal document');
+  objectFields(input,['agent_id','event_id','consent','label','content_base64','content_sha256','project_id','byte_size','has_bom']);
+  requireThat(profile.allowDocuments===true&&input.consent===true,'capture_disabled','Profile file permission and explicit per-file consent are required');
   personalId(input.agent_id,'agent_id');personalId(input.event_id,'event_id');
-  documentLabel(input.label);documentFormat(input.label);
-  requireThat(typeof input.content_base64==='string'&&/^[A-Za-z0-9+/]+={0,2}$/.test(input.content_base64),'invalid_params','Invalid base64 content');
-  requireThat(typeof input.content_sha256==='string'&&/^[a-f0-9]{64}$/.test(input.content_sha256),'invalid_params','Invalid content fingerprint');
-  requireThat(!Object.hasOwn(input,'project_id')||input.project_id===profile.projectId,
-    'scope_denied','Project differs from the trusted client profile');
-  const {...fields}=input;delete fields.project_id;
-  return {...fields,...(profile.projectId?{project_id:profile.projectId}:{})};
+  requireThat(!Object.hasOwn(input,'project_id')||input.project_id===(profile.projectId??null),'scope_denied','Project differs from trusted profile');
+  const request={agent_id:input.agent_id,event_id:input.event_id,consent:input.consent,label:input.label,
+    content_base64:input.content_base64,content_sha256:input.content_sha256,...(profile.projectId?{project_id:profile.projectId}:{})};
+  const checked=importDocumentRequest(request);
+  requireThat((input.byte_size===undefined||input.byte_size===checked.byte_size)&&(input.has_bom===undefined||input.has_bom===checked.has_bom),'fingerprint_mismatch','Selection metadata disagrees with original bytes');
+  return request;
 }
-/** Last-mile consent boundary for document import, mirroring deliverCapture:
- * freeze the selection before asynchronous work and re-assert the synchronous
- * authorization snapshot after every awaited step, immediately before sending.
- */
 export async function deliverDocumentImport(file,profile,{checkIdentity,invoke,signal,authorize=()=>{}}) {
-  requireThat(file&&typeof file==='object'&&!Array.isArray(file),'invalid_params','A selected document is required');
+  const request=documentImportRequest(structuredClone(file),profile);
   requireThat(typeof authorize==='function','invalid_params','Synchronous authorization assertion required');
-  const selection=structuredClone(file); // Bytes and consent frozen at selection time.
-  const request=documentImportRequest({...selection,consent:true},profile);
   const allowed=()=>{
-    requireThat(!signal?.aborted,'aborted','Document import cancelled before transmission');
-    const result=authorize();
-    if(result&&typeof result.then==='function'){
-      Promise.resolve(result).catch(()=>{});
-      requireThat(false,'invalid_params','Authorization assertion must be synchronous');
-    }
+    requireThat(!signal?.aborted,'aborted','Document import cancelled');const result=authorize();
+    if(result&&typeof result.then==='function'){Promise.resolve(result).catch(()=>{});requireThat(false,'invalid_params','Authorization must be synchronous');}
     requireThat(!signal?.aborted,'aborted','Document import cancelled during authorization');
   };
-  await checkIdentity();
-  allowed();
+  allowed();await checkIdentity();allowed();
   await invoke('ultra_agent_register',{agent_id:request.agent_id,agent_type:'custom'});
-  await checkIdentity();
-  allowed();
-  return invoke('ultra_personal_document_import',request);
+  await checkIdentity();allowed();
+  const receipt=await invoke('ultra_personal_document_import',request);
+  requireThat(receipt?.source_id===profile.source&&receipt.event_id===request.event_id&&receipt.storage==='stored'&&
+    /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(receipt.document_id??'')&&receipt.content_sha256===request.content_sha256&&
+    receipt.agent_id===request.agent_id&&(receipt.project_id??null)===(profile.projectId??null),
+    'mcp_contract_changed','Document receipt does not match selection and destination; delivery unconfirmed');
+  return receipt;
 }

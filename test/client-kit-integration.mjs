@@ -36,7 +36,7 @@ try{
  r=await run('capture',event);assert.equal(r.code,1);assert.equal(r.json.error,'capture_disabled');pass();
  await withProxy(async c=>{
   assert.match(c.getInstructions(),/untrusted reference data/);pass();
-  const tools=(await c.listTools()).tools;assert.equal(tools.length,6);assert.ok(tools.every(x=>!['query','ultra_memory_commit','ultra_personal_consolidate'].includes(x.name)));pass();
+  const tools=(await c.listTools()).tools;assert.equal(tools.length,8);assert.ok(tools.every(x=>!['query','ultra_memory_commit','ultra_personal_consolidate'].includes(x.name)));pass();
   const result=await c.callTool({name:'ultra_personal_context',arguments:{}});assert.ok(!result.isError);assert.equal(JSON.parse(result.content[0].text).memories[0].id,entry.id);pass();
   const denied=await c.callTool({name:'ultra_personal_review',arguments:{memory_id:entry.id,expected_revision:2,event_id:'bad',status:'archived'}});assert.equal(denied.isError,true);pass();
  });
@@ -44,7 +44,7 @@ try{
  r=await run('capture',event);assert.equal(r.code,0,r.out+' '+r.err);const job=r.json.result.job_id;pass();
  r=await run('capture',event);assert.equal(r.json.result.job_id,job);assert.equal(r.json.result.replayed,true);pass();
  await withProxy(async c=>{
-  assert.equal((await c.listTools()).tools.length,12);pass();
+  assert.equal((await c.listTools()).tools.length,14);pass();
   const denied=await c.callTool({name:'query',arguments:{sql:'select 1'}});assert.equal(denied.isError,true);pass();
   const result=await c.callTool({name:'ultra_personal_jobs',arguments:{job_id:job}});assert.equal(JSON.parse(result.content[0].text).jobs[0].state,'queued');pass();
  });

@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id);
 const labels={identity:'身份',preference:'偏好',environment:'环境',project:'项目',decision:'决策',skill:'技能',error:'错误经验',goal:'目标',experience:'经验'};
 const views={candidate:'待确认记忆',active:'当前记忆',archived:'已归档',profile:'个人偏好',documents:'导入文档',agents:'已登记 Agent',jobs:'整理任务'};
-let sourceId='',token='',view='candidate',offset=0,nextOffset=null,current=null,editing=null,pending=null,busy=false,loadVersion=0,documentOriginal=null;
+let sourceId='',token='',view='candidate',offset=0,nextOffset=null,current=null,editing=null,pending=null,busy=false,loadVersion=0,documentOriginal=null,documentEpoch=0;
 function message(text,error=false){$('message').textContent=text;$('message').dataset.error=String(error);}
 function element(tag,text,cls){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;}
 function controls(){
@@ -24,24 +24,28 @@ function edit(row){if(pending||busy)return;editing=row;$('editor-title').textCon
 async function submitPending(){
   if(!pending||busy)return;busy=true;controls();
   try{
+    pending.authorize?.();
     if(['commit','capture','document_import'].includes(pending.operation))await api('register',{agent_id:'personal-console',agent_type:'general_agent',capabilities:[]});
+    pending.authorize?.();
     const operation=pending.operation;const result=await api(operation,pending.input);pending=null;resetEditor();message((operation==='consolidate'?'整理请求已返回，请在整理任务中查看实际状态。':'操作已确认。')+(result.state==='needs_model'?'尚未配置个人整理模型，未发送原文。':'')+(result.review_required?'该记忆需要明确确认后才进入当前上下文。':''));await load();
   }catch(e){
     if(!e.unknown){pending=null;message('请求被拒绝：'+e.message+'。版本冲突时请刷新并重新核对；不要覆盖他人的更改。',true);}
     else message('尚未取得可靠确认：'+e.message+'。请重试同一请求，不要更换事件编号。',true);
   }finally{busy=false;controls();}
 }
-function mutate(operation,input){if(busy||pending){message('请先处理尚未确认的请求。',true);return;}pending={operation,input:{...input,...(['commit','capture','update','review','document_import','document_queue','document_archive'].includes(operation)?{event_id:crypto.randomUUID()}: {})}};submitPending();}
+function mutate(operation,input,authorize){if(busy||pending){message('请先处理尚未确认的请求。',true);return;}authorize?.();pending={operation,authorize,input:{...input,...(['commit','capture','update','review','document_import','document_queue','document_archive'].includes(operation)?{event_id:crypto.randomUUID()}: {})}};submitPending();}
 const formatSize=n=>n<1024?n+' B':(n/1024).toFixed(1)+' KiB';
 const sha16=v=>v?String(v).slice(0,16)+'…':'';
 function base64ToBytes(value){const raw=atob(value);const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return bytes;}
 function bytesToBase64(bytes){let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(binary);}
 async function sha256Hex(bytes){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(b=>b.toString(16).padStart(2,'0')).join('');}
 async function fetchDocumentOriginal(documentId){
+  const session=token,epoch=documentEpoch;
   const result=await api('document_read',{document_id:documentId});
   const bytes=base64ToBytes(result.content_base64);
   const digest=await sha256Hex(bytes);
   if(digest!==result.content_sha256)throw Object.assign(new Error('fingerprint_mismatch_after_download'),{unknown:false});
+  if(!token||token!==session||epoch!==documentEpoch)throw new Error('document_view_changed');
   documentOriginal={document:result,bytes};
   return {result,bytes};
 }
@@ -81,9 +85,9 @@ function renderDocuments(result){
       });
       const queue=element('button','排队整理（之后才会调用模型）');queue.dataset.write='true';
       queue.addEventListener('click',()=>{
-        const plan=[];for(let start=0;start<row.byte_size;start+=32768)plan.push({byte_start:start,byte_length:Math.min(32768,row.byte_size-start)});
-        if(!confirm('将把 '+row.label+' 划分为 '+plan.length+' 个 ≤32 KiB 的片段排队整理。排队只保存候选，不调用模型；之后在“整理任务”里逐条明确运行模型并核对结果。继续？'))return;
-        mutate('document_queue',{document_id:row.document_id,fragments:plan});
+        // Immutable original is split server-side at UTF-8 boundaries, not by naive browser byte steps.
+        if(!confirm('将把 '+row.label+' 按 UTF-8 字符边界划分为 ≤32 KiB 的片段排队整理。排队只保存候选，不调用模型；之后在“整理任务”里逐条明确运行模型并核对结果。继续？'))return;
+        mutate('document_queue',{document_id:row.document_id});
       });
       const archive=element('button','归档文档');archive.dataset.write='true';
       archive.addEventListener('click',()=>{if(confirm('归档会使相关片段退出当前使用范围、使派生记忆失效并阻止未完成任务写回。原始文件字节保留可下载，这不是物理擦除。继续？'))mutate('document_archive',{document_id:row.document_id});});
@@ -116,16 +120,23 @@ function renderDocuments(result){
   controls();
 }
 async function importSelectedDocument(){
-  const file=$('document-file').files?.[0];
+  if(busy||pending)return;
+  const file=$('document-file').files?.[0],session=token,project=$('project').value||null;
   if(!file){message('请先选择一个文件。',true);return;}
-  if(!$('document-consent').checked){message('导入前必须明确同意按原始字节保存。',true);return;}
-  if(file.size>131072){message('文件为 '+formatSize(file.size)+'，超过 128 KiB 上限，已整体拒绝（不会截断保存）。',true);return;}
+  const authorize=()=>{
+    if(!token||token!==session||!$('document-consent').checked||$('document-file').files?.[0]!==file||($('project').value||null)!==project)
+      throw new Error('document_consent_or_selection_changed');
+  };
   try{
+    authorize();
+    if(file.size<1||file.size>131072)throw new Error('file_size_out_of_range');
     const bytes=new Uint8Array(await file.arrayBuffer());
-    new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes); // Client mirror; the server remains authoritative.
-    mutate('document_import',{agent_id:'personal-console',consent:true,label:file.name,content_base64:bytesToBase64(bytes),content_sha256:await sha256Hex(bytes),project_id:$('project').value||null});
-  }catch{message('文件不是有效的 UTF-8 文本，已整体拒绝。',true);}
+    new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
+    const digest=await sha256Hex(bytes);authorize();
+    mutate('document_import',{agent_id:'personal-console',consent:true,label:file.name,content_base64:bytesToBase64(bytes),content_sha256:digest,project_id:project},authorize);
+  }catch(e){message('导入被拒绝：'+e.message+'。请重新选择并确认；未提交此文件。',true);}
 }
+
 function render(result){
   current=result;$('results').replaceChildren();
   const rows=view==='jobs'?result.jobs:view==='agents'?result.agents:result.memories;
@@ -146,7 +157,7 @@ function render(result){
       card.append(element('span',labels[row.type]??row.type,'badge'),element('span',row.owned_by_caller?'自己拥有':'同源共享','badge'),element('p',row.content,'memory-content'));
       card.append(element('p','r'+row.revision+' · '+(row.project_id??'全局')+' · '+row.visibility+' · 可信度估计：'+(row.confidence??'未知'),'meta'),element('p','来源：'+row.provenance,'meta'));
       if(row.derivation)card.append(element('p','原文引用：'+row.derivation.quote,'memory-content'),element('p',row.derivation_current?'来源版本仍匹配；引用不代表真实性证明。':'来源已修改或归档；重新核对前不能激活。','note'));
-      if(row.owned_by_caller){
+      if(row.owned_by_caller&&row.origin_kind!=='document_fragment'){
         const actions=element('div',undefined,'row card-actions');
         for(const [name,handler]of [['编辑',()=>edit(row)],...(row.status!=='active'?[['确认启用',()=>{if(confirm('确认启用这条记忆？这表示你认可本次内容，不是系统已证明其真实性。'))mutate('review',{memory_id:row.id,expected_revision:row.revision,status:'active'});}]]:[]),...(row.status!=='archived'?[['归档',()=>{if(confirm('归档后不再用于当前上下文。原始内容仍保留，不会物理擦除。'))mutate('review',{memory_id:row.id,expected_revision:row.revision,status:'archived'});}]]:[])]){const b=element('button',name);b.dataset.write='true';b.addEventListener('click',handler);actions.append(b);}card.append(actions);
       }
@@ -160,7 +171,7 @@ function render(result){
 async function load(){
   const request=++loadVersion;current=null;$('export').disabled=true;for(const b of document.querySelectorAll('[data-view]'))b.setAttribute('aria-current',b.dataset.view===view?'page':'false');
   $('view-title').textContent=views[view];$('search-form').hidden=['profile','agents','documents','jobs'].includes(view);
-  $('document-panel').hidden=view!=='documents';$('document-original').hidden=true;documentOriginal=null;
+  documentEpoch++;$('document-panel').hidden=view!=='documents';$('document-original').hidden=true;documentOriginal=null;
   try{
     if(view==='documents'){
       const data=await api('document_list',{status:'any',limit:20,offset});
@@ -173,7 +184,7 @@ async function load(){
   catch(e){if(request===loadVersion)message('读取失败：'+e.message,true);}
 }
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('token').value.trim();$('token').value='';try{const info=await api('info');sourceId=info.source_id;$('scope').textContent='数据源：'+info.source_id+' · Linux 本机所有者（与同账号 stdio 共享）';$('login').hidden=true;$('workspace').hidden=false;$('logout').hidden=false;message('已连接。');await load();}catch(e){token='';message('连接失败：'+e.message,true);}});
-$('logout').addEventListener('click',()=>{if(pending||busy)return;token='';loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
+$('logout').addEventListener('click',()=>{if(pending||busy)return;token='';sourceId='';documentEpoch++;documentOriginal=null;$('document-original-text').textContent='';$('document-original').hidden=true;$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
 for(const b of document.querySelectorAll('[data-view]'))b.addEventListener('click',()=>{view=b.dataset.view;offset=0;load();});
 $('refresh').addEventListener('click',()=>load());$('search-form').addEventListener('submit',e=>{e.preventDefault();offset=0;load();});
 $('prev').addEventListener('click',()=>{offset=Math.max(0,offset-20);load();});$('next').addEventListener('click',()=>{if(nextOffset!==null){offset=nextOffset;load();}});
@@ -181,6 +192,7 @@ $('export').addEventListener('click',()=>{if(current)download({format:1,exported
 $('cancel-edit').addEventListener('click',()=>{resetEditor();controls();});
 $('queue-personal').addEventListener('click',()=>{if(editing||busy||pending)return;if(!$('consent').checked){message('排队前必须明确同意保存原文。',true);return;}if(!$('content').value.trim()){message('请填写要整理的原文。',true);return;}mutate('capture',{agent_id:'personal-console',transcript:$('content').value,project_id:$('project').value||null,consent:true});});
 $('document-file').addEventListener('change',()=>{
+  $('document-consent').checked=false;
   const file=$('document-file').files?.[0];
   $('document-file-info').textContent=file?(file.name+' · '+formatSize(file.size)+(file.size>131072?' · 超过 128 KiB 上限，将被整体拒绝':'')):'尚未选择文件。';
 });

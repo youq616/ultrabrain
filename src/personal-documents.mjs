@@ -1,91 +1,10 @@
-/** Explicitly imported personal text documents: original bytes, provenance, bounded queueing.
- * A filename is a caller label, never a path, identity or command. JSON/CSV content is
- * stored as untrusted text only; nothing inside an imported file is ever executed.
- * Import and model processing stay separate: queueing creates candidates through the
- * existing PersonalConsolidator jobs, and archiving retains the original bytes.
- */
-import {requireThat,sha256,sourceId,integer,UltraError} from './core.mjs';
+/** PostgreSQL-only document service. Pure file contracts live in personal-document-core. */
+import {requireThat,sha256,sourceId,integer} from './core.mjs';
 import {objectFields,personalId,memoryId} from './personal-memory.mjs';
 import {personalPrincipal,lockPersonal} from './personal-memory-store.mjs';
 import {MAX_PERSONAL_JOBS} from './personal-consolidation-core.mjs';
-export const PERSONAL_DOCUMENT_MAX_BYTES=131072; // First batch hard cap: whole-file reject, never truncate.
-export const PERSONAL_DOCUMENT_FORMATS=Object.freeze(['txt','md','json','csv','log']);
-export const PERSONAL_FRAGMENT_MAX_BYTES=32768; // Same bound as capture transcripts feeding the consolidator.
-export const PERSONAL_DOCUMENT_FRAGMENT_LIMIT=16;
-const BASE64=/^[A-Za-z0-9+/]+={0,2}$/;
-const strictUtf8=bytes=>{try{
-  // ignoreBOM keeps a leading U+FEFF in the decoded text so re-encoding reproduces the exact bytes.
-  return new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
-}catch{throw new UltraError('invalid_utf8','Imported files must be strictly valid UTF-8; re-encoding is not accepted as the original');}};
-export function documentLabel(value) {
-  requireThat(typeof value==='string'&&value.isWellFormed(),'invalid_label','File label must be well-formed text');
-  const bytes=Buffer.byteLength(value);
-  requireThat(bytes>=1&&bytes<=256,'invalid_label','File label must be 1..256 UTF-8 bytes');
-  requireThat(value!=='.'&&value!=='..','invalid_label','File label cannot be a directory reference');
-  // A label is not a path: separators, drive syntax and control characters are rejected whole.
-  requireThat(!/[\\/\x00-\x1f\x7f]/.test(value)&&!/^[A-Za-z]:/.test(value)&&!/[<>:"|?*]/.test(value),
-    'invalid_label','File label must be a plain name without path separators, drives or control characters');
-  return value;
-}
-export function documentFormat(label) {
-  const match=/\.([A-Za-z0-9]{1,16})$/.exec(label);
-  const format=match?match[1].toLowerCase():null;
-  requireThat(format&&PERSONAL_DOCUMENT_FORMATS.includes(format),'unsupported_format',
-    'First-batch personal documents are UTF-8 .txt .md .json .csv .log files only');
-  return format;
-}
-export function decodeDocumentContent(encoded) {
-  requireThat(typeof encoded==='string'&&encoded.length>0,'invalid_params','File content must be provided as nonempty standard base64 text');
-  requireThat(encoded.length<=200000,'file_too_large',
-    `Personal documents are limited to ${PERSONAL_DOCUMENT_MAX_BYTES} bytes; larger files are rejected whole, never truncated`);
-  requireThat(BASE64.test(encoded)&&encoded.length%4===0,'invalid_params','File content must be standard base64 in groups of four');
-  const bytes=Buffer.from(encoded,'base64');
-  requireThat(bytes.toString('base64')===encoded,'invalid_params','File content is not canonical base64');
-  requireThat(bytes.length>=1&&bytes.length<=PERSONAL_DOCUMENT_MAX_BYTES,'file_too_large',
-    `Personal documents are limited to ${PERSONAL_DOCUMENT_MAX_BYTES} bytes; larger files are rejected whole, never truncated`);
-  return bytes;
-}
-export function documentContent(bytes) {
-  requireThat(Buffer.isBuffer(bytes)&&bytes.length>=1&&bytes.length<=PERSONAL_DOCUMENT_MAX_BYTES,'file_too_large',
-    `Personal documents are limited to ${PERSONAL_DOCUMENT_MAX_BYTES} bytes; larger files are rejected whole, never truncated`);
-  const decoded=strictUtf8(bytes); // Strict decode: BOM, CRLF/LF, U+FFFD and negations survive only as original bytes.
-  return {text:decoded,has_bom:bytes.length>=3&&bytes[0]===0xEF&&bytes[1]===0xBB&&bytes[2]===0xBF,
-    content_sha256:sha256(bytes)};
-}
-export function importDocumentRequest(input) {
-  objectFields(input,['event_id','agent_id','label','content_base64','content_sha256','consent','project_id']);
-  requireThat(input.consent===true,'capture_disabled','Explicit consent is required to import this file into personal memory');
-  personalId(input.agent_id,'agent_id');personalId(input.event_id,'event_id');
-  const label=documentLabel(input.label),format=documentFormat(label);
-  requireThat(typeof input.content_sha256==='string'&&/^[a-f0-9]{64}$/.test(input.content_sha256),'invalid_params','Content fingerprint must be a lowercase SHA-256 hex digest');
-  const bytes=decodeDocumentContent(input.content_base64),content=documentContent(bytes);
-  requireThat(input.content_sha256===content.content_sha256,'fingerprint_mismatch',
-    'Submitted fingerprint does not match the submitted bytes; the file changed during import');
-  return {event_id:input.event_id,agent_id:input.agent_id,label,format,content_base64:input.content_base64,
-    content_sha256:content.content_sha256,byte_size:bytes.length,has_bom:content.has_bom,text:content.text,
-    project_id:input.project_id==null?null:personalId(input.project_id,'project_id')};
-}
-export function fragmentRanges(input,byteSize) {
-  requireThat(Array.isArray(input)&&input.length>=1&&input.length<=PERSONAL_DOCUMENT_FRAGMENT_LIMIT,
-    'invalid_params',`Queue 1..${PERSONAL_DOCUMENT_FRAGMENT_LIMIT} explicit fragments per request`);
-  const ranges=[];
-  for(const f of input) {
-    objectFields(f,['byte_start','byte_length']);
-    const start=integer(f.byte_start,undefined,0,PERSONAL_DOCUMENT_MAX_BYTES-1);
-    const length=integer(f.byte_length,undefined,1,PERSONAL_FRAGMENT_MAX_BYTES);
-    requireThat(start+length<=byteSize,'invalid_params','Fragment range exceeds the imported file');
-    ranges.push({byte_start:start,byte_end:start+length});
-  }
-  const sorted=[...ranges].sort((a,b)=>a.byte_start-b.byte_start);
-  for(let i=1;i<sorted.length;i++)requireThat(sorted[i-1].byte_end<=sorted[i].byte_start,'invalid_params','Fragments must not overlap');
-  return sorted;
-}
-export function documentFragment(bytes,range) {
-  const slice=bytes.subarray(range.byte_start,range.byte_end);
-  const text=strictUtf8(slice); // Rejects ranges that split a multi-byte UTF-8 sequence.
-  requireThat(sha256(slice)===sha256(Buffer.from(text,'utf8')),'fragment_boundary','Fragment boundaries must align to UTF-8 code points');
-  return {text,fragment_sha256:sha256(slice)};
-}
+import {importDocumentRequest,fragmentRanges,documentFragment,planDocumentFragments,PERSONAL_DOCUMENT_MAX_BYTES,PERSONAL_FRAGMENT_MAX_BYTES} from './personal-document-core.mjs';
+export * from './personal-document-core.mjs';
 const publicDocument=row=>({document_id:row.document_id,label:row.label,format:row.format,byte_size:row.byte_size,
   content_sha256:row.content_sha256,has_bom:row.has_bom,status:row.status,revision:row.revision,agent_id:row.agent_id,
   project_id:row.project_id??null,created_at:row.created_at,archived_at:row.archived_at??null,
@@ -124,14 +43,14 @@ export class PersonalDocumentStore {
       const bytes=Buffer.from(p.content_base64,'base64');
       requireThat(sha256(bytes)===p.content_sha256,'fingerprint_mismatch','Stored bytes fail the submitted fingerprint inside the transaction');
       const [existing]=await tx.executeRaw(`SELECT id::text AS document_id,label,format,byte_size,content_sha256,has_bom,status,revision,agent_id,project_id,created_at
-        FROM ultrabrain.personal_documents WHERE source_id=$1 AND actor_key=$2 AND status='active' AND label=$3 AND content_sha256=$4 LIMIT 1`,
-        [this.source,this.actor,p.label,p.content_sha256]);
-      if(existing)return {...publicDocument(existing),already_imported:true,storage:'stored',model_calls:0};
+        FROM ultrabrain.personal_documents WHERE source_id=$1 AND actor_key=$2 AND status='active' AND label=$3 AND content_sha256=$4 AND agent_id=$5 AND project_id IS NOT DISTINCT FROM $6::text LIMIT 1`,
+        [this.source,this.actor,p.label,p.content_sha256,p.agent_id,p.project_id]);
+      if(existing)return {source_id:this.source,event_id:p.event_id,...publicDocument(existing),already_imported:true,storage:'stored',model_calls:0};
       const [row]=await tx.executeRaw(`INSERT INTO ultrabrain.personal_documents
         (source_id,actor_key,label,format,content,content_sha256,byte_size,has_bom,agent_id,project_id)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id::text AS document_id,label,format,byte_size,content_sha256,has_bom,status,revision,agent_id,project_id,created_at`,
         [this.source,this.actor,p.label,p.format,bytes,p.content_sha256,p.byte_size,p.has_bom,p.agent_id,p.project_id]);
-      return {...publicDocument(row),already_imported:false,storage:'stored',model_calls:0,
+      return {source_id:this.source,event_id:p.event_id,...publicDocument(row),already_imported:false,storage:'stored',model_calls:0,
         original_bytes:'retained exactly as submitted; BOM, line endings and wording untouched'};
     });
   }
@@ -149,7 +68,7 @@ export class PersonalDocumentStore {
   }
   async #ownedDocument(tx,id,{forUpdate=false}={}) {
     memoryId(id);
-    const [row]=await tx.executeRaw(`SELECT id::text AS document_id,label,format,content,content_sha256,byte_size,has_bom,status,revision
+    const [row]=await tx.executeRaw(`SELECT id::text AS document_id,label,format,content,content_sha256,byte_size,has_bom,status,revision,agent_id,project_id,created_at,archived_at
       FROM ultrabrain.personal_documents WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid ${forUpdate?'FOR UPDATE':''}`,[this.source,this.actor,id]);
     requireThat(row,'not_found','Personal document not found under this principal');
     // Integrity self-check on every read: refuse to serve or process tampered rows.
@@ -160,21 +79,28 @@ export class PersonalDocumentStore {
   async documentRead(input) {
     objectFields(input,['document_id']);
     const row=await this.engine.transaction(tx=>this.#ownedDocument(tx,input.document_id));
-    return {...publicDocument(row),fragments:null,content_base64:row.content.toString('base64'),
+    return {source_id:this.source,...publicDocument(row),fragments:null,content_base64:row.content.toString('base64'),
       round_trip:'base64 decodes to the exact submitted bytes; verify content_sha256 locally after download'};
   }
   async documentQueue(input) {
     objectFields(input,['event_id','document_id','fragments']);
     personalId(input.event_id,'event_id');
-    const shaped=fragmentRanges(input.fragments,PERSONAL_DOCUMENT_MAX_BYTES); // Shape check before opening the event.
+    const shaped=input.fragments===undefined?null:fragmentRanges(input.fragments,PERSONAL_DOCUMENT_MAX_BYTES); // Shape check before opening the event.
     const p={event_id:input.event_id,document_id:input.document_id,fragments:shaped};
     return this.#event('document_queue',p.event_id,p,async tx=>{
       const document=await this.#ownedDocument(tx,p.document_id,{forUpdate:true});
       requireThat(document.status==='active','invalid_params','Only active documents can be queued; archived originals are retained but no longer processed');
-      const ranges=fragmentRanges(input.fragments,document.byte_size);
+      const requests=p.fragments===null?planDocumentFragments(document.content):p.fragments.map(f=>({byte_start:f.byte_start,byte_length:f.byte_end-f.byte_start}));
+      const ranges=fragmentRanges(requests,document.byte_size);
+      // All fragment text is validated before any rows are created. NUL/blank originals remain downloadable.
+      for(const range of ranges)documentFragment(document.content,range);
       const [capacity]=await tx.executeRaw("SELECT count(*)::integer AS n FROM ultrabrain.personal_consolidations WHERE source_id=$1 AND actor_key=$2 AND state IN ('queued','processing','failed')",[this.source,this.actor]);
       requireThat(capacity.n+ranges.length<=MAX_PERSONAL_JOBS,'queue_full','Process or explicitly cancel pending jobs before accepting more; no records were removed');
       const fragments=[];
+      for(const range of ranges) {
+        const [prior]=await tx.executeRaw('SELECT 1 FROM ultrabrain.personal_document_fragments WHERE source_id=$1 AND actor_key=$2 AND document_id=$3::uuid AND byte_start=$4 AND byte_end=$5',[this.source,this.actor,p.document_id,range.byte_start,range.byte_end]);
+        requireThat(!prior,'conflict','This range already has a task; inspect its status or retry the original event');
+      }
       for(const range of ranges) {
         const fragment=documentFragment(document.content,range);
         const [entry]=await tx.executeRaw(`INSERT INTO ultrabrain.personal_memories

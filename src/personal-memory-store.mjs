@@ -30,7 +30,7 @@ export async function lockPersonal(tx,source,actor) {
   await tx.executeRaw("SET LOCAL statement_timeout='15s'");
   await tx.executeRaw('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[JSON.stringify(['ultra-personal',source,actor])]);
 }
-const projection=`id::text,type,content,content_hash,confidence,importance,source AS provenance,agent_id,project_id,
+const projection=`id::text,type,origin_kind,content,content_hash,confidence,importance,source AS provenance,agent_id,project_id,
   status,visibility,revision,created_at,updated_at,last_confirmed,(actor_key=$2) AS owned_by_caller,
   CASE WHEN actor_key=$2 THEN derivation ELSE NULL END AS derivation,${PERSONAL_DERIVATION_CURRENT} AS derivation_current`;
 function rowView(row) {

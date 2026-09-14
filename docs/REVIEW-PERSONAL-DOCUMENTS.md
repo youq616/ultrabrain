@@ -12,7 +12,7 @@
   - `src/personal-plugin.mjs`（5 个 `ultra_personal_document_*` 工具）
   - `src/personal-console.mjs`（METHODS/WRITES/SAFE_CODES/dispatch）
   - `web/personal/index.html`、`web/personal/app.js`（文档视图）
-  - `src/client-document.mjs`（客户端显式读取与授权快照递送）
+  - `src/client-document.mjs`、`src/personal-document-core.mjs`、打包客户端 CLI/runtime、profile 生成器（实际文件许可和导入/转发）
   - `test/personal-documents.test.mjs`、`test/personal-documents-integration.mjs`、`test/personal-console-integration.mjs`、`test/restore-verify.py`
   - `.github/workflows/ci.yml`、`package.json`、`docs/PERSONAL-DOCUMENTS.md`、检查表
 
@@ -27,7 +27,7 @@
 7. **归档语义**：片段 archived、未完成任务（含持租约 in-flight）围栏 `stale`/`source_archived`、派生记忆退出上下文但行保留、原始字节仍可 byte-exact 读取；归档非擦除的表述与实现一致；归档后不可再排队/再归档。
 8. **快照不可变**：`ultra_personal_update`/`ultra_personal_review` 对 `document_fragment` 行返回 `document_bound`；不存在任何改写片段内容的路径。
 9. **管理台安全**：文档操作沿用固定路由/令牌/CSP；列表不回内容；纯文本展示（无 innerHTML）；下载仅显式点击；`SAFE_CODES` 白名单未放行敏感错误。
-10. **客户端边界**：`readLocalDocument` lstat 拒绝 symlink/junction 与非常规文件；不扫描目录；`deliverDocumentImport` 选择即冻结 + 每个 await 后同步授权断言；项目绑定只来自受信配置。
+10. **客户端边界**：`readLocalDocument` 通过 no-follow 描述符与读取前后 inode/父目录检查拒绝 symlink/junction、替换和非常规文件；不扫描目录；`deliverDocumentImport` 选择即冻结 + 每个 await 后同步授权断言；项目绑定只来自受信配置。
 11. **测试诚实性**：测试没有删除断言、放宽边界或伪造成功；集成测试真的经过 PostgreSQL 与 stdio MCP；`restore-verify.py` 对文档做字节级比对；CI 步骤真实执行。
 12. **文档一致性**：`docs/PERSONAL-DOCUMENTS.md` 与检查表更新不宣称 PDF/图片/OCR 支持或阶段完成。
 
@@ -47,3 +47,5 @@ bun src/cli.mjs db stop
 ## 结论格式
 
 按 AGENTS.md：列出阻断（P0/P1）与非阻断（P2）问题，各附文件/行号与最小复现；给出明确 verdict（approve / approve-with-nonblocking / reject）。没有书面结论不得合入 main。
+
+接收端新增回归：UTF-8 自动规划、相同原文不同项目/Agent、事务注入回滚、文件描述符替换、文件/聊天许可分离、实际打包 Node 导入及 MCP 代理、浏览器读取/注册期间撤销同意。独立审核须检查整个基线差异而非仅复述上一轮发现，最终结论绑定修正后的完整 SHA。浏览器本机可能受管理员网络策略限制；未执行成功则注明，由同 SHA GitHub Chromium 门禁验证，不绕过策略。
