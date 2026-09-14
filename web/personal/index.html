@@ -6,7 +6,7 @@
 <main>
 <section id="login" class="panel narrow"><h2>连接你的个人记忆</h2><p>在服务器上读取启动命令提示的私有令牌文件，将令牌粘贴到此处。它只保存在当前页面内存中，不写入浏览器存储。</p><form id="login-form"><label>管理台令牌<input id="token" type="password" autocomplete="off" required spellcheck="false"></label><button type="submit">连接</button></form><p class="note">远程 Linux 服务请通过 SSH 隧道访问；不要把这个管理端口暴露到公网。此令牌不是模型 API Key，也不是 MCP 令牌。</p></section>
 <div id="workspace" hidden>
-<nav aria-label="视图"><button data-view="candidate">待确认记忆</button><button data-view="active">当前记忆</button><button data-view="archived">已归档</button><button data-view="profile">个人偏好</button><button data-view="jobs">整理任务</button><button data-view="agents">已登记 Agent</button></nav>
+<nav aria-label="视图"><button data-view="candidate">待确认记忆</button><button data-view="active">当前记忆</button><button data-view="archived">已归档</button><button data-view="profile">个人偏好</button><button data-view="documents">导入文档</button><button data-view="jobs">整理任务</button><button data-view="agents">已登记 Agent</button></nav>
 <div class="columns"><section class="panel"><div class="section-head"><h2 id="view-title">待确认记忆</h2><button id="refresh">刷新</button></div><form id="search-form"><label class="sr-only" for="query">搜索文字</label><input id="query" placeholder="文字搜索（不是语义搜索）" maxlength="4096"><button type="submit">搜索</button></form><p class="note" id="coverage">只展示当前身份可见的记录。</p><div id="results" aria-live="polite"></div><div class="row"><button id="prev" disabled>上一页</button><button id="next" disabled>下一页</button><button id="export" disabled>导出当前页</button></div></section>
 <section class="panel"><h2 id="editor-title">新建候选记忆</h2><p class="note">保存不会自动确认真实性。编辑已有记忆后，它会重新进入待确认状态。</p><form id="memory-form">
 <label>类型<select id="type"><option value="identity">身份信息</option><option value="preference" selected>偏好</option><option value="environment">环境</option><option value="project">项目</option><option value="decision">决策</option><option value="skill">技能</option><option value="error">错误经验</option><option value="goal">目标</option><option value="experience">经验</option></select></label>
@@ -18,6 +18,15 @@
 <label class="checkbox"><input id="consent" type="checkbox">我同意保存上述内容，并已排除不应保存的秘密。</label>
 <div class="row"><button type="submit" id="save">保存候选</button><button type="button" id="queue-personal" data-write="true">将内容作为原文排队整理</button><button type="button" id="cancel-edit" hidden>取消编辑</button></div></form></section></div>
 <section id="pending-panel" class="panel warning" hidden><h2>有一次提交尚未确认</h2><p>不要重新生成内容或新的事件编号。下面的重试会使用相同请求。刷新或关闭页面会丢失内存中的待确认请求；可以先将其保存到本机。</p><p id="pending-id"></p><div class="row"><button id="retry">重试原请求</button><button id="save-pending">保存待确认请求</button></div></section>
+<section id="document-panel" class="panel" hidden><h2>导入个人文本文件</h2>
+<p class="note">只导入你在这个表单里明确选择的 UTF-8 文本文件（TXT / MD / JSON / CSV / LOG，≤128 KiB）。文件按原始字节保存，不会自动执行或解析其中内容，也不会自动排队整理。超过上限或编码非法的文件会被整体拒绝，不会截断保存。JSON/CSV 仅作为不可信文本保存。</p>
+<label>选择文件<input id="document-file" type="file" accept=".txt,.md,.json,.csv,.log,text/plain,application/json,text/csv"></label>
+<p class="note" id="document-file-info">尚未选择文件。</p>
+<label class="checkbox"><input id="document-consent" type="checkbox">我确认此文件由我本人选择，内容不含不应保存的秘密，同意按原始字节保存到我的个人记忆库。</label>
+<div class="row"><button type="button" id="document-import" data-write="true">导入此文件</button></div>
+<p class="note">排队整理会从原文生成候选记忆片段（每段 ≤32 KiB，区间以 UTF-8 字节计），生成结果仍需逐条确认。归档会使相关片段退出当前使用范围并使派生记忆失效，但原始文件保留，不等于物理擦除。浏览器仅以纯文本展示原文；下载必须点击“下载原文”才会发生。</p>
+<div id="document-original" hidden><h3 id="document-original-title">原文（纯文本预览）</h3><pre id="document-original-text"></pre></div>
+</section>
 </div>
 <p id="message" role="status" aria-live="polite"></p>
 <footer>归档不等于物理删除，当前页导出不等于完整备份。内容与调用方估计不构成独立真实性证明。</footer>

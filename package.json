@@ -36,6 +36,7 @@
     "test:enterprise": "bun test/enterprise-integration.mjs",
     "test:metadata": "bun test/response-metadata-integration.mjs",
     "test:personal": "bun test/personal-integration.mjs",
+    "test:documents": "bun test/personal-documents-integration.mjs",
     "test:personal-console": "bun test/personal-console-integration.mjs",
     "test:personal-consolidation": "bun test/personal-consolidation-integration.mjs",
     "build:client": "bun scripts/build-client.mjs",

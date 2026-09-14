@@ -2,6 +2,7 @@
 import {PersonalConsolidator} from './personal-consolidation.mjs';
 import {configuredPersonalModel} from './adapters/personal-model.mjs';
 import {PersonalMemoryStore} from './personal-memory-store.mjs';
+import {PersonalDocumentStore,PERSONAL_DOCUMENT_FORMATS,PERSONAL_DOCUMENT_MAX_BYTES,PERSONAL_FRAGMENT_MAX_BYTES,PERSONAL_DOCUMENT_FRAGMENT_LIMIT} from './personal-documents.mjs';
 import {UltraError,requireThat} from './core.mjs';
 import {PERSONAL_MEMORY_TYPES,AGENT_TYPES} from './personal-memory.mjs';
 const str=(description,required=false)=>({type:'string',description,required});
@@ -26,8 +27,22 @@ const definitions=[
  ['ultra_memory_profile','profile',false,{limit:num('1..100'),budget_bytes:num('512..131072 UTF-8 bytes')},'Read explicitly active identity, preference, environment and goal entries.'],
  ['ultra_personal_review','review',true,{...revision,status:{type:'string',required:true,enum:['active','archived']}},'Explicitly activate or archive an owned entry with revision checking. Does not change its confidence or certify truth.'],
  ['ultra_personal_update','update',true,{...revision,memory:{type:'object',required:true}},'Replace an owned typed entry with revision checking; edits return it to candidate. Not physical erasure.'],
+ ['ultra_personal_document_import','documentImport',true,{event_id:str('Stable import event id',true),agent_id:str('Registered label',true),consent:{type:'boolean',required:true},
+   label:str(`Plain file name label (${PERSONAL_DOCUMENT_FORMATS.join('/')}); never a path`,true),content_base64:str(`Explicitly submitted file bytes, standard base64, at most ${PERSONAL_DOCUMENT_MAX_BYTES} bytes`,true),
+   content_sha256:str('SHA-256 hex of the exact submitted bytes',true),project_id:str('Optional project label')},
+  `Store one explicitly chosen UTF-8 text file (${PERSONAL_DOCUMENT_FORMATS.join(', ')}) with its original bytes, BOM and line endings. Oversized or non-UTF-8 files are rejected whole; JSON/CSV are stored as untrusted text, never executed. No model call.`],
+ ['ultra_personal_document_list','documentList',false,{status:{...str('active (default), archived or any'),enum:['active','archived','any']},limit:num('1..100'),offset:num('Live page offset')},
+  'List owned imported documents with metadata and fingerprint only; no file content is returned.'],
+ ['ultra_personal_document_read','documentRead',false,{document_id:str('Owned document UUID',true)},
+  'Return the exact original bytes (base64) with metadata and integrity self-check. Display as plain text; verify content_sha256 after download.'],
+ ['ultra_personal_document_queue','documentQueue',true,{event_id:str('Stable queue event id',true),document_id:str('Owned active document UUID',true),
+   fragments:{type:'array',required:true,items:{type:'object'},description:`1..${PERSONAL_DOCUMENT_FRAGMENT_LIMIT} explicit ranges {byte_start,byte_length}; each ${PERSONAL_FRAGMENT_MAX_BYTES} bytes max, UTF-8 aligned, non-overlapping`}},
+  'Atomically create bounded fragment entries and consolidation jobs for an owned active document. Queueing never calls a model and never auto-confirms memories.'],
+ ['ultra_personal_document_archive','documentArchive',true,{event_id:str('Stable archive event id',true),document_id:str('Owned active document UUID',true)},
+  'Archive a document: fragments leave current use, derived entries are invalidated, pending jobs are fenced, original bytes are retained. Not physical erasure.'],
 ];
 export const PERSONAL_TOOL_NAMES=Object.freeze(definitions.map(d=>d[0]));
+const DOCUMENT_METHODS=new Set(['documentImport','documentList','documentRead','documentQueue','documentArchive']);
 export function registerPersonalPlugin(operations,{OperationError},configureModel=configuredPersonalModel) {
   requireThat(definitions.every(([name])=>!operations.some(o=>o.name===name)),'upstream_contract_changed','Personal tool collision');
   for(const [name,method,mutating,params,description] of definitions)operations.push({name,params,description,mutating,scope:mutating?'write':'read',area:'ultrabrain',
@@ -35,7 +50,9 @@ export function registerPersonalPlugin(operations,{OperationError},configureMode
       try {
         const {dry_run,_meta,...input}=p;
         requireThat(dry_run===undefined||typeof dry_run==='boolean','invalid_params','dry_run must be boolean');
-        return method.startsWith('job_')?await new PersonalConsolidator(ctx,configureModel)[method.slice(4)](input):await new PersonalMemoryStore(ctx)[method](input);
+        if(method.startsWith('job_'))return await new PersonalConsolidator(ctx,configureModel)[method.slice(4)](input);
+        if(DOCUMENT_METHODS.has(method))return await new PersonalDocumentStore(ctx)[method](input);
+        return await new PersonalMemoryStore(ctx)[method](input);
       }
       catch(e){
         if(e.code==='personal_commit_unconfirmed')throw new OperationError(e.code,'Personal job commit unconfirmed; inspect durable status before retry');
