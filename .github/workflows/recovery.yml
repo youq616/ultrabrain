@@ -1,0 +1,40 @@
+name: Personal recovery set
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: recovery-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      ULTRABRAIN_HOME: /home/runner/ultrabrain-recovery-test
+      ULTRABRAIN_BUILD_JOBS: '2'
+      ULTRABRAIN_TEST_ALLOW_WRITE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Native build prerequisites
+        run: sudo apt-get update && sudo apt-get install -y build-essential bison flex libssl-dev zlib1g-dev pkg-config
+      - run: install -d -m 0700 "$ULTRABRAIN_HOME"
+      - uses: actions/cache@v4
+        with:
+          path: /home/runner/ultrabrain-recovery-test/runtime
+          key: native-ubuntu24-v1-${{ hashFiles('upstreams.lock.json', 'scripts/build-postgres.sh') }}
+      - name: Bootstrap synthetic installation
+        run: bash scripts/bootstrap-linux.sh
+      - name: Real CLI, native bytes, managed PostgreSQL and isolated recovery
+        run: python3 test/recovery-integration.py
+      - name: Stop isolated database
+        if: always()
+        run: bun src/cli.mjs db stop || true
+      # Never upload recovery sets, credentials, configuration or raw native logs.
