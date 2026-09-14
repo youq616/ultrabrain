@@ -1,0 +1,81 @@
+name: Import exact user-authorized personal-documents commits
+on:
+  push:
+    branches: [handoff/personal-documents-import]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: exact-personal-documents-import
+  cancel-in-progress: false
+jobs:
+  import:
+    if: github.repository == 'youq616/ultrabrain' && github.ref == 'refs/heads/handoff/personal-documents-import'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: handoff
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 09a4c8fe95242d5939e28cc3957d4605a6823a81
+          fetch-depth: 0
+          path: receiver
+          persist-credentials: true
+      - name: Verify exact bundle and preserve original commits (never change main)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, subprocess
+          root = pathlib.Path(os.environ['GITHUB_WORKSPACE'])
+          source = root / 'handoff/handoffs/personal-documents'
+          receiver = root / 'receiver'
+          base = '09a4c8fe95242d5939e28cc3957d4605a6823a81'
+          head = '1e60ac891b22a307f42cbfeaa3e8637299266336'
+          tree = '633be38bb3eeb1c5f40221983a4f02b8956febdb'
+          ref = 'refs/heads/development/personal-documents'
+          expected = ['8fc75aa4949baffc5c3c4c5f4c1df6376d28ba8c', '2e10b9c88920d0b49f73cf71f2033e45272683ff', head]
+          chunks = []
+          for n in range(1, 12):
+              path = source / f'chunk-{n:02d}'
+              assert path.is_file() and not path.is_symlink() and path.stat().st_size <= 9000
+              chunks.append(path.read_bytes())
+          raw = b''.join(chunks)
+          assert len(raw) == 34793
+          assert hashlib.sha256(raw).hexdigest() == '85c35ffaeb4147c28741a58f40bcb0a0bc2e37619ad11d22c09c8b2609efa0f3'
+          bundle = pathlib.Path(os.environ['RUNNER_TEMP']) / 'personal-documents.bundle'
+          with bundle.open('xb') as f:
+              f.write(raw)
+          def git(*args):
+              return subprocess.check_output(['git', '-c', 'core.hooksPath=/dev/null', '-C', str(receiver), *args], text=True).strip()
+          git('bundle', 'verify', str(bundle))
+          assert git('bundle', 'list-heads', str(bundle)) == head + ' ' + ref
+          git('fetch', '--no-tags', str(bundle), ref + ':' + ref)
+          assert git('rev-parse', ref) == head
+          assert git('rev-parse', head + '^{tree}') == tree
+          assert git('rev-list', '--reverse', base + '..' + head).splitlines() == expected
+          parent = base
+          for commit in expected:
+              assert git('show', '-s', '--format=%P', commit) == parent
+              parent = commit
+          assert git('diff-tree', '--no-commit-id', '--name-only', '-r', head) == 'docs/REVIEW-RECORD-PERSONAL-DOCUMENTS.md'
+          remote = git('ls-remote', '--heads', 'origin', ref)
+          assert remote in ('', head + '\t' + ref), 'Remote branch already differs; do not overwrite'
+          git('push', 'origin', head + ':' + ref)
+          assert git('ls-remote', '--heads', 'origin', ref) == head + '\t' + ref
+          report = {'format': 1, 'base_commit': base, 'head_commit': head, 'head_tree': tree, 'commits': expected,
+                    'destination_ref': ref, 'preserved_original_commits': True, 'main_changed': False,
+                    'code_executed_from_import': False, 'acceptance': 'pending Linux CI and independent review'}
+          print(json.dumps(report, indent=2))
+          (pathlib.Path(os.environ['RUNNER_TEMP']) / 'documents-transfer-result.json').write_text(json.dumps(report, indent=2) + '\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: personal-documents-original-commit-import
+          path: ${{ runner.temp }}/documents-transfer-result.json
+          if-no-files-found: error
+          retention-days: 30
