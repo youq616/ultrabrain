@@ -143,9 +143,9 @@ with sync_playwright() as p:
     page.locator('#document-file').set_input_files(selection)
     expect(page.locator('#document-consent')).not_to_be_checked()
     page.locator('#document-consent').check()
-    page.evaluate("""() => {window.originalArrayBuffer=File.prototype.arrayBuffer; File.prototype.arrayBuffer=async function(){const bytes=await window.originalArrayBuffer.call(this);await new Promise(r=>window.releaseFileRead=r);return bytes;};}""")
+    page.evaluate("""() => {window.originalArrayBuffer=File.prototype.arrayBuffer; File.prototype.arrayBuffer=async function(){const bytes=await window.originalArrayBuffer.call(this);document.documentElement.dataset.fileReadWaiting='true';await new Promise(r=>window.releaseFileRead=r);delete document.documentElement.dataset.fileReadWaiting;return bytes;};}""")
     page.locator('#document-import').click()
-    page.wait_for_function('typeof window.releaseFileRead === "function"')
+    expect(page.locator('html')).to_have_attribute('data-file-read-waiting', 'true')
     page.locator('#document-consent').uncheck()
     page.evaluate('window.releaseFileRead()')
     expect(page.locator('#message')).to_contain_text('document_consent_or_selection_changed')
@@ -174,8 +174,20 @@ with sync_playwright() as p:
     page.locator('#document-import').click()
     expect(page.locator('#results article')).to_have_count(1)
     expect(page.locator('#document-original')).to_be_hidden()
-    page.get_by_role('button', name='查看原文', exact=True).click()
-    expect(page.locator('#document-original')).to_be_visible()
+    with page.expect_response(lambda response: response.request.method == 'POST' and response.request.post_data_json.get('operation') == 'document_read') as original_response:
+        page.get_by_role('button', name='查看原文', exact=True).click()
+    original_result = original_response.value.json()
+    assert original_result.get('ok') is True, 'Original document API rejected the synthetic read'
+    try:
+        expect(page.locator('#document-original')).to_be_visible()
+    except AssertionError:
+        status = page.locator('#message').inner_text()
+        print(json.dumps({'preview_failed': True,
+                          'fingerprint_error': 'fingerprint_mismatch_after_download' in status,
+                          'changed_view': 'document_view_changed' in status,
+                          'javascript_error_count': len(errors),
+                          'raw_status_omitted': True}))
+        raise
     assert page.locator('#document-original-text').inner_text().startswith('不要删除')
     assert page.locator('#document-original-text img').count() == 0
     passed()
