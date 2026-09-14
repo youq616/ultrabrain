@@ -38,7 +38,7 @@ jobs:
       - name: Install exact locally built client package
         run: |
           bash scripts/package-client.sh "$RUNNER_TEMP/native-client"
-          npm install --prefix "$RUNNER_TEMP/native-host" --no-audit --no-fund --ignore-scripts "$RUNNER_TEMP/native-client/ultrabrain-client-0.13.0-alpha.1.tgz"
+          npm install --prefix "$RUNNER_TEMP/native-host" --no-audit --no-fund --ignore-scripts "$RUNNER_TEMP/native-client/ultrabrain-client-0.14.0-alpha.1.tgz"
           ln -s "$RUNNER_TEMP/native-host/node_modules" packages/ultrabrain-client/node_modules
       - uses: actions/checkout@v4
         with:

@@ -1,6 +1,8 @@
 # 原生只读记忆接入：OpenCode、Hermes、OpenClaw（0.13.0-alpha.1）
 
-本轮把个人记忆接入三个实际宿主接口，复用 Node 客户端与同一个 Linux PostgreSQL。**这些适配器只读取已激活记忆，不自动保存提示词、聊天、工具输出，不接管原生记忆槽，也不会调用个人整理模型。**旧的 MCP 显式采集和 Claude Code Hook 保持可用。个人 V1 尚未全部完成。
+本页描述 0.13 引入的默认只读能力；下方安装命令使用当前 `0.14.0-alpha.1` 候选包。0.14 可为 OpenCode 另外明确授权自动采集，授权范围、队列和验收见 `AUTOMATIC-CAPTURE.md`；不改变 Hermes/OpenClaw 的只读范围。
+
+本轮把个人记忆接入三个实际宿主接口，复用 Node 客户端与同一个 Linux PostgreSQL。**默认只读配置下，这些适配器只读取已激活记忆，不自动保存提示词、聊天、工具输出，不接管原生记忆槽，也不会调用个人整理模型。**旧的 MCP 显式采集和 Claude Code Hook 保持可用。个人 V1 尚未全部完成。
 
 ## 版本和验证范围
 
@@ -22,10 +24,10 @@
 bash scripts/package-client.sh
 ```
 
-得到 `dist/client/ultrabrain-client-0.13.0-alpha.1.tgz` 和校验文件。安装到使用 Agent 的机器的独立用户目录：
+得到 `dist/client/ultrabrain-client-0.14.0-alpha.1.tgz` 和校验文件。安装到使用 Agent 的机器的独立用户目录：
 
 ```bash
-npm install --prefix /实际客户端安装目录 --omit=dev --ignore-scripts /实际路径/ultrabrain-client-0.13.0-alpha.1.tgz
+npm install --prefix /实际客户端安装目录 --omit=dev --ignore-scripts /实际路径/ultrabrain-client-0.14.0-alpha.1.tgz
 ```
 
 Windows 同样可以运行 Node 客户端并通过已配置 SSH 访问 Linux，不要求本机 WSL/PostgreSQL。这里没有改为 Windows 服务端。包未发布 npm，不要安装注册表同名包替代本项目 tgz。
@@ -57,7 +59,7 @@ python3 /安装目录/node_modules/ultrabrain-client/dist/native-adapter-config.
 
 默认不写文件。核对 plan 后，在同样参数中添加 `--apply --expected-sha absent`；已有完全相同的文件则使用 plan 返回的 before_sha256。不同的同名插件会被拒绝，不能直接覆盖。回滚用同一个工具的 `--target PATH --rollback RECEIPT`，沿用写前备份、哈希和锁保护。新目录由管理员或本地 Agent 在授权范围内建立，工具不会偷偷创建全局插件目录。
 
-插件只追加一段当前个人参考数据，保持既有 system、压缩 prompt、权限、模型配置不变。没有 sessionID 的小模型辅助调用不读取记忆。每次调用重新请求受控上下文，不跨回合缓存旧内容。工作目录不匹配时拒绝注册；服务不可用时只附加无敏感正文的不可用提示，不复用上次记忆。自动 Hook 不是自动采集接口，不会调用 capture 或保存完整对话。
+插件只追加一段当前个人参考数据，保持既有 system、压缩 prompt、权限、模型配置不变。没有 sessionID 的小模型辅助调用不读取记忆。每次调用重新请求受控上下文，不跨回合缓存旧内容。工作目录不匹配时拒绝注册；服务不可用时只附加无敏感正文的不可用提示，不复用上次记忆。上述只读回调本身不保存完整对话；0.14 的独立采集回调只有在 profile 另外明确授权时才会启用，见 `AUTOMATIC-CAPTURE.md`。
 
 ## OpenClaw：明确会话的附加插件
 

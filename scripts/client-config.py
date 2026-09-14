@@ -12,7 +12,7 @@ import stat
 import sys
 import tomllib
 
-CLIENTS = ('codex','claude-code','opencode','zcode','claude-hooks')
+CLIENTS = ('codex','claude-code','opencode','zcode','claude-hooks','claude-capture-hooks')
 MAX_FILE = 2 * 1024 * 1024
 class ConfigError(Exception):
     pass
@@ -81,7 +81,7 @@ def command_spec(node,cli,profile):
     check(Path(cli).is_absolute() and Path(profile).is_absolute(),'absolute_cli_and_profile_required')
     return [node,cli,'mcp','--profile',profile]
 
-def patch(client,old,command):
+def patch(client,old,command,capture_scopes=()):
     if client=='codex':
         text='' if old is None else old.decode('utf-8');parsed=tomllib.loads(text)
         servers=parsed.get('mcp_servers',{});check(isinstance(servers,dict),'invalid_mcp_table')
@@ -91,11 +91,15 @@ def patch(client,old,command):
         block='\n[mcp_servers.ultrabrain]\n'+'\n'.join(k+' = '+json.dumps(v,ensure_ascii=False) for k,v in entry.items())+'\n'
         out=(text+block).encode('utf-8');check(tomllib.loads(out.decode())['mcp_servers']['ultrabrain']==entry,'toml_validation_failed');return out
     data={} if old is None else json_load(old);check(isinstance(data,dict),'object_config_required')
-    if client=='claude-hooks':
+    if client in ('claude-hooks','claude-capture-hooks'):
         # Paths are command data quoted for Claude command hooks' POSIX/Git-Bash shell.
-        hook_cmd=shlex.join([command[0].replace('\\','/'),command[1].replace('\\','/'),'claude-hook','--profile',command[-1].replace('\\','/')])
+        check(data.get('disableAllHooks') is not True,'hooks_disabled')
+        action='claude-capture-hook' if client=='claude-capture-hooks' else 'claude-hook'
+        events=('SessionStart','UserPromptSubmit') if client=='claude-hooks' else tuple(e for scope,e in [('claude-user','UserPromptSubmit'),('claude-assistant','Stop')] if scope in capture_scopes)
+        check(bool(events),'explicit_automatic_capture_scopes_required')
+        hook_cmd=shlex.join([command[0].replace('\\','/'),command[1].replace('\\','/'),action,'--profile',command[-1].replace('\\','/')])
         hooks=data.setdefault('hooks',{});check(isinstance(hooks,dict),'invalid_hooks')
-        for event in ('SessionStart','UserPromptSubmit'):
+        for event in events:
             group={'matcher':'','hooks':[{'type':'command','command':hook_cmd,'timeout':30}]}
             entries=hooks.setdefault(event,[]);check(isinstance(entries,list),'invalid_hook_list')
             if group not in entries: entries.append(group)
@@ -153,7 +157,9 @@ def main(argv=None):
             profile_path=safe_path(a.profile);profile=json_load(read_file(profile_path));check(profile.get('format')==1,'invalid_profile')
             # Validate through the actual client probe separately before use; no secrets or commands executed here.
             cli_path=safe_path(a.cli);check(cli_path.is_file(),'client_cli_missing')
-            command=command_spec(a.node,str(cli_path),str(profile_path));old=read_file(target);new=patch(a.client,old,command)
+            if a.client=='claude-capture-hooks':
+                check(profile.get('allow_capture') is True and profile.get('workspace') and profile.get('expected_instance') and profile.get('expected_actor') and profile.get('outbox_directory'),'automatic_capture_profile_required')
+            command=command_spec(a.node,str(cli_path),str(profile_path));old=read_file(target);new=patch(a.client,old,command,profile.get('automatic_capture',[]))
             result={'client':a.client,'target':str(target),'changed':old!=new,'before_sha256':'absent' if old is None else digest(old),'after_sha256':digest(new),'mode':'plan','contains_memory':False}
             if a.apply:
                 write_new(lock,b'local configuration transaction\n')

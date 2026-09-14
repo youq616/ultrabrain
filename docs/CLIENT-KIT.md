@@ -1,4 +1,6 @@
-# Personal Client Kit 0.12.0-alpha.1
+# Personal Client Kit：基础接入（始于 0.12）
+
+下方安装命令使用当前 `0.14.0-alpha.1` 候选包；本页的基础能力与验证表保留 0.12 的范围。后续原生适配和授权自动采集分别见 `NATIVE-AGENT-ADAPTERS.md`、`AUTOMATIC-CAPTURE.md`，不能把历史验证表当作当前所有客户端的验收结论。
 
 这一版提供可安装的 Node 客户端、限定个人工具的 MCP stdio 转发器、配置预检/合并/回滚，以及 Claude Code 的工作前只读 Hook。服务端仍在 Linux 上运行项目托管 PostgreSQL；Windows 客户端不需要本地 PostgreSQL、Bun 或 WSL。这里的“不需要 WSL”仅指客户端通过已配置 SSH/HTTP 连接 Linux 服务，不是服务端支持原生 Windows。
 
@@ -21,12 +23,12 @@
 bash scripts/package-client.sh
 ```
 
-输出 `dist/client/ultrabrain-client-0.12.0-alpha.1.tgz` 和 SHA-256 文件。CI 也会为同一提交生成 `personal-client-<完整SHA>` 产物；产物保留期有限，仓库里的构建脚本是长期可重建入口。此私有包**没有发布到 npm**，不要安装注册表里的同名软件替代它。
+输出 `dist/client/ultrabrain-client-0.14.0-alpha.1.tgz` 和 SHA-256 文件。CI 也会为同一提交生成 `personal-client-<完整SHA>` 产物；产物保留期有限，仓库里的构建脚本是长期可重建入口。此私有包**没有发布到 npm**，不要安装注册表里的同名软件替代它。
 
 在实际使用 Agent 的机器上，将这个确定版本的 tgz 安装到独立的当前用户目录：
 
 ```bash
-npm install --prefix /你的独立客户端安装目录 --omit=dev --ignore-scripts /实际路径/ultrabrain-client-0.12.0-alpha.1.tgz
+npm install --prefix /你的独立客户端安装目录 --omit=dev --ignore-scripts /实际路径/ultrabrain-client-0.14.0-alpha.1.tgz
 ```
 
 Windows PowerShell 同样使用 npm，并将路径替换为真实 Windows 路径。安装后的入口为 `<安装目录>/node_modules/ultrabrain-client/dist/cli.cjs`；配置工具 `client-profile.py` 和 `client-config.py` 也包含在该 dist 目录。执行配置工具需要 Python 3.11+。客户端运行需要 Node.js 22.16+。包不含 node_modules，安装仍需获取固定直接版本的 MCP SDK 1.29.0 及它的传递依赖；不是完整离线环境。脚本不会启用服务、安装其他 Agent 或导入真实聊天。
@@ -106,7 +108,7 @@ Hook 只读取事件类型与 cwd，不读取 `prompt`、`transcript_path` 或�
 
 `capture --profile PATH` 从 stdin 读取完整 JSON：`agent_id`、稳定 `event_id`、`transcript`、`consent:true`。没有 profile 级授权即在联网前拒绝；有授权后登记当前身份自己的标签并调用现有 `ultra_personal_capture`。原文最多 32 KiB、拒绝 NUL 和不完整 Unicode；不得传入 source/模型端点/命令覆盖。
 
-同一事件重试保持相同内容，回执表示原文和任务已持久化，不表示模型提取已完成。此客户端没有额外 fsync outbox，未确认之前事件必须由生产系统保留。禁止只为重试交付重新运行模型。`mcp` 转发器默认仅六个只读个人工具；明确开启写模式后最多增加六个写工具，仍不公开任意 SQL、shell、企业管理或模型整理执行。服务端原有采集与审核权限继续有效。
+同一事件重试保持相同内容，回执表示原文和任务已持久化，不表示模型提取已完成。直接 `capture` 命令没有额外 fsync outbox，未确认之前事件必须由生产系统保留；0.14 的 `queue-capture` 是另一个明确选择的持久交付入口，见 `AUTOMATIC-CAPTURE.md`。禁止只为重试交付重新运行模型。`mcp` 转发器默认仅六个只读个人工具；明确开启写模式后最多增加六个写工具，仍不公开任意 SQL、shell、企业管理或模型整理执行。服务端原有采集与审核权限继续有效。
 
 ## 官方配置依据和验收
 

@@ -1,0 +1,105 @@
+{
+  "format": 1,
+  "phase": "personal-0.14",
+  "implementation_base": "a467855de2462f0d7b247babe458ae7d04c78db0",
+  "review_status": "PENDING",
+  "independent_reviewer": null,
+  "runtime": {
+    "node": "22.16.0",
+    "bun": "1.3.13",
+    "platform": "Linux",
+    "postgres": "matching pinned prior-CI native runtime; new isolated data directory; not rebuilt in this local run"
+  },
+  "tests": [
+    {
+      "command": "node --test test/*.test.mjs",
+      "scope": "unit",
+      "passed_checks": 427,
+      "exit_code": 0,
+      "log_sha256": "347b3ee58b5d7dc0b10c343439d222a122462f83a9ddefb202b042f59659521a"
+    },
+    {
+      "command": "python3 -m unittest discover -s test -p 'test_*.py' -v",
+      "scope": "python",
+      "passed_checks": 86,
+      "exit_code": 0,
+      "log_sha256": "e83066617abcb3d55acd4773eacecfe5e6b1163ef4c6bf74492ef9294ea98e8f"
+    },
+    {
+      "command": "bun test/capture-integration.mjs",
+      "scope": "real-pg-mcp-synthetic-claude-hook",
+      "passed_checks": 18,
+      "exit_code": 0,
+      "log_sha256": "d528ddcfbc1fca24e56581fef47f0145b075652458ffe38a99db005dac1894e5"
+    },
+    {
+      "command": "bun test/client-kit-integration.mjs",
+      "scope": "real-node-proxy-mcp-pg",
+      "passed_checks": 19,
+      "exit_code": 0,
+      "log_sha256": "31bd10c8466112cb97fc5a29498255ea253992f9e07c279c2f7332464e848ea5"
+    },
+    {
+      "command": "bun test/personal-integration.mjs",
+      "scope": "real-pg-mcp",
+      "passed_checks": 43,
+      "exit_code": 0,
+      "log_sha256": "b159d14e1ad18a1f7ac37d135b2bad848cff5d68761be0edbb8e820068ec8e39"
+    },
+    {
+      "command": "bun test/native-adapters-integration.mjs",
+      "scope": "callback-mcp-pg-not-opencode-cli",
+      "passed_checks": 7,
+      "exit_code": 0,
+      "log_sha256": "b63dc97f88d9b6720bab569a9bb6f851e763fe90bcaadbadd2b19fa3851ce530"
+    },
+    {
+      "command": "bun test/personal-console-integration.mjs",
+      "scope": "real-api-pg-agent",
+      "passed_checks": 13,
+      "exit_code": 0,
+      "log_sha256": "5b9e4ffca9d6cb1aeb99db342a89f618bd49bf8dc12a82573f3fcef944c3f361"
+    },
+    {
+      "command": "bun test/personal-consolidation-integration.mjs",
+      "scope": "real-pg-controlled-model",
+      "passed_checks": 29,
+      "exit_code": 0,
+      "log_sha256": "3395dbe2ad1273b1826117ec6d1128f7322da9617168824c3830fe16417553c4"
+    },
+    {
+      "command": "bun test/personal-provider-integration.mjs",
+      "scope": "worker-sdk-synthetic-provider",
+      "passed_checks": 5,
+      "exit_code": 0,
+      "log_sha256": "6ff0b09dde307261fcd306b3b9965567dea1fb139900a87ce4ab0c36437503bc"
+    },
+    {
+      "command": "bun test/http-integration.mjs",
+      "scope": "real-http",
+      "passed_checks": 49,
+      "exit_code": 0,
+      "log_sha256": "a229bfb5e5a954303917fe5206102eed9f6c52c511398b12ae6dedb470e65b52"
+    },
+    {
+      "command": "python3 test/restore-verify.py ub_restore_current",
+      "scope": "real-db-restore-fingerprints",
+      "passed_checks": 25,
+      "exit_code": 0,
+      "log_sha256": "5d45a687c58def0e8690240cd228965cf5cdde78c271d1e66f5dec63e16327fc"
+    }
+  ],
+  "first_failure": {
+    "scope": "revocation after registration before raw capture transmission",
+    "exit_code": 1,
+    "log_sha256": "dce94a8e242c3bd7bcc029418009de7ef391f9cfa69462f62b5a882ae88e862a",
+    "result": "Existing runtime ignored final local authorization callback; actual integration detected unexpected submission. Fixed by shared deliverCapture and callback propagation."
+  },
+  "limitations": [
+    "Implementation self-tests are not independent agent review.",
+    "Claude events and model-provider outputs are synthetic.",
+    "Actual OpenCode, Windows, Chromium, n8n and old-version matrix results must be read from final same-commit GitHub CI.",
+    "Private raw logs are not published; hashes alone do not prove public reproducibility.",
+    "No user installation or complete Personal V1 acceptance."
+  ]
+}

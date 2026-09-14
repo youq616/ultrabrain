@@ -1,6 +1,7 @@
 /** Pure client contracts. No DB, host administration, or caller-supplied tool dispatch. */
 import {requireThat,sha256,sourceId,integer} from './core.mjs';
 import {objectFields,personalId,PERSONAL_MEMORY_TYPES} from './personal-memory.mjs';
+import {isAbsolute} from 'node:path';
 import {automationEndpoint} from './automation-transport.mjs';
 const clean=(x,max=4096)=>typeof x==='string'&&x.length>0&&x.length<=max&&!/[\x00-\x1f\x7f]/.test(x);
 const uuid=x=>typeof x==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(x);
@@ -9,7 +10,7 @@ export function requiredClientTools(profile) {
   return profile.allowCapture?[...CLIENT_REQUIRED_TOOLS,'ultra_agent_register','ultra_personal_capture']:[...CLIENT_REQUIRED_TOOLS];
 }
 export function clientProfile(input) {
-  objectFields(input,['format','source','project_id','workspace','server','expected_instance','expected_actor','budget_bytes','timeout_ms','allow_capture']);
+  objectFields(input,['format','source','project_id','workspace','server','expected_instance','expected_actor','budget_bytes','timeout_ms','allow_capture','outbox_directory','automatic_capture']);
   requireThat(input.format===1,'invalid_profile','Client profile format must be 1');
   const source=sourceId(input.source);
   const projectId=input.project_id??null;if(projectId!==null)personalId(projectId,'project_id');
@@ -17,6 +18,12 @@ export function clientProfile(input) {
   requireThat(input.expected_instance===undefined||uuid(input.expected_instance),'invalid_profile','Invalid instance pin');
   requireThat(input.expected_actor===undefined||/^[a-f0-9]{64}$/.test(input.expected_actor),'invalid_profile','Invalid actor pin');
   requireThat(input.allow_capture===undefined||typeof input.allow_capture==='boolean','invalid_profile','allow_capture must be boolean');
+  const automaticCapture=input.automatic_capture??[];
+  requireThat(Array.isArray(automaticCapture)&&automaticCapture.length<=4&&new Set(automaticCapture).size===automaticCapture.length&&
+    automaticCapture.every(x=>['claude-user','claude-assistant','opencode-user','opencode-assistant'].includes(x)), 'invalid_profile','Unknown or duplicate automatic capture scope');
+  requireThat(input.outbox_directory===undefined||clean(input.outbox_directory)&&isAbsolute(input.outbox_directory),'invalid_profile','Outbox path must be absolute');
+  requireThat(!input.outbox_directory||(input.workspace&&isAbsolute(input.workspace)&&input.expected_instance&&input.expected_actor), 'invalid_profile','Outbox requires observed identity pins and an absolute workspace');
+  requireThat(!automaticCapture.length||(input.allow_capture===true&&input.outbox_directory), 'invalid_profile','Automatic capture requires a pinned outbox and capture opt-in');
   const server=input.server;objectFields(server,['transport','command','args','env','url','bearer_env']);
   if(server.transport==='stdio') {
     requireThat(!('url' in server)&&!('bearer_env' in server)&&clean(server.command),'invalid_profile','Invalid stdio transport');
@@ -32,6 +39,7 @@ export function clientProfile(input) {
   }
   return Object.freeze({source,projectId,workspace:input.workspace??null,server:structuredClone(server),
     expectedInstance:input.expected_instance??null,expectedActor:input.expected_actor??null,
+    outboxDirectory:input.outbox_directory??null,automaticCapture:Object.freeze([...automaticCapture]),
     budgetBytes:integer(input.budget_bytes,6000,512,8192),timeoutMs:integer(input.timeout_ms,10000,1000,30000),allowCapture:input.allow_capture===true});
 }
 export function clientIdentity(value,profile) {

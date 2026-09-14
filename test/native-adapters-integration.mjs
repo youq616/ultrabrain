@@ -15,7 +15,7 @@ const engine=await connect(),dir=mkdtempSync(join(tmpdir(),'ub-native-')),source
 const workspace=join(dir,'workspace'),home=join(dir,'hermes');mkdirSync(workspace,{mode:0o700});mkdirSync(home,{mode:0o700});
 const packageRoot=process.env.ULTRABRAIN_NATIVE_INSTALLED??join(ROOT,'packages/ultrabrain-client');
 const cli=join(packageRoot,'dist/cli.cjs'),library=join(packageRoot,'dist/native-adapters.cjs'),profilePath=join(dir,'profile.json');
-let provider,checks=0;const pass=()=>checks++;
+let provider,automaticInputs=0,checks=0;const pass=()=>checks++;
 async function run(command,args,{env=process.env,input,timeout=60000,cwd=ROOT}={}){
  const p=spawn(command,args,{cwd,env,stdio:['pipe','pipe','pipe']});let stdout='',stderr='';p.stdout.on('data',x=>{stdout=(stdout+x).slice(-262144);});p.stderr.on('data',x=>{stderr=(stderr+x).slice(-8192);});
  p.stdin.end(input);const t=setTimeout(()=>p.kill('SIGKILL'),timeout);try{const [code]=await once(p,'close');return {code,stdout,stderr};}finally{clearTimeout(t);}
@@ -37,6 +37,7 @@ try{
  const hermes=await run('python3',[join(ROOT,'test/hermes-native-integration.py')],{env});
  assert.equal(hermes.code,0,'Hermes provider/Node integration failed');assert.equal(JSON.parse(hermes.stdout).checks,6);pass();
  if(process.argv.includes('--opencode-engine')){
+  Object.assign(profile,{allow_capture:true,outbox_directory:join(dir,'capture-outbox'),automatic_capture:['opencode-user','opencode-assistant']});writeFileSync(profilePath,JSON.stringify(profile));
   const binary=process.env.ULTRABRAIN_OPENCODE_BIN;assert.ok(binary,'Pinned OpenCode executable required');
   const version=await run(binary,['--version']);assert.equal(version.stdout.trim(),'1.18.30','Unreviewed OpenCode version');
   let observed=false,requests=0;
@@ -54,9 +55,19 @@ try{
   const actual=await run(binary,['run','--format','json','--model','ubfixture/test','SYNTHETIC_MAIN_REQUEST'],{env:clean,cwd:workspace,timeout:120000});
   if(actual.code!==0||!observed){console.error(JSON.stringify({opencode_exit:actual.code,provider_requests:requests,observed_personal_context:observed,missing_module:/Cannot find|ResolveError/.test(actual.stderr),config_error:/config|Config/.test(actual.stderr),no_raw_logs:true}));}
   assert.equal(actual.code,0,'Actual OpenCode CLI failed');assert.ok(observed,'Actual OpenCode model request did not include recalled memory');pass();
+  const captured=await engine.executeRaw("SELECT m.content,m.status,m.visibility,j.state FROM ultrabrain.personal_memories m JOIN ultrabrain.personal_consolidations j ON j.input_id=m.id WHERE m.source_id=$1",[source]);
+  assert.ok(captured.length>=2,'Actual OpenCode hooks did not capture user/assistant observations');
+  const observations=captured.map(r=>JSON.parse(r.content));
+  assert.ok(observations.some(r=>r.origin==='opencode'&&r.role==='user'&&r.texts.includes('SYNTHETIC_MAIN_REQUEST')),'Actual user input missing');
+  assert.ok(observations.some(r=>r.origin==='opencode'&&r.role==='assistant'&&r.texts.includes('Synthetic response.')),'Actual assistant output missing');
+  assert.ok(captured.every(r=>r.status==='candidate'&&r.visibility==='private'&&r.state==='queued'));
+  assert.ok(observations.every(r=>r.origin==='opencode'&&r.texts.every(t=>['SYNTHETIC_MAIN_REQUEST','Synthetic response.'].includes(t))),'Unexpected transcript/tool/context captured');
+  automaticInputs=captured.length;pass();
+  const journal=await run('node',[cli,'queue-status','--profile',profilePath]);assert.equal(journal.code,0);
+  assert.equal(JSON.parse(journal.stdout).result.pending,0);pass();
  }
  await store.review({memory_id:item.id,expected_revision:2,event_id:'archive',status:'archived'});
  const empty=await run('node',[cli,'bound-context','--profile',profilePath],{input:JSON.stringify({workspace})});assert.equal(JSON.parse(empty.stdout).memories.length,0);pass();
- const [count]=await engine.executeRaw('SELECT count(*)::integer AS n FROM ultrabrain.personal_memories WHERE source_id=$1',[source]);assert.equal(count.n,1);pass();
+ const [count]=await engine.executeRaw('SELECT count(*)::integer AS n FROM ultrabrain.personal_memories WHERE source_id=$1',[source]);assert.equal(count.n,1+automaticInputs);pass();
  console.log(`PASS ${checks} native-adapter integrations; OpenCode actual CLI: ${process.argv.includes('--opencode-engine')}; Hermes/OpenClaw callback scope explicitly limited`);
 }finally{if(provider)await new Promise(r=>provider.close(r));await engine.disconnect();rmSync(dir,{recursive:true,force:true});}
