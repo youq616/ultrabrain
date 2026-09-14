@@ -57,8 +57,15 @@ const safe=new Set(['capture_disabled','workspace_mismatch','stable_event_requir
   'invalid_profile','insecure_profile','insecure_outbox','outbox_full','outbox_busy','outbox_corrupt','conflict']);
 export const captureCode=e=>e instanceof UltraError&&safe.has(e.code)?e.code:'capture_unavailable';
 /** Shared manager for one immutable trusted profile. Revocation is re-read before capture/send. */
-export function automaticCapture(profilePath,connect) {
-  const initial=readClientProfile(profilePath),fingerprint=sha256(JSON.stringify(initial.input));let closed=false;
+export function automaticCapture(profilePath,connect,{authorizedProfileInput}={}) {
+  // Bind to the exact trusted configuration that authorized the observation,
+  // not merely whichever file happens to exist after the caller awaited input.
+  requireThat(authorizedProfileInput&&typeof authorizedProfileInput==='object'&&!Array.isArray(authorizedProfileInput),
+    'invalid_profile','Original authorized profile snapshot is required');
+  const fingerprint=sha256(JSON.stringify(structuredClone(authorizedProfileInput)));
+  const initial=readClientProfile(profilePath);
+  requireThat(sha256(JSON.stringify(initial.input))===fingerprint,'capture_disabled','Capture profile changed before writer initialization');
+  let closed=false;
   const active=new Set();
   const current=()=>{
     requireThat(!closed,'capture_disabled','Adapter stopped');const now=readClientProfile(profilePath);

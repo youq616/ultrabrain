@@ -25,16 +25,16 @@ Claude 用 scripts/client-config.py --client claude-capture-hooks，目标为选
 客户端入口为实际安装目录中的 `node_modules/ultrabrain-client/dist/cli.cjs`：
 
 ```sh
-node /installed/ultrabrain-client/dist/cli.cjs queue-status --profile /private/capture-profile.json
-node /installed/ultrabrain-client/dist/cli.cjs queue-flush --profile /private/capture-profile.json
-node /installed/ultrabrain-client/dist/cli.cjs queue-flush --profile /private/capture-profile.json --retry-blocked
+node /installed/node_modules/ultrabrain-client/dist/cli.cjs queue-status --profile /private/capture-profile.json
+node /installed/node_modules/ultrabrain-client/dist/cli.cjs queue-flush --profile /private/capture-profile.json
+node /installed/node_modules/ultrabrain-client/dist/cli.cjs queue-flush --profile /private/capture-profile.json --retry-blocked
 ```
 
 路径必须替换为实际路径。自研 Agent 可将 agent_id、event_id、transcript、consent:true 的 JSON 经 stdin 交给 queue-capture --profile PATH。直接 capture 命令仍是无本地队列的直接交付，不混淆保证。
 
 原文先写客户端日志再发送；匹配实际 source/event/job 的服务端 journaled 回执且身份核对通过后才删除本地正文。每次 Hook 只尝试当前事件，旧积压用 queue-flush 处理；没有暗中安装常驻进程或调度器。上限 256 条/8 MiB，满额拒绝新事件不驱逐旧事件；最多八次自动尝试后转为受阻，显式重试保持原事件编号。超限整条拒绝，不截断否定词。Hook 出错不会阻止用户工作，须留意未确认提示。
 
-队列绑定目的地配置、source、actor、instance、project 与 workspace。关闭采集可继续查队列但不能发送；更改目的地不能接管旧队列。采集器重新读取 profile，最后发送前再次检查，包括异步注册/身份检查之后；已发送的请求不能撤回。重新授权并显式 queue-flush 可交付旧的待提交记录。
+队列绑定目的地配置、source、actor、instance、project 与 workspace。关闭采集可继续查队列但不能发送；更改目的地不能接管旧队列。采集器绑定最初授权事件的完整 profile 快照；等待输入期间若 profile 被替换，拒绝新目的地和新项目，不建立或接管新队列。入队和最后发送前重新读取 profile 检查，包括异步注册/身份检查之后；已发送的请求不能撤回。重新授权并显式 queue-flush 可交付旧的待提交记录。
 
 Linux 使用文件与目录 fsync；Windows 只声明文件 fsync，不声明相同的断电目录持久性。队列存放明文获准输入，不是加密备份，也不能抵抗恶意同账号程序。未取得客户端持久化回执之前崩溃的输入不保证保存。
 

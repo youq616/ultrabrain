@@ -11,3 +11,9 @@ for(const path of ['docs/CLIENT-KIT.md','docs/NATIVE-AGENT-ADAPTERS.md','docs/AU
     assert.ok(archives.every(name=>name===expected),'Stale archive reference; expected '+expected);
   });
 }
+test('queue commands use the npm-prefix node_modules executable path',()=>{
+  const source=readFileSync(new URL('../docs/AUTOMATIC-CAPTURE.md',import.meta.url),'utf8');
+  const commands=source.split('\n').filter(line=>/^node \/installed\//.test(line));
+  assert.ok(commands.length>=3,'Document status, delivery and explicit retry commands');
+  assert.ok(commands.every(line=>line.startsWith('node /installed/node_modules/ultrabrain-client/dist/cli.cjs ')));
+});

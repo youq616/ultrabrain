@@ -47,7 +47,7 @@ test('OpenCode rejects identity mismatch and keeps assistant part IDs stable',t=
  assert.notEqual(openCodeCapture('assistant',{...input,partID:'other'},{text:'answer'},p,p.workspace).event_id,r.event_id);
 });
 test('manager journals before failed connect and notices profile revocation',async t=>{
- const {p,path,input}=setup(t),writer=automaticCapture(path,async()=>{throw Error('offline SECRET');});t.after(()=>writer.close());
+ const {p,path,input}=setup(t),writer=automaticCapture(path,async()=>{throw Error('offline SECRET');},{authorizedProfileInput:input});t.after(()=>writer.close());
  const r=await writer.submit(claudeCapture(prompt(p),p),p.workspace,'claude-user');assert.equal(r.storage,'client_journal');assert.equal(r.delivery.retained,1);
  assert.equal((await new CaptureOutbox(input).status()).pending,1);assert.ok(!JSON.stringify(r).includes('SECRET'));
  writeFileSync(path,JSON.stringify({...input,automatic_capture:[],allow_capture:false}));
@@ -71,7 +71,7 @@ test('OpenCode real hook shape gates primary-session metadata and never mutates 
 test('revoked scope is rechecked after waiting for the short writer lock',async t=>{
  const {input,p,path}=setup(t);const queue=new CaptureOutbox(input);await queue.status();
  const {unlinkSync}=await import('node:fs');const lock=join(queue.directory,'.queue.lock');writeFileSync(lock,JSON.stringify({pid:process.pid}),{mode:0o600});
- const writer=automaticCapture(path,()=>assert.fail('No network after revocation'));t.after(()=>writer.close());
+ const writer=automaticCapture(path,()=>assert.fail('No network after revocation'),{authorizedProfileInput:input});t.after(()=>writer.close());
  const pending=writer.submit(claudeCapture(prompt(p),p),p.workspace,'claude-user');
  writeFileSync(path,JSON.stringify({...input,automatic_capture:[],allow_capture:false}));unlinkSync(lock);
  await assert.rejects(pending,{code:'capture_disabled'});assert.equal((await queue.status()).pending,0);

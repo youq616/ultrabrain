@@ -2,7 +2,7 @@
  * Synthetic hook events, not a claim that a live Claude host was executed.
  */
 import assert from 'node:assert/strict';
-import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,rmSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';import {join} from 'node:path';import {pathToFileURL} from 'node:url';
 import {spawn} from 'node:child_process';import {randomBytes} from 'node:crypto';
 import {connect,ROOT} from '../src/runtime.mjs';
@@ -23,6 +23,24 @@ async function child(args,input){
 }
 const run=(cmd,event,rest=[])=>child([cli,cmd,'--profile',profilePath,...rest],event);
 const count=async()=>Number((await engine.executeRaw('SELECT count(*)::int AS n FROM ultrabrain.personal_consolidations WHERE source_id=$1',[source]))[0].n);
+
+// A test-only preload signals the exact stdin-read boundary. No sleeps, production
+// test switches, credentials or user data are used to synchronize this race.
+async function replaceProfileWhileReading(command,request,replacement) {
+ const preload=join(dir,'stdin-boundary.cjs');
+ writeFileSync(preload,`const iterator=process.stdin[Symbol.asyncIterator];process.stdin[Symbol.asyncIterator]=function(...args){process.send({captureTestReady:true},()=>process.disconnect());return iterator.apply(this,args);};`,{mode:0o600});
+ const child=spawn('node',['--require',preload,cli,command,'--profile',profilePath],{cwd:ROOT,env:process.env,stdio:['pipe','pipe','pipe','ipc']});
+ let output='';child.stdout.on('data',data=>output=(output+data).slice(-32768));child.stderr.on('data',()=>{});child.stdin.on('error',()=>{});
+ const ready=new Promise(done=>child.on('message',message=>{if(message?.captureTestReady===true)done();}));
+ const ended=new Promise((done,fail)=>{child.once('error',fail);child.once('close',done);});
+ const timer=setTimeout(()=>child.kill('SIGKILL'),30000);
+ try {
+   await Promise.race([ready,ended.then(()=>{throw Error('Fixture exited before stdin boundary');})]);
+   save(replacement);child.stdin.end(JSON.stringify(request));
+   const code=await ended;return {code,data:JSON.parse(output)};
+ } finally {clearTimeout(timer);if(child.exitCode===null&&child.signalCode===null){child.kill('SIGKILL');await ended.catch(()=>{});}save();}
+}
+
 try{
  await engine.executeRaw('INSERT INTO sources(id,name) VALUES($1,$1)',[source]);save();
  const initial=await run('probe');assert.equal(initial.code,0,'Packaged probe failed');const identity=initial.data.identity;
@@ -61,5 +79,16 @@ try{
      {authorize:()=>{if(++authorized===2)throw new UltraError('capture_disabled','Synthetic revocation');}}),{code:'capture_disabled'});
    assert.equal(await count(),5);pass();
  } finally {await guarded.close();}
+
+ // The configuration that authorized stdin must remain authoritative even if
+ // a new valid destination/profile appears before the event body is complete.
+ const replacement={...profile,project_id:'replaced-project',outbox_directory:join(dir,'replacement-queue')};
+ const swapped=await replaceProfileWhileReading('claude-capture-hook',{...event,prompt_id:'44444444-4444-4444-8444-444444444444'},replacement);
+ assert.match(swapped.data.systemMessage,/capture_disabled/,'Profile replacement was not rejected');
+ assert.equal(await count(),5);assert.equal(existsSync(replacement.outbox_directory),false);pass();
+ const revoked=await replaceProfileWhileReading('queue-capture',{agent_id:'revoked-input',event_id:'revoked-stdin',transcript:'SYNTHETIC_NOT_AUTHORIZED_AFTER_REVOCATION',consent:true},
+   {...profile,allow_capture:false,automatic_capture:[]});
+ assert.equal(revoked.code,1);assert.equal(revoked.data.error,'capture_disabled');
+ assert.equal((await q.status()).pending,0);assert.equal((await q.status()).blocked,0);assert.equal(await count(),5);pass();
  console.log(`PASS ${checks} capture/outbox checks: packaged Node/Claude-event fixture/stdio/PostgreSQL, offline reopen and crash-after-commit replay`);
 }finally{await engine.disconnect();rmSync(dir,{recursive:true,force:true});}

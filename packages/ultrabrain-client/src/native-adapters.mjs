@@ -54,8 +54,8 @@ export function createOpenCodePlugin(options,connect=connectClient) {
       catch(e){text=JSON.stringify({source:'Ultrabrain',status:safeAdapterCode(e),notice:'Personal memory was not recalled. Continue without recalled memory; this read hook performed no capture.'});}
       values.push(text); // append only; never replace existing system instructions or compaction prompt
     };
-    const {profile}=readClientProfile(options.profilePath);
-    const writer=profile.automaticCapture.some(x=>x.startsWith('opencode-'))?automaticCapture(options.profilePath,connect):null;
+    const {input:authorizedProfileInput,profile}=readClientProfile(options.profilePath);
+    const writer=profile.automaticCapture.some(x=>x.startsWith('opencode-'))?automaticCapture(options.profilePath,connect,{authorizedProfileInput}):null;
     let disposed=false;
     const collect=async(kind,input,output)=>{
       if(!writer?.scopes.includes('opencode-'+kind)||disposed)return;

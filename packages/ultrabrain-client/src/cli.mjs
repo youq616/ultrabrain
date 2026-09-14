@@ -21,10 +21,11 @@ export async function main(args=process.argv.slice(2)) {
       command==='queue-recover-lock'&&args.length===8&&args[3]==='--kind'&&args[5]==='--expected-sha'&&args[7]==='--confirm-writer-stopped';
     requireThat(valid&&args[1]==='--profile','invalid_params','Use a supported client command and --profile PATH');
     const {input,profile}=readClientProfile(resolve(args[2]));let event,payload;
+    const assertProfile=()=>requireThat(JSON.stringify(readClientProfile(resolve(args[2])).input)===JSON.stringify(input),'capture_disabled','Profile changed; reload before capture');
     if(command==='claude-capture-hook'){
       event=await readBounded(process.stdin,220000);payload=claudeCapture(event,profile);
       if(!payload){process.stdout.write(JSON.stringify({systemMessage:'Ultrabrain: no eligible automatic observation; nothing captured.'})+'\n');return;}
-      autoWriter=automaticCapture(resolve(args[2]),connectClient);
+      autoWriter=automaticCapture(resolve(args[2]),connectClient,{authorizedProfileInput:input});
       const role=event.hook_event_name==='Stop'?'assistant':'user';
       const result=await autoWriter.submit(payload,event.cwd,'claude-'+role);
       process.stdout.write(JSON.stringify({systemMessage:result.delivery.delivered?'Ultrabrain: observation journaled by the server; not yet confirmed knowledge.':'Ultrabrain: observation kept in the private client queue; server delivery not confirmed.'})+'\n');return;
@@ -36,10 +37,10 @@ export async function main(args=process.argv.slice(2)) {
       else if(command==='queue-recover-lock')result=queue.recoverLock(args[4],args[6],{writerStopped:true});
       else {
         let queued;
-        if(command==='queue-capture'){payload=await readBounded(process.stdin,220000);captureRequest(payload,profile);writing=true;queued=await queue.enqueue(payload);}
+        if(command==='queue-capture'){payload=await readBounded(process.stdin,220000);captureRequest(payload,profile);writing=true;queued=await queue.enqueue(payload,{authorize:assertProfile});}
         else{requireThat(profile.allowCapture,'capture_disabled','Capture permission required before delivery');writing=true;}
         try {result={...(queued?{queued}:{}),delivery:await queue.flush(connectClient,{limit:4,retryBlocked:args[3]==='--retry-blocked',signal:controller.signal,
-          authorize:()=>requireThat(JSON.stringify(readClientProfile(resolve(args[2])).input)===JSON.stringify(input),'capture_disabled','Profile changed; reload before delivery')})};}
+          authorize:assertProfile})};}
         catch(e){if(!queued)throw e;result={queued,delivery:{delivered:0,retained:1,last_error:captureCode(e)}};}
         if(result.delivery.retained||result.delivery.blocked||result.delivery.last_error||result.delivery.remaining_pending||result.delivery.remaining_blocked)process.exitCode=1;
       }
@@ -54,7 +55,7 @@ export async function main(args=process.argv.slice(2)) {
     if(hook)output=claudeContext(event.hook_event_name,await connection.context());
     else if(args[0]==='probe')output=await connection.probe();
     else if(['context','bound-context'].includes(args[0]))output=await connection.context();
-    else{const p=captureRequest(payload,connection.profile);writing=true;const r=await connection.capture(p,{authorize:()=>requireThat(JSON.stringify(readClientProfile(resolve(args[2])).input)===JSON.stringify(input),'capture_disabled','Profile changed before transmission')});
+    else{const p=captureRequest(payload,connection.profile);writing=true;const r=await connection.capture(p,{authorize:assertProfile});
       requireThat(r?.source_id===connection.profile.source&&r.event_id===p.event_id&&r.storage==='journaled'&&typeof r.job_id==='string','mcp_contract_changed','Unconfirmed capture receipt');output={ok:true,result:r};}
     process.stdout.write(JSON.stringify(output)+'\n');
   }catch(e){const code=e instanceof UltraError&&/^[a-z0-9_]{1,64}$/.test(e.code)?e.code:'client_failed';
