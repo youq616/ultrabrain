@@ -87,7 +87,7 @@ PostgreSQL 随项目在本机安装和管理，不要求外部数据库，不是
 
 ## 开发候选：个人召回排序修正（development/personal-ranking）
 
-context/profile 改为先排名后取前 100（修复旧 high 偏好被时间窗口截断）、统一 SQL/JS 排名（importance 3/2/1 + 不同任务词命中加分、仅折叠 ASCII A–Z、Unicode 空白分词去重上限 32）、平局按毫秒时间降序 + 完整 UUID 升序（修复 String(Date).localeCompare 按星期名排序）、只读事务 + 事务级 5 秒超时；search 保持时间序分页。450 条 × 20 组查询校验 SQL 与 JavaScript 排序一致。**未获独立审核批准且 CI 未在最终提交跑绿前不合入 main**；详见 [召回排序](docs/PERSONAL-RANKING.md) 与 [自审记录](docs/SELF-REVIEW-PERSONAL-RANKING.md)。
+context/profile 改为先排名后取前 100（修复旧 high 偏好被时间窗口截断）、统一 SQL/JS 排名（importance 3/2/1 + 不同任务词命中加分、仅折叠 ASCII A–Z、Unicode 空白分词去重上限 32）、平局按毫秒时间降序 + 完整 UUID 升序（修复 String(Date).localeCompare 按星期名排序）、只读事务 + 事务级 5 秒超时；search 保持时间序分页。450 条 × 20 组查询的 SQL/JavaScript 一致性校验已接入 Linux CI，通过与否以 CI 运行为准。**未获独立审核批准且 CI 未在最终提交跑绿前不合入 main**；详见 [召回排序](docs/PERSONAL-RANKING.md) 与 [自审记录](docs/SELF-REVIEW-PERSONAL-RANKING.md)。
 
 ## 当前增量：0.13.0-alpha.1
 

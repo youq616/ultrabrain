@@ -216,6 +216,9 @@ export class PersonalMemoryStore {
   async context(input={}) {
     const p=contextQuery(input);
     requireThat(p.status==='active','invalid_params','Personal context contains only explicitly active entries');
+    // The old query silently applied OFFSET inside the pre-ranking time window; on a ranked
+    // window offset paging is meaningless, so an explicit non-zero offset is now rejected.
+    requireThat(p.offset===0,'invalid_params','Personal context is one bounded ranked window; use limit, not offset');
     const rows=await this.#contextRows(p);
     // Re-rank in JavaScript with the same canonical rule; drop the SQL-only score column.
     const result=buildPersonalContext(rows.map(({rank_score,...row})=>rowView(row)),

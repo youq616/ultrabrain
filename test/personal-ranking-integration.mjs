@@ -152,11 +152,16 @@ try {
     ${PERSONAL_DERIVATION_CURRENT} AS derivation_current
     FROM ultrabrain.personal_memories m WHERE m.source_id=$1 AND m.actor_key=$2 AND m.status='active'`,[source,actor]))
     .map(row=>({...row,confidence:null,trust:'untrusted-memory-data'}));
+  // The pure assembler ranks; it does not itself apply the SQL-side agent/query filters,
+  // so the JavaScript baseline pre-filters rows with exactly the SQL semantics first.
+  const baselineFor=params=>allRows.filter(row=>
+    (!params.agent_id||row.agent_id===params.agent_id)&&
+    (!params.query||row.content.toLowerCase().includes(params.query.toLowerCase())));
   for(const group of queryGroups) {
     const params={limit:100,budget_bytes:131072,...(group.task!==undefined?{task:group.task}:{}),...(group.types?{types:group.types}:{}),
       ...(group.project_id?{project_id:group.project_id}:{}),...(group.agent_id?{agent_id:group.agent_id}:{})};
     const sql=await call('ultra_personal_context',params);
-    const js=buildPersonalContext(allRows,params);
+    const js=buildPersonalContext(baselineFor(params),params);
     assert.deepEqual(sql.memories.map(m=>m.id),js.memories.map(m=>m.id),
       `SQL/JS disagreement for ${JSON.stringify(group)}`);
   }

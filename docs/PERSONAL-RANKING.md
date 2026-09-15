@@ -28,6 +28,7 @@
 | 词数上限 | 前 32 个 token（重复占位） | 前 32 个**不同**词 |
 | 时间平局 | `String(Date).localeCompare`（星期名字母序，错误） | 数值毫秒降序 + 完整 UUID 升序 |
 | 召回窗口 | 先按时间取 100 再排名（丢旧的高分项） | 先排名再取前 100 |
+| context 的 offset | 被静默应用在排名前的时间窗口内（语义无意义） | 非零 offset 直接拒绝（invalid_params）；排名窗口用 limit 控制 |
 
 ## 有界召回的诚实边界
 
@@ -36,4 +37,4 @@ context/profile 仍是**有界召回**：授权过滤后按排名取前 100 条�
 ## 测试
 
 - 纯契约单测（Windows 可跑，`node --test test/personal-ranking.test.mjs`）：分词/折叠/去重/上限、排名值、平局（Date 对象与 ISO 字符串）、组装器排除与预算、注入字面值、窗口排序修正。
-- 真实 PostgreSQL 集成（Linux CI，`npm run test:ranking`）：两条基线缺陷的真实复现回归、重复词/中英文/emoji、项目与主体隔离、显式共享、candidate/archived/失效派生排除、只读身份、SQL 注入字面值、search 分页、字节预算、连接不被只读/超时设置污染、日期与 UUID 平局，以及 **450 条合成记录 × 20 组查询的 SQL 与 JavaScript 排序完全一致**校验。
+- 真实 PostgreSQL 集成（Linux CI，`npm run test:ranking`）：窗口缺陷的真实复现回归、重复词/中英文/emoji、项目与主体隔离、显式共享、candidate/archived/失效派生排除、只读身份、SQL 注入字面值、search 分页、字节预算、连接不被只读/超时设置污染、日期与 UUID 平局钉住，以及 **450 条合成记录 × 20 组查询的 SQL 与 JavaScript 排序完全一致**校验。该文件在编写时由独立审核以语料模拟核对过过滤语义；其真实通过以 Linux CI 在最终提交上的运行为准，本文不预先宣称已通过。

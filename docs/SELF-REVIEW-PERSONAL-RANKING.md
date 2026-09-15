@@ -7,13 +7,14 @@
 在未修改的基线 `5f175cb4b4ba7f8d603ee9a61b59c414ab983e0d` 上运行两个复现（脚本保存在本阶段工作日志，非仓库文件）：
 
 - REPRO-B（纯 JS，真实 `buildPersonalContext`）：两条同分记忆 `updated_at` 分别为 Date(2024-01-04) 与 Date(2024-01-03)，输出第一条为 2024-01-03 —— **失败复现**（`String(Date).localeCompare` 按星期名字母序）。
-- REPRO-A（窗口逻辑模型 + 真实 `buildPersonalContext`）：1 条 2023 年 high 偏好 + 110 条 2026 年 normal 记录，按 `#rows` 语义 `ORDER BY updated_at DESC LIMIT 100` 截断后，任务词命中的旧偏好**不在结果中** —— **失败复现**。真实 PostgreSQL 版回归已写入 Linux 集成测试（context 第一断言）。
+- REPRO-A（窗口逻辑模型 + 真实 `buildPersonalContext`；真实 PostgreSQL 版回归在集成测试第一条断言）：1 条 2023 年 high 偏好 + 110 条 2026 年 normal 记录，按 `#rows` 语义 `ORDER BY updated_at DESC LIMIT 100` 截断后，任务词命中的旧偏好**不在结果中** —— **失败复现**。真实 PostgreSQL 版回归已写入 Linux 集成测试（context 第一断言）。
 
 ## 实现差异摘要
 
 - `src/personal-context-engine.mjs`：`foldAscii`（仅 A–Z）、`taskTerms`（Unicode 空白分词、去重、≤32 不同词）、`rankMemory`（3/2/1 + 不同词命中数）、数值毫秒 + UUID 平局、组装器新增 `derivation_current!==false` 过滤，selection 标记升为 `bounded-literal-and-importance-v2`。
 - `src/personal-memory-store.mjs`：`#rows` 精简为 search 专用（语义与原先 search 分支逐条等价）；新增 `#contextRows`——同一套过滤 + SQL 端排名（`CASE importance` + `unnest($7::text[])`/`translate` 折叠），`ORDER BY rank_score DESC, date_trunc('milliseconds',updated_at) DESC, id LIMIT 100`，包在只读事务（`SET LOCAL transaction_read_only=on` + `statement_timeout='5s'`）中；`context()` 复用 `buildPersonalContext` 做同规则 JS 排名并剥除 SQL 专用列，附 `recall` 有界声明；`search()` 未变。
 - 测试：`test/personal-ranking.test.mjs`（8 项契约）、`test/personal-ranking-integration.mjs`（真实 PG，含 450×20 一致性）；接入 ci.yml 个人测试步骤与 `npm run test:ranking`。
+- 首轮独立审核（run id aad45f3b，受审 4fda603）发现本阶段自审未抓住的 P0：一致性测试的 JS 对照组未按 `agent_id` 预过滤（SQL 侧过滤），两组 agent 查询必然失败；另指出 context 的 offset 被静默忽略未记录（P2）与集成平局断言属"钉住修复后行为"而非"基线复现"（P2）。已修复：JS 对照组按 SQL 语义预过滤 agent/query；context 非零 offset 显式拒绝并记入兼容表；文档措辞改为 450×20 以 CI 运行为准。修复后需独立复审。
 - 未触碰：历史迁移、上游锁、企业工具白名单、采集权限、模型配置、既有回归断言。
 
 ## 自审要点与残留风险（如实）

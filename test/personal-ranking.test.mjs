@@ -84,3 +84,12 @@ test('selection marker documents the canonical rule and bounded recall',()=>{
   assert.equal(ctx.selection,'bounded-literal-and-importance-v2');
   assert.match(ctx.confidence_semantics,/not truth/);
 });
+test('context rejects a non-zero offset before touching the database',async()=>{
+  const {PersonalMemoryStore}=await import('../src/personal-memory-store.mjs');
+  const engine={kind:'postgres',executeRaw:async()=>{throw new Error('database must not be reached');},
+    transaction:async()=>{throw new Error('database must not be reached');}};
+  const auth={sourceId:'rank-offset',principal:{kind:'oauth_client',id:'a'},scopes:['read','write'],hasSourceGrant:true};
+  const store=new PersonalMemoryStore({sourceId:'rank-offset',remote:true,transport:'http',auth,engine});
+  await assert.rejects(store.context({offset:20}),{code:'invalid_params'});
+  await assert.rejects(store.profile({offset:5}),{code:'invalid_params'}); // profile forwards to context
+});
