@@ -4,7 +4,7 @@ import {authorizeMemory} from './memory-policy.mjs';
 import {objectFields,personalId,memoryId,normalizePersonalMemory,contextQuery} from './personal-memory.mjs';
 import {agentIdentity,memoryCommit} from './agent-memory-protocol.mjs';
 import {captureRequest,MAX_PERSONAL_JOBS} from './personal-consolidation-core.mjs';
-import {buildPersonalContext} from './personal-context-engine.mjs';
+import {buildPersonalContext,taskTerms} from './personal-context-engine.mjs';
 export {normalizePersonalMemory as normalizeMemory} from './personal-memory.mjs';
 export function personalPrincipal(ctx,write=false) {
   authorizeMemory(ctx,write);
@@ -170,15 +170,43 @@ export class PersonalMemoryStore {
       return {...row,review_required:true};
     });
   }
-  async #rows(p,context=false) {
+  async #rows(p) {
     // All optional search filters are data, never identifiers or SQL fragments.
+    // Search keeps time-ordered pagination; ranking belongs to the context path only.
     return this.engine.executeRaw(`SELECT ${projection} FROM ultrabrain.personal_memories m
       WHERE source_id=$1 AND (actor_key=$2 OR (visibility='source' AND status='active')) AND status=$3 AND type=ANY($4::text[])
-      AND (status!='active' OR (NOT $9 AND actor_key=$2) OR ${PERSONAL_DERIVATION_CURRENT})
-      AND (($9 AND (project_id IS NULL OR project_id=$5)) OR (NOT $9 AND ($5::text IS NULL OR project_id=$5)))
+      AND (status!='active' OR actor_key=$2 OR ${PERSONAL_DERIVATION_CURRENT})
+      AND ($5::text IS NULL OR project_id=$5)
       AND ($6::text IS NULL OR agent_id=$6) AND ($7='' OR strpos(lower(content),lower($7))>0)
-      ORDER BY updated_at DESC,id LIMIT $8 OFFSET $10`,
-      [this.source,this.actor,p.status,p.types,p.project_id,p.agent_id,p.query,context?100:p.limit,context,p.offset]);
+      ORDER BY updated_at DESC,id LIMIT $8 OFFSET $9`,
+      [this.source,this.actor,p.status,p.types,p.project_id,p.agent_id,p.query,p.limit,p.offset]);
+  }
+  /** Context/profile candidates: rank first, then bound. Same authorization filters as
+   * search's non-context branch plus context semantics (active, derivation-current, project
+   * scope). Task terms arrive as a bound text[] parameter; translate() folds ASCII A–Z only,
+   * matching the JavaScript rule. Read-only transaction with a local statement timeout:
+   * failures propagate as errors, never as empty success, and SET LOCAL cannot outlive the
+   * transaction or alter connection-level settings.
+   */
+  async #contextRows(p) {
+    const terms=taskTerms(p.task);
+    return this.engine.transaction(async tx=>{
+      await tx.executeRaw('SET LOCAL transaction_read_only=on');
+      await tx.executeRaw("SET LOCAL statement_timeout='5s'");
+      return tx.executeRaw(`SELECT ${projection},
+        (CASE m.importance WHEN 'high' THEN 3 WHEN 'normal' THEN 2 WHEN 'low' THEN 1 ELSE 0 END
+          +(SELECT count(*) FROM unnest($7::text[]) AS term(word)
+            WHERE strpos(translate(m.content,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),term.word)>0)) AS rank_score
+        FROM ultrabrain.personal_memories m
+        WHERE m.source_id=$1 AND (m.actor_key=$2 OR (m.visibility='source' AND m.status='active'))
+          AND m.status='active' AND m.type=ANY($3::text[])
+          AND ${PERSONAL_DERIVATION_CURRENT}
+          AND (m.project_id IS NULL OR m.project_id=$4)
+          AND ($5::text IS NULL OR m.agent_id=$5) AND ($6='' OR strpos(lower(m.content),lower($6))>0)
+        ORDER BY rank_score DESC,date_trunc('milliseconds',m.updated_at) DESC,m.id
+        LIMIT 100`,
+        [this.source,this.actor,p.types,p.project_id,p.agent_id,p.query,terms]);
+    });
   }
   async search(input={}) {
     const p=contextQuery(input),rows=await this.#rows(p);
@@ -188,9 +216,12 @@ export class PersonalMemoryStore {
   async context(input={}) {
     const p=contextQuery(input);
     requireThat(p.status==='active','invalid_params','Personal context contains only explicitly active entries');
-    const rows=await this.#rows(p,true);
-    const result=buildPersonalContext(rows.map(rowView),Object.fromEntries(Object.entries(p).filter(([,v])=>v!==null)));
+    const rows=await this.#contextRows(p);
+    // Re-rank in JavaScript with the same canonical rule; drop the SQL-only score column.
+    const result=buildPersonalContext(rows.map(({rank_score,...row})=>rowView(row)),
+      Object.fromEntries(Object.entries(p).filter(([,v])=>v!==null)));
     result.source_id=this.source;
+    result.recall='bounded top-100 ranked candidates, not semantic search; important entries outside the window or filters are absent';
     while(Buffer.byteLength(JSON.stringify(result))>p.budget_bytes&&result.memories.length){result.memories.pop();result.dropped++;}
     return result;
   }
