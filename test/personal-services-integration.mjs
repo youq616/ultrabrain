@@ -2,6 +2,7 @@
  * No user deployment, paid model or test-double systemd process is certified here.
  */
 import assert from 'node:assert/strict';
+import {requireMissingUnit,cleanupFixture} from './personal-services-harness.mjs';
 import {spawn} from 'node:child_process';
 import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,lstatSync,existsSync,unlinkSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
@@ -19,7 +20,7 @@ const names=['ultrabrain-personal.target','ultrabrain-personal-console.service',
 const [target,consoleUnit,worker,db]=names;
 const privateDir=mkdtempSync(join(homedir(),'.ub-service-verification-'));
 const linked=[],unitDir=join(homedir(),'.config/systemd/user');
-let engine,provider,original,configFile,checks=0,calls=0;
+let engine,provider,original,configFile,report,unitsTouched=false,checks=0,calls=0;
 const pass=()=>checks++;
 const sha=b=>createHash('sha256').update(b).digest('hex');
 async function run(command,args,{ok=true,timeout=120000}={}){
@@ -32,6 +33,11 @@ async function run(command,args,{ok=true,timeout=120000}={}){
  finally{clearTimeout(timer);}
 }
 const ctl=(...args)=>run('systemctl',['--user',...args]);
+async function missing(unit){
+ const result=await run('systemctl',['--user','show',unit,
+  '--property=LoadState,ActiveState,FragmentPath','--no-pager'],{ok:false});
+ requireMissingUnit(result);
+}
 async function property(unit,key){return (await ctl('show',unit,'--property='+key,'--value')).text.trim();}
 async function until(fn,label,timeout=15000){const end=Date.now()+timeout;while(Date.now()<end){if(await fn())return;await new Promise(r=>setTimeout(r,250));}throw Error('Timed out: '+label);}
 async function render(dir,workerEnabled,source,port){
@@ -46,7 +52,13 @@ async function render(dir,workerEnabled,source,port){
 async function link(file){
  const name=file.split('/').at(-1),path=join(unitDir,name);
  if(existsSync(path))throw Error('Never replace an existing CI unit');
- await ctl('link',file);assert.equal(lstatSync(path).isSymbolicLink(),true);linked.push({name,path,file});
+ try{await ctl('link',file);}finally{
+  const {readlinkSync}=await import('node:fs');
+  if(existsSync(path)&&lstatSync(path).isSymbolicLink()&&readlinkSync(path)===file){
+   linked.push({name,path,file});unitsTouched=true;
+  }
+ }
+ assert.equal(linked.some(x=>x.path===path),true,'Expected owned unit link');
 }
 async function unlinkOwned(name){
  const index=linked.findIndex(x=>x.name===name);if(index<0)return;
@@ -55,7 +67,7 @@ async function unlinkOwned(name){
  unlinkSync(x.path);linked.splice(index,1);
 }
 try{
- for(const n of names){assert.equal(await property(n,'LoadState'),'not-found','Existing service makes test unsafe');}
+ for(const n of names)await missing(n);
  engine=await connect();const source='services-'+randomBytes(4).toString('hex');
  await engine.executeRaw('INSERT INTO sources(id,name) VALUES($1,$1)',[source]);
  const store=new PersonalMemoryStore({sourceId:source,engine,remote:false,transport:'stdio'});await store.register({agent_id:'service-fixture'});
@@ -68,10 +80,10 @@ try{
  const url='http://127.0.0.1:'+port;
  const ready=async()=>{try{return (await fetch(url,{signal:AbortSignal.timeout(1000)})).ok;}catch{return false;}};
  const minimal=join(privateDir,'read-only');await render(minimal,false,source,port);
- assert.equal(await property(consoleUnit,'LoadState'),'not-found');assert.equal((await status(job.job_id)).attempts,0);pass();
+ await missing(consoleUnit);assert.equal((await status(job.job_id)).attempts,0);pass();
  const base=join(privateDir,'database');await run('python3',[ROOT+'/scripts/install-service.py','--output',base]);
  await link(join(base,db));await link(join(minimal,target));await link(join(minimal,consoleUnit));await ctl('daemon-reload');
- await ctl('start',target);await until(ready,'console HTTP');assert.equal(await property(worker,'LoadState'),'not-found');pass();
+ await ctl('start',target);await until(ready,'console HTTP');await missing(worker);pass();
  const token=readFileSync(HOME+'/personal-console-token','utf8').trim();
  const response=await fetch(url+'/api/call',{method:'POST',headers:{Origin:url,'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({operation:'info'})});
  assert.equal(response.status,200);assert.equal((await response.json()).result.source_id,source);pass();
@@ -108,14 +120,24 @@ try{
  await ctl('stop',target);await until(async()=>await property(worker,'ActiveState')==='inactive','worker graceful shutdown');
  assert.equal(await property(consoleUnit,'ActiveState'),'inactive');assert.equal(await property(db,'ActiveState'),'active');pass();
  assert.equal((await store.profile()).memories.length,0);assert.equal(calls,2);pass();
- console.log(JSON.stringify({passed:true,checks,scope:'actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment',model_calls_to_local_fixture:calls}));
+ report={passed:true,checks,scope:'actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment',model_calls_to_local_fixture:calls};
 }finally{
- for(const n of [target,worker,consoleUnit]){try{if(linked.some(x=>x.name===n))await ctl('stop',n);}catch{}}
- if(configFile&&original)writeFileSync(configFile,original,{mode:0o600});
- try{await engine?.disconnect();}catch{}
- try{if(linked.some(x=>x.name===db))await ctl('stop',db);}catch{}
- for(const n of names)try{await unlinkOwned(n);}catch{}
- try{await ctl('daemon-reload');}catch{}
- if(provider)await new Promise(r=>provider.close(r));
- rmSync(privateDir,{recursive:true,force:true});
+ const stopOwned=async name=>{
+  const entry=linked.find(x=>x.name===name);if(!entry)return;
+  const {readlinkSync}=await import('node:fs');
+  assert.equal(lstatSync(entry.path).isSymbolicLink(),true);
+  assert.equal(readlinkSync(entry.path),entry.file,'Never stop a replacement unit');
+  await ctl('stop',name);
+ };
+ await cleanupFixture({
+  shutdown:[...[target,worker,consoleUnit].map(n=>()=>stopOwned(n)),
+   ()=>{if(configFile&&original)writeFileSync(configFile,original,{mode:0o600});},
+   async()=>{await engine?.disconnect();},()=>stopOwned(db),
+   async()=>{if(provider)await new Promise(r=>provider.close(r));}],
+  unlink:names.map(n=>()=>unlinkOwned(n)),
+  reload:async()=>{if(unitsTouched)await ctl('daemon-reload');},
+  remove:()=>rmSync(privateDir,{recursive:true,force:true}),
+ });
 }
+// A printed success receipt must include successful service and file cleanup.
+console.log(JSON.stringify(report));

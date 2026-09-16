@@ -1,0 +1,56 @@
+{
+  "format": 1,
+  "phase": "personal-services-followup",
+  "base_commit": "5cad51b0c8eafd1b9628bb04181736fa12b236e4",
+  "base_tree": "3a1d19fda8d4aafa42d4252b99eddf720a4dca46",
+  "main_last_observed": "445d22c465f634829a27c9e91f1f7dc61b3d14e7",
+  "pull_request": 7,
+  "publication": "local changes only; no GitHub commit/push/comment/merge performed in this continuation",
+  "independent_review": "pending corrected source; implementation self-review is not an independent agent",
+  "merge_allowed": false,
+  "tests": {
+    "node_full": {
+      "passed": 491,
+      "failed": 0,
+      "skipped": 0
+    },
+    "python_full": {
+      "passed": 210,
+      "failed": 0,
+      "skipped": 0
+    },
+    "services_python_subset": {
+      "passed": 34,
+      "included_in_python_full": true
+    },
+    "cli_and_harness_subset": {
+      "passed": 8,
+      "included_in_node_full": true
+    },
+    "live_systemd": {
+      "status": "blocked locally",
+      "cause": "No local user-scope bus; no user manager started"
+    },
+    "baseline_failure_reproductions": {
+      "first_round_failures": 5,
+      "second_round_alias_failure": 1
+    }
+  },
+  "execution_notes": [
+    "One final combined run reached 491 Node passes but was interrupted by the 100-second command timeout during an unchanged preflight test. Not counted as a passed full Python run.",
+    "The affected existing preflight test module passed 6 tests alone; the subsequent full Python rerun passed 210 in 24.019 seconds. Root cause of the interruption is not established.",
+    "Current changes were not run in remote CI or an independent review. Older PR CI does not validate this patch.",
+    "No database, paid model, real memory, deployed unit or user Agent configuration changed."
+  ],
+  "log_sha256": {
+    "guardrails-before.log": "678668110d2bc57ee1809bb206b0f8914370090eb49549247fa64808c08aa2f9",
+    "alias-before-fix.log": "5ffa1ed617596191d8caf2f1d7cc262e51ee7b580c316f104f5e1018987d925a",
+    "guardrails-final.log": "28a75d18174056353717ef68f3422a4cb84c1f526901aa72dd3344e3a15497c2",
+    "harness-after.log": "27636a6d76d777d04de783e87b2460794ce6ec51d882d0830a028a86985c0196",
+    "node-full.log": "cc4d3bea4d8d0fa049d22629fbf4c7cfbea76d31b595a1c9968a54e288efcfd9",
+    "python-full.log": "1d4d42e416c0a13714c25ab0ce39960e249797090a8e0c9138587aef0734e80d",
+    "python-full-interrupted.log": "f18609b1677a28fea47c765ce7942dc8df0fb205ee1f5db349674ef147bc9cc7",
+    "preflight-existing-repeat.log": "1946763a92e0fa3500decd470ea88efb76749102cc4cf1dcf5a4f2ee7a2313cd",
+    "local-user-manager.log": "e2f88b2dfd571c98cb1bb359c9f28803378ecffda7d0a29f8462d9b17fedeaab"
+  }
+}

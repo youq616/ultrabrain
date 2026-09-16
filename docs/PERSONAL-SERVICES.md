@@ -64,3 +64,11 @@ systemctl --user stop ultrabrain-postgres.service
 纯单元/CLI 测试只写临时目录；systemd-analyze 的解析检查不是活服务验收。新增 GitHub Actions `Personal user services` 在一次性 runner 上明确启用用户管理器，实际启动原数据库服务、新管理台与 Worker，核对认证、默认不采集、不启用模型、缺模型不重启、合成供应商任务处理、周期下一批、控制台崩溃重启及目标停止。真实模型质量、用户主机断电/开机、网络与各 Agent 接入仍须单独验收。工作流未成功时不得写成通过。
 
 官方接口依据：systemd 的 systemd.unit(PartOf/After)、systemd.service(RestartPreventExitStatus/Type)、systemd.exec(命令参数与环境展开)，https://github.com/systemd/systemd/tree/v255/man；Bun dotenv 禁用见 https://bun.com/docs/runtime/environment-variables 。
+
+## 导出与验收补充防护
+
+导出目录不能位于已知的 systemd 单元加载路径中，否则一次“仅导出”也可能使新单元可被用户管理器发现。生成器现在拒绝标准用户/系统单元目录、当前进程声明的 XDG 配置/数据/运行目录中的单元与生成器路径，以及 `SYSTEMD_UNIT_PATH` 指定路径及其子目录；拒绝发生在创建目录前。无效的相对搜索路径或过长环境参数会明确失败。此检查不连接用户管理器，无法发现仅在另一个管理器环境或非标准编译配置中存在的额外路径；操作者仍须选择不在任何实际加载路径中的独立私有导出目录，不可将它视为对同账号恶意进程的沙箱。
+
+导出完成前逐字核对所有文件，保留 `INCOMPLETE` 直到核对结束；校验在读取后再次检查文件清单与目录修改时间，拒绝读取期间新增/移除的条目。校验不锁住目录，不能保证返回后文件永远不变。`installed:false` 表示本命令没有安装，不是通过 systemd 查询得到的当前安装状态。
+
+CI 夹具检查缺失单元时只接受退出码 0 或 5 且命名属性完整满足 `LoadState=not-found`、`ActiveState=inactive`、`FragmentPath=`；不把其他非零退出、空输出或无法连接用户总线当作单元缺失。控制命令及其他属性查询继续要求成功退出。清理失败时不输出成功回执、不删除用于诊断的私有导出目录；其他安全关闭步骤仍会尝试。既有审核意见本身不是某一 systemd 版本已失败的证据，新版本必须由最终提交的真实用户管理器工作流验收。
