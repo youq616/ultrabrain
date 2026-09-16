@@ -92,3 +92,7 @@ context/profile 改为先排名后取前 100（修复旧 high 偏好被时间窗
 ## 当前增量：0.13.0-alpha.1
 
 增加 OpenCode 原生工作前/压缩前只读 Hook、Hermes 主 CLI 外部 MemoryProvider 和 OpenClaw 精确 Agent/session/workspace 限定的附加插件；复用现有客户端与 PostgreSQL，不自动上传聊天或替换原生 memory slot。安装与测试层次见 [原生 Agent 接入](docs/NATIVE-AGENT-ADAPTERS.md)。Hermes/OpenClaw 全引擎、所有自动采集和完整个人 V1 尚未全部验收。
+
+## 离线部署前检查
+
+`python3 -B scripts/preflight.py --mode install` 可在尚未安装 Bun 时报告本地前置条件；`bun src/cli.mjs preflight --mode runtime` 检查已有托管配置和运行时元数据。均不安装、不修复、不连接数据库、不调用模型。通过不代表服务已启动或全部 Agent 已接通，详见 [部署预检](docs/DEPLOYMENT-PREFLIGHT.md)。阶段发布以实际候选 CI 和独立审核为准。
