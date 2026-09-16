@@ -97,7 +97,7 @@ jobs:
           retention-days: 30
           if-no-files-found: error
       - name: Personal PostgreSQL, authenticated ownership and actual MCP transports
-        run: bun test/personal-integration.mjs && bun test/personal-console-integration.mjs && bun test/personal-consolidation-integration.mjs && bun test/personal-provider-integration.mjs && bun test/personal-documents-integration.mjs && bun test/personal-dispatch-integration.mjs
+        run: bun test/personal-integration.mjs && bun test/personal-console-integration.mjs && bun test/personal-consolidation-integration.mjs && bun test/personal-provider-integration.mjs && bun test/personal-documents-integration.mjs && bun test/personal-ranking-integration.mjs && bun test/personal-ranking-safety-integration.mjs && bun test/personal-dispatch-integration.mjs
       - name: Packaged Node personal client and MCP proxy
         run: |
           ln -s "$GITHUB_WORKSPACE/vendor/gbrain/node_modules" packages/ultrabrain-client/node_modules

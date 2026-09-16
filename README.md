@@ -85,6 +85,10 @@ PostgreSQL 随项目在本机安装和管理，不要求外部数据库，不是
 
 新增单文件显式导入（首批 UTF-8 的 TXT/MD/JSON/CSV/LOG，≤128 KiB 整体拒绝不截断）、原始字节与 SHA-256 追溯、明确排队整理片段（复用既有队列与事件重放）与归档围档（保留原文、失效派生、阻止旧任务写回）。个人管理台与受限 MCP 工具同步接入，恢复校验为字节级。**不包含 PDF、图片、OCR 或任何多模态格式；本候选未获独立子代理审核批准前不合入 main。**详见 [个人文档](docs/PERSONAL-DOCUMENTS.md) 与 [审核任务书](docs/REVIEW-PERSONAL-DOCUMENTS.md)。
 
+## 开发候选：个人召回排序修正（development/personal-ranking）
+
+context/profile 改为先排名后取前 100（修复旧 high 偏好被时间窗口截断）、统一 SQL/JS 排名（importance 3/2/1 + 不同任务词命中加分、仅折叠 ASCII A–Z、Unicode 空白分词去重上限 32）、平局按毫秒时间降序 + 完整 UUID 升序（修复 String(Date).localeCompare 按星期名排序）、只读事务 + 事务级 5 秒超时；search 保持时间序分页。450 条 × 20 组查询的 SQL/JavaScript 一致性校验已接入 Linux CI，通过与否以 CI 运行为准。**未获独立审核批准且 CI 未在最终提交跑绿前不合入 main**；详见 [召回排序](docs/PERSONAL-RANKING.md) 与 [自审记录](docs/SELF-REVIEW-PERSONAL-RANKING.md)。
+
 ## 当前增量：0.13.0-alpha.1
 
 增加 OpenCode 原生工作前/压缩前只读 Hook、Hermes 主 CLI 外部 MemoryProvider 和 OpenClaw 精确 Agent/session/workspace 限定的附加插件；复用现有客户端与 PostgreSQL，不自动上传聊天或替换原生 memory slot。安装与测试层次见 [原生 Agent 接入](docs/NATIVE-AGENT-ADAPTERS.md)。Hermes/OpenClaw 全引擎、所有自动采集和完整个人 V1 尚未全部验收。
