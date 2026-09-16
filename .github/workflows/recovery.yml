@@ -30,8 +30,12 @@ jobs:
         with:
           path: /home/runner/ultrabrain-recovery-test/runtime
           key: native-ubuntu24-v1-${{ hashFiles('upstreams.lock.json', 'scripts/build-postgres.sh') }}
+      - name: Offline install preflight (no changes)
+        run: python3 -B scripts/preflight.py --mode install
       - name: Bootstrap synthetic installation
         run: bash scripts/bootstrap-linux.sh
+      - name: Offline runtime preflight (no database connection)
+        run: python3 -B test/preflight-integration.py
       - name: Real CLI, native bytes, managed PostgreSQL and isolated recovery
         run: python3 test/recovery-integration.py
       - name: Stop isolated database

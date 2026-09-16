@@ -46,6 +46,8 @@
     "test:native-adapters": "bun test/native-adapters-integration.mjs",
     "test:capture": "bun test/capture-integration.mjs",
     "test:document-client": "bun test/document-client-integration.mjs",
-    "test:recovery": "python3 test/recovery-integration.py"
+    "test:recovery": "python3 test/recovery-integration.py",
+    "preflight": "python3 -B scripts/preflight.py",
+    "test:preflight": "python3 -B -m unittest discover -s test -p 'test_preflight*.py' -v"
   }
 }
