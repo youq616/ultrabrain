@@ -8,6 +8,7 @@ try {
   if (!command || ['help','--help','-h'].includes(command)) {
     console.log(`ultrabrain 0.14.0-alpha.1 — Linux / managed PostgreSQL
   preflight --mode install|runtime            Offline, read-only installation checks
+  personal-services render|verify             Inactive personal console/timer units
   recovery create|verify|stage|restore-database   Private recovery set; never auto-activate
   db init|start|stop|status|backup|restore-new   Manage local PostgreSQL
   db activate-runtime                        Switch a stopped cluster to reviewed same-major binaries
@@ -30,8 +31,8 @@ No arbitrary SQL MCP endpoint is added. HTTP/OAuth: native serve --help.
 Lifecycle bridge: bun scripts/agent-bridge.mjs --url URL --token-file PATH --root ultra://SOURCE/ < event.json
 Deferred worker: bun scripts/consolidate.mjs --url URL --token-file PATH --source SOURCE
 Upstream-dependent features require their original providers/configuration.`);
-  } else if (['db','upstream','summary-config','personal-model-config','recovery','preflight'].includes(command)) {
-    const script = command === 'preflight' ? 'preflight.py' : command === 'recovery' ? 'recovery.py' : command === 'personal-model-config' ? 'configure-personal-model.py' : command === 'db' ? (['vector-plan','vector-upgrade','vector-recover'].includes(rest[0]) ? 'vector-upgrade.py' : 'postgres.py') : command === 'summary-config' ? 'configure-summary.py' : 'upstreams.py';
+  } else if (['db','upstream','summary-config','personal-model-config','recovery','preflight','personal-services'].includes(command)) {
+    const script = command === 'personal-services' ? 'personal-services.py' : command === 'preflight' ? 'preflight.py' : command === 'recovery' ? 'recovery.py' : command === 'personal-model-config' ? 'configure-personal-model.py' : command === 'db' ? (['vector-plan','vector-upgrade','vector-recover'].includes(rest[0]) ? 'vector-upgrade.py' : 'postgres.py') : command === 'summary-config' ? 'configure-summary.py' : 'upstreams.py';
     const p = spawnSync('python3', [...(command === 'preflight' ? ['-B'] : []), `${ROOT}/scripts/${script}`, ...rest], { stdio: 'inherit' });
     if (p.error) throw p.error;
     process.exitCode = p.status ?? 1;

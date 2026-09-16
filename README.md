@@ -96,3 +96,7 @@ context/profile 改为先排名后取前 100（修复旧 high 偏好被时间窗
 ## 离线部署前检查
 
 `python3 -B scripts/preflight.py --mode install` 可在尚未安装 Bun 时报告本地前置条件；`bun src/cli.mjs preflight --mode runtime` 检查已有托管配置和运行时元数据。均不安装、不修复、不连接数据库、不调用模型。通过不代表服务已启动或全部 Agent 已接通，详见 [部署预检](docs/DEPLOYMENT-PREFLIGHT.md)。阶段发布以实际候选 CI 和独立审核为准。
+
+## 个人后台服务与授权周期整理
+
+`bun src/cli.mjs personal-services render` 生成全新、私有、可校验但未启用的 systemd 用户单元；默认仅本机管理台，周期整理必须另外明确授权。不会自动修改服务、配置、采集范围或模型设置。使用与验收边界见 [个人服务](docs/PERSONAL-SERVICES.md)。
