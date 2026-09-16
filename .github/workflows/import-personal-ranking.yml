@@ -1,0 +1,91 @@
+name: Import exact authorized personal-ranking commits
+on:
+  push:
+    branches: [handoff/personal-ranking-import]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: exact-personal-ranking-import
+  cancel-in-progress: false
+jobs:
+  import:
+    if: github.repository == 'youq616/ultrabrain' && github.ref == 'refs/heads/handoff/personal-ranking-import'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: handoff
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 5f175cb4b4ba7f8d603ee9a61b59c414ab983e0d
+          fetch-depth: 0
+          path: receiver
+          persist-credentials: true
+      - name: Validate transfer, import original history, never update main
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, json, os, pathlib, subprocess
+          root = pathlib.Path(os.environ['GITHUB_WORKSPACE'])
+          source = root / 'handoff/handoffs/personal-ranking'
+          receiver = root / 'receiver'
+          base = '5f175cb4b4ba7f8d603ee9a61b59c414ab983e0d'
+          head = 'bcef3abfb92aef95567e5949e70c8e7ba25ab6d4'
+          tree = '32aacf399c1592408785ea8d62c6e58850109714'
+          ref = 'refs/heads/development/personal-ranking'
+          commits = ['4fda603bdcb0726d99b115e61796f85612d3c009', '14e43fa8a727758ec93046e3a2d41ed0e1ea5205', head]
+          def read(name, size):
+              path = source / name
+              assert path.is_file() and not path.is_symlink() and path.stat().st_size == size
+              return path.read_bytes()
+          # An API text-transfer omission affected one fragment. Restore those exact
+          # base64 characters, then require the independently supplied whole-bundle hash.
+          # This changes transfer encoding only: no candidate commit or file is rewritten.
+          third = base64.b64encode(read('chunk-3-transport', 5996)).decode().rstrip('=')
+          assert third.count('nO0732/cismg') == 1
+          third = third.replace('nO0732/cismg', 'nO0732/cRnrv/ismg')
+          assert len(third) == 8000 and third.endswith('1Xk9s+l0RbtA')
+          third = base64.b64decode(third[:-1] + 'B', validate=True)
+          assert hashlib.sha1(b'blob 6000\0' + third).hexdigest() == '42ac00227e206b2c01340c74320a931effb451c8'
+          raw = read('chunk-1',6000) + read('chunk-2',6000) + third + read('chunk-4',4114)
+          assert len(raw) == 22114
+          assert hashlib.sha256(raw).hexdigest() == 'ae7b98995c372dca17fbe79520d797a04153e29c78eb0ede6d7dd74079fedea5'
+          bundle = pathlib.Path(os.environ['RUNNER_TEMP']) / 'personal-ranking.bundle'
+          with bundle.open('xb') as f:
+              f.write(raw)
+          def git(*args):
+              return subprocess.check_output(['git','-c','core.hooksPath=/dev/null','-C',str(receiver),*args],text=True).strip()
+          original_main = git('ls-remote','--heads','origin','refs/heads/main')
+          git('bundle','verify',str(bundle))
+          assert git('bundle','list-heads',str(bundle)) == head + ' ' + ref
+          git('fetch','--no-tags',str(bundle),ref+':'+ref)
+          assert git('rev-parse',ref) == head
+          assert git('rev-parse',head+'^{tree}') == tree
+          assert git('rev-list','--reverse',base+'..'+head).splitlines() == commits
+          previous = base
+          for commit in commits:
+              assert git('show','-s','--format=%P',commit) == previous
+              previous = commit
+          assert git('diff-tree','--no-commit-id','--name-only','-r',head) == 'docs/REVIEW-RECORD-PERSONAL-RANKING.md'
+          remote = git('ls-remote','--heads','origin',ref)
+          assert remote in ('',head+'\t'+ref), 'Ref already differs; never overwrite'
+          git('push','origin',head+':'+ref)
+          assert git('ls-remote','--heads','origin',ref) == head+'\t'+ref
+          assert git('ls-remote','--heads','origin','refs/heads/main') == original_main
+          report = {'format':1,'base_commit':base,'head_commit':head,'head_tree':tree,'commits':commits,
+                    'preserved_original_commits':True,'main_changed':False,'candidate_code_executed':False,
+                    'acceptance':'PENDING: database fixture repairs, current CI and independent review still required'}
+          print(json.dumps(report,indent=2))
+          (pathlib.Path(os.environ['RUNNER_TEMP'])/'ranking-transfer-result.json').write_text(json.dumps(report,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: personal-ranking-original-commit-import
+          path: ${{ runner.temp }}/ranking-transfer-result.json
+          if-no-files-found: error
+          retention-days: 30

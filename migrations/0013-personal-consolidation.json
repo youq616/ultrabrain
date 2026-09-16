@@ -1,8 +1,0 @@
-{
-  "id": "0013-personal-consolidation",
-  "statements": [
-    "ALTER TABLE ultrabrain.personal_memories ADD COLUMN derivation jsonb, ADD CONSTRAINT personal_derivation_object CHECK (derivation IS NULL OR jsonb_typeof(derivation)='object'), ADD CONSTRAINT personal_scoped_id UNIQUE(source_id,actor_key,id)",
-    "CREATE TABLE ultrabrain.personal_consolidations (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), source_id text NOT NULL, actor_key text NOT NULL CHECK(actor_key ~ '^[a-f0-9]{64}$'), input_id uuid NOT NULL, input_revision integer NOT NULL CHECK(input_revision>0), input_hash text NOT NULL CHECK(input_hash ~ '^[a-f0-9]{64}$'), state text NOT NULL DEFAULT 'queued' CHECK(state IN ('queued','processing','completed','failed','stale')), attempts integer NOT NULL DEFAULT 0 CHECK(attempts BETWEEN 0 AND 3), lease_id uuid, lease_until timestamptz, profile_hash text, result jsonb, error_code text, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), FOREIGN KEY(source_id,actor_key,input_id) REFERENCES ultrabrain.personal_memories(source_id,actor_key,id), UNIQUE(source_id,actor_key,input_id), CHECK((state='processing')=(lease_id IS NOT NULL AND lease_until IS NOT NULL)), CHECK(result IS NULL OR jsonb_typeof(result)='object'))",
-    "CREATE INDEX personal_consolidation_queue ON ultrabrain.personal_consolidations(source_id,actor_key,state,created_at,id)"
-  ]
-}

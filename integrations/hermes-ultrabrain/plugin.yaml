@@ -1,4 +1,0 @@
-name: ultrabrain
-version: 0.14.0-alpha.1
-description: Primary CLI personal recall through the trusted Ultrabrain client; no conversation syncing.
-hooks: []

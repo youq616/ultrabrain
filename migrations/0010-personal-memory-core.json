@@ -1,9 +1,0 @@
-{
-  "id":"0010-personal-memory-core",
-  "statements":[
-    "CREATE TABLE ultrabrain.personal_memories (id uuid PRIMARY KEY DEFAULT gen_random_uuid(),type text NOT NULL,content text NOT NULL,content_hash text NOT NULL,confidence numeric NOT NULL DEFAULT 0.5,importance text NOT NULL DEFAULT 'normal',source text NOT NULL,agent_id text,project_id text,status text NOT NULL DEFAULT 'candidate',created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())",
-    "CREATE INDEX personal_memories_type_idx ON ultrabrain.personal_memories(type)",
-    "CREATE INDEX personal_memories_agent_idx ON ultrabrain.personal_memories(agent_id)",
-    "CREATE TABLE ultrabrain.agent_registry (agent_id text PRIMARY KEY,type text NOT NULL,workspace text,capabilities jsonb NOT NULL DEFAULT '[]'::jsonb,identity_hash text NOT NULL,last_seen timestamptz NOT NULL DEFAULT now())"
-  ]
-}

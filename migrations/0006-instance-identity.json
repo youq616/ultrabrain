@@ -1,7 +1,0 @@
-{
-  "id": "0006-instance-identity",
-  "statements": [
-    "CREATE TABLE ultrabrain.instance_identity (singleton boolean PRIMARY KEY DEFAULT true CHECK(singleton),instance_id uuid NOT NULL DEFAULT gen_random_uuid(),created_at timestamptz NOT NULL DEFAULT now())",
-    "INSERT INTO ultrabrain.instance_identity(singleton) VALUES(true) ON CONFLICT DO NOTHING"
-  ]
-}

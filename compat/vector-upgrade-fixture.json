@@ -1,8 +1,0 @@
-{
-  "format": 1,
-  "source": "0.8.5",
-  "target": "0.8.6",
-  "source_sql_git_blob": "7fc36712b31dc3b58d6c0c5caa8fa6097f30471d",
-  "verified_source": "https://github.com/pgvector/pgvector/blob/v0.8.5/sql/vector.sql",
-  "scope": "The installed 0.8.6 creation script has the exact Git blob hash of the official 0.8.5 SQL file. The fixture creates actual 0.8.5 extension objects and executes the declared 0.8.5-to-0.8.6 update path using the pinned current C library; it does not attest an old-binary ABI upgrade. Changed pins require fixture review."
-}
