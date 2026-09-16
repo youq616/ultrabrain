@@ -1,0 +1,49 @@
+name: Personal user services
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: personal-services-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  user-systemd:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      ULTRABRAIN_HOME: /home/runner/ultrabrain-personal-services-test
+      ULTRABRAIN_TEST_ALLOW_WRITE: '1'
+      ULTRABRAIN_SYSTEMD_TEST: '1'
+      ULTRABRAIN_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Native and user-manager prerequisites on disposable runner
+        run: sudo apt-get update && sudo apt-get install -y build-essential bison flex libssl-dev zlib1g-dev pkg-config dbus-user-session
+      - run: install -d -m 0700 "$ULTRABRAIN_HOME"
+      - uses: actions/cache@v4
+        with:
+          path: /home/runner/ultrabrain-personal-services-test/runtime
+          key: native-ubuntu24-v1-${{ hashFiles('upstreams.lock.json', 'scripts/build-postgres.sh') }}
+      - name: Initialize only synthetic installation
+        run: bash scripts/bootstrap-linux.sh
+      - name: Start runner user manager (not a user production machine)
+        run: |
+          sudo loginctl enable-linger "$(id -un)"
+          sudo systemctl start "user@$(id -u).service"
+          echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
+          echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
+      - name: Actual generated user services, restart, consent and periodic model fixture
+        run: bun test/personal-services-integration.mjs
+      - name: Stop only synthetic service names and database
+        if: always()
+        run: |
+          systemctl --user stop ultrabrain-personal.target ultrabrain-personal-worker.service ultrabrain-personal-console.service ultrabrain-postgres.service || true
+          bun src/cli.mjs db stop || true
+      # No tokens, private configs, database dumps or raw service journals uploaded.
