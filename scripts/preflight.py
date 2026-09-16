@@ -75,6 +75,7 @@ class PrivateHome:
         self.path = Path(path)
         self.fd, self.missing = absolute_directory(self.path)
         self.initial = os.fstat(self.fd)
+        self.observed = {}
         try:
             if not self.missing:
                 is_private(self.initial, 'directory')
@@ -95,15 +96,41 @@ class PrivateHome:
             current = os.fstat(fd)
             require(missing == self.missing and (current.st_dev, current.st_ino) ==
                     (self.initial.st_dev, self.initial.st_ino), 'home_changed_during_check')
+            if not missing:
+                is_private(current, 'directory')
+            # Catch later replacements between individual checks without rereading
+            # credential contents. This is a bounded recheck, not an atomic snapshot.
+            for (name, private, directory), expected in self.observed.items():
+                self._verify_path(name, private, directory, expected)
         finally:
             os.close(fd)
+    def _verify_path(self, name, private, directory, expected):
+        try:
+            with self._resolve(name, private=private, directory=directory) as (fd, ancestors):
+                require((ancestors, signature(os.fstat(fd))) == expected,
+                        'managed_path_changed_during_check')
+        except OSError:
+            raise PreflightError('managed_path_changed_during_check') from None
     @contextlib.contextmanager
     def open(self, name, *, private=True, directory=False):
+        with self._resolve(name, private=private, directory=directory) as (fd, ancestors):
+            expected = ancestors, signature(os.fstat(fd))
+            key = name, private, directory
+            if key in self.observed:
+                require(self.observed[key] == expected, 'managed_path_changed_during_check')
+            yield fd
+            # fstat alone follows the original inode after an ancestor rename.
+            # Rewalk from the held home descriptor before accepting this result.
+            self._verify_path(name, private, directory, expected)
+            self.observed[key] = expected
+    @contextlib.contextmanager
+    def _resolve(self, name, *, private=True, directory=False):
         require(not self.missing, 'not_installed')
         # All callers supply program-owned relative paths, never a path read from a file.
         parts = Path(name).parts
         require(parts and not Path(name).is_absolute() and all(p not in ('.', '..') for p in parts), 'unsafe_managed_path')
         parent = os.dup(self.fd)
+        ancestors = []
         leaf = None
         try:
             for part in parts[:-1]:
@@ -113,6 +140,7 @@ class PrivateHome:
                 # Native/state ancestors are private; runtime/bin internals may be readable
                 # inside an explicitly private runtime prefix, but never other-writable.
                 s = os.fstat(parent)
+                ancestors.append((s.st_dev, s.st_ino))
                 require(s.st_uid == os.geteuid() and not s.st_mode & (0o077 if private else 0o022),
                         'owner_only_permissions_required')
             flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
@@ -127,7 +155,7 @@ class PrivateHome:
                         and s.st_uid == os.geteuid() and not s.st_mode & 0o022, 'unsafe_runtime_file')
                 if not directory:
                     require(s.st_nlink == 1, 'hardlink_refused')
-            yield leaf
+            yield leaf, tuple(ancestors)
         finally:
             if leaf is not None:
                 os.close(leaf)
@@ -247,6 +275,7 @@ class Report:
                              else 'run health and an authenticated client probe separately'}
 
 @contextlib.contextmanager
+
 def source_entry(root, relative, *, directory=False):
     """Metadata/config from fixed checkout paths; refuse links without importing source."""
     fd, missing = absolute_directory(root)

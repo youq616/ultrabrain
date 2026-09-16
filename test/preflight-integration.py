@@ -15,8 +15,14 @@ import sys
 import tempfile
 
 ROOT=Path(__file__).resolve().parents[1]
-assert os.environ.get('ULTRABRAIN_TEST_ALLOW_WRITE')=='1', 'Explicit isolated-test permission required'
-assert os.geteuid()!=0, 'Use ordinary synthetic service account'
+# These are safety gates, not test assertions: they must survive -O and
+# PYTHONOPTIMIZE before any installation access or process operation.
+if os.environ.get('ULTRABRAIN_TEST_ALLOW_WRITE') != '1':
+    raise SystemExit('Explicit isolated-test permission required')
+if os.geteuid() == 0:
+    raise SystemExit('Use ordinary synthetic service account')
+if not __debug__:
+    raise SystemExit('Integration verification requires Python assertions enabled')
 HOME=Path(os.environ['ULTRABRAIN_HOME'])
 bun=shutil.which('bun');assert bun, 'Bun needed for actual entrypoint check'
 checks=0
