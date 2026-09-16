@@ -1,0 +1,46 @@
+name: Personal service lifecycle
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: personal-services-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  services:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      ULTRABRAIN_HOME: /home/runner/ultrabrain-service-test
+      ULTRABRAIN_TEST_ALLOW_WRITE: '1'
+      ULTRABRAIN_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Native prerequisites
+        run: sudo apt-get update && sudo apt-get install -y build-essential bison flex libssl-dev zlib1g-dev pkg-config dbus-user-session
+      - run: install -d -m 0700 "$ULTRABRAIN_HOME"
+      - uses: actions/cache@v4
+        with:
+          path: /home/runner/ultrabrain-service-test/runtime
+          key: native-ubuntu24-v1-${{ hashFiles('upstreams.lock.json', 'scripts/build-postgres.sh') }}
+      - name: Bootstrap synthetic installation
+        run: bash scripts/bootstrap-linux.sh
+      - name: Start ephemeral runner user manager (not a user deployment)
+        run: |
+          sudo loginctl enable-linger "$(id -un)"
+          sudo systemctl start "user@$(id -u).service"
+          echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
+          echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
+      - name: Actual user-service startup, restart, timer and shutdown
+        run: bun test/personal-services-integration.mjs
+      - name: Stop only the synthetic test database
+        if: always()
+        run: bun src/cli.mjs db stop || true
+      # No unit backup, service.env, console token, database or raw journal artifact upload.
