@@ -10,7 +10,7 @@ const num=(description,required=false)=>({type:'number',description,required});
 const query={agent_id:str('Optional label filter, never authentication'),project_id:str('Project label'),
   query:str('Literal substring search'),task:str('Context query hint, not a model prompt'),
   types:{type:'array',items:{type:'string',enum:PERSONAL_MEMORY_TYPES}},status:{...str('Search lifecycle state; context requires active'),enum:['active','candidate','archived']},
-  limit:num('1..100'),offset:num('Live page offset'),budget_bytes:num('512..131072 serialized UTF-8 bytes')};
+  limit:num('1..100'),offset:num('Search live page offset; personal context accepts only 0'),budget_bytes:num('512..131072 serialized UTF-8 bytes')};
 const revision={memory_id:str('Full memory UUID',true),expected_revision:num('Latest observed revision',true),event_id:str('Stable immutable request id',true)};
 const definitions=[
  ['ultra_personal_capture','capture',true,{agent_id:str('Registered label',true),event_id:str('Stable capture event id',true),transcript:str('Explicitly consented raw text, at most 32 KiB',true),consent:{type:'boolean',required:true},project_id:str('Optional project label')},'Atomically retain a private source entry and queue it for personal consolidation. Does not call a model or activate memory.'],

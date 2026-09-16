@@ -33,7 +33,7 @@ try {
   await engine.executeRaw('INSERT INTO sources(id,name) VALUES($1,$1)',[source]);
   await call('ultra_agent_register',{agent_id:'codex',agent_type:'coding_agent'});
   await call('ultra_agent_register',{agent_id:'helper',agent_type:'automation_agent'});
-  [actor]=await engine.executeRaw('SELECT actor_key FROM ultrabrain.agent_registry WHERE source_id=$1 AND agent_id=$2 LIMIT 1',[source,'codex']);
+  [{actor_key:actor}]=await engine.executeRaw('SELECT actor_key FROM ultrabrain.agent_registry WHERE source_id=$1 AND agent_id=$2 LIMIT 1',[source,'codex']);
   const day=(n,h=0)=>new Date(Date.UTC(2026,8,1,0,0,0,n*1000+h)); // deterministic, sub-second spread
   // 1) Rank-before-window: one old high preference outranks 110 newer normal entries.
   await insert([{type:'preference',content:'Always prefer full CLI commands in the terminal',importance:'high',updated_at:new Date('2023-06-01T00:00:00.000Z')}]);
@@ -59,18 +59,22 @@ try {
     {type:'preference',content:'tie-ms-early',importance:'low',updated_at:'2026-09-05T00:00:00.250Z'},
     {type:'preference',content:'tie-ms-late',importance:'low',updated_at:'2026-09-05T00:00:00.750Z'},
   ]);
-  const msOrder=await call('ultra_personal_context',{limit:2,budget_bytes:131072,types:['preference'],task:'tie-ms'});
+  const msOrder=await call('ultra_personal_context',{limit:2,budget_bytes:131072,types:['preference'],query:'tie-ms',task:'tie-ms'});
   assert.equal(msOrder.memories[0].content,'tie-ms-late');pass();
-  const uuidRows=await engine.executeRaw(`INSERT INTO ultrabrain.personal_memories
-    (source_id,actor_key,type,content,content_hash,importance,source,agent_id,status,visibility,origin_kind,updated_at)
-    VALUES($1,$2,'preference',$3,$4,'low','ranking fixture','codex','active','private','agent','2026-09-06T00:00:00.000Z')
-    RETURNING id::text AS id, content`,[source,actor,'tie-uuid-zzz',SHA('tie-uuid-zzz')]);
-  await engine.executeRaw(`INSERT INTO ultrabrain.personal_memories
-    (source_id,actor_key,type,content,content_hash,importance,source,agent_id,status,visibility,origin_kind,updated_at)
-    VALUES($1,$2,'preference',$3,$4,'low','ranking fixture','codex','active','private','agent','2026-09-06T00:00:00.000Z')`,
-    [source,actor,'tie-uuid-aaa',SHA('tie-uuid-aaa')]);
-  const uuidOrder=await call('ultra_personal_context',{limit:3,budget_bytes:131072,types:['preference'],task:'tie-uuid'});
-  assert.equal(uuidOrder.memories[0].content,'tie-uuid-aaa');pass(); // smaller UUID first at equal score+time
+  const uuidPrefix=randomBytes(14).toString('hex');
+  const fixedUuid=n=>{
+    const hex=uuidPrefix+n.toString(16).padStart(4,'0');
+    return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+  };
+  // Insert the larger UUID first, with a newer microsecond value in the SAME millisecond.
+  // Expected ordering follows UUID, deliberately NOT insertion/content/microsecond order.
+  for(const [n,content,time] of [[2,'tie-uuid-aaa','2026-09-06T00:00:00.000900Z'],[1,'tie-uuid-zzz','2026-09-06T00:00:00.000100Z']])
+    await engine.executeRaw(`INSERT INTO ultrabrain.personal_memories
+      (id,source_id,actor_key,type,content,content_hash,importance,source,agent_id,status,visibility,origin_kind,updated_at)
+      VALUES($1::uuid,$2,$3,'preference',$4,$5,'low','ranking fixture','codex','active','private','agent',$6)`,
+      [fixedUuid(n),source,actor,content,SHA(content),time]);
+  const uuidOrder=await call('ultra_personal_context',{limit:3,budget_bytes:131072,types:['preference'],query:'tie-uuid',task:'tie-uuid'});
+  assert.deepEqual(uuidOrder.memories.map(r=>r.id),[fixedUuid(1),fixedUuid(2)]);pass();
   // 4) Project scoping: context project rows exclude other projects but include global.
   await insert([
     {type:'project',content:'project-a rule: run tests before merge',importance:'normal',project_id:'proj-a',updated_at:day(300)},
@@ -96,13 +100,15 @@ try {
   await engine.executeRaw(`INSERT INTO ultrabrain.personal_memories
     (source_id,actor_key,type,content,content_hash,importance,source,agent_id,status,visibility,origin_kind,derivation,updated_at)
     VALUES($1,$2,'preference','derived from stale origin',$3,'high','ranking fixture','codex','active','private','agent',
-      jsonb_build_object('input_id',$4::text,'input_revision',1,'input_hash',$5),day(503))`,
-    [source,actor,SHA('derived from stale origin'),staleOrigin.id,SHA('stale origin input')]);
+      jsonb_build_object('input_id',$4::text,'input_revision',1,'input_hash',$5::text),$6)`,
+    [source,actor,SHA('derived from stale origin'),staleOrigin.id,SHA('stale origin input'),day(503)]);
   const visible=await call('ultra_personal_context',{limit:100,budget_bytes:131072});
   assert.ok(!visible.memories.some(m=>m.content==='candidate invisible'||m.content==='archived invisible'||m.content==='derived from stale origin'));pass();
   // 7) Read-only authenticated identity may read context; write stays denied for it.
   const readOnly=await call('ultra_personal_context',{limit:5,budget_bytes:131072},reader);
-  assert.equal(readOnly.memories.length,5);pass();
+  assert.equal(readOnly.memories.length,1);
+  assert.equal(readOnly.memories[0].content,'shared preference for the whole source');
+  assert.equal(readOnly.memories[0].owned_by_caller,false);pass();
   await assert.rejects(call('ultra_memory_commit',{agent_id:'codex',event_id:'deny',consent:true,
     memories:[{type:'preference',content:'must not store',importance:'normal'}]},reader),{code:'permission_denied'});pass();
   // 8) Hostile task text is matched literally; no SQL is formed from it and the table survives.
@@ -120,7 +126,8 @@ try {
   // 10) Byte budget drops whole entries only and never truncates a negation.
   const tight=await call('ultra_personal_context',{limit:100,budget_bytes:2000,task:'prefer'});
   assert.ok(tight.memories.every(m=>m.content.includes('不要')?m.content.endsWith('否定词')||m.content.includes('不要改写否定词'):true));
-  assert.ok(Buffer.byteLength(JSON.stringify(tight))<=2000+tight.memories.length*80); // bounded envelope, whole rows
+  assert.ok(Buffer.byteLength(JSON.stringify(tight))<=2000);
+  assert.ok(tight.memories.every(m=>SHA(m.content)===m.content_hash)); // exact whole contents
   pass();
   // 11) Local timeouts and read-only settings never leak past the context transaction.
   const [before]=await engine.executeRaw("SELECT current_setting('statement_timeout') AS t, current_setting('default_transaction_read_only') AS r");

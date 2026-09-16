@@ -23,7 +23,7 @@
 | 方面 | 旧行为 | 新行为 |
 |---|---|---|
 | 大小写折叠 | 全字符串 `toLowerCase()`（含非 ASCII，如西里尔、带点 İ） | 仅折叠 ASCII A–Z；非 ASCII 文字按原样字面匹配 |
-| 分词空白 | `/\s+/`（ASCII 空白为主） | Unicode `\p{White_Space}+`（含全角空格、NBSP 等） |
+| 分词空白 | `/\s+/`（本来已包含 NBSP、全角空格等；包含 BOM、不包含 NEL） | `\p{White_Space}+`（包含 NEL U+0085、不包含 BOM U+FEFF） |
 | 重复词 | 重复任务词各计 1 分（可重复加分） | 不同词各计 1 分，重复只算一次 |
 | 词数上限 | 前 32 个 token（重复占位） | 前 32 个**不同**词 |
 | 时间平局 | `String(Date).localeCompare`（星期名字母序，错误） | 数值毫秒降序 + 完整 UUID 升序 |
@@ -37,4 +37,10 @@ context/profile 仍是**有界召回**：授权过滤后按排名取前 100 条�
 ## 测试
 
 - 纯契约单测（Windows 可跑，`node --test test/personal-ranking.test.mjs`）：分词/折叠/去重/上限、排名值、平局（Date 对象与 ISO 字符串）、组装器排除与预算、注入字面值、窗口排序修正。
-- 真实 PostgreSQL 集成（Linux CI，`npm run test:ranking`）：窗口缺陷的真实复现回归、重复词/中英文/emoji、项目与主体隔离、显式共享、candidate/archived/失效派生排除、只读身份、SQL 注入字面值、search 分页、字节预算、连接不被只读/超时设置污染、日期与 UUID 平局钉住，以及 **450 条合成记录 × 20 组查询的 SQL 与 JavaScript 排序完全一致**校验。该文件在编写时由独立审核以语料模拟核对过过滤语义；其真实通过以 Linux CI 在最终提交上的运行为准，本文不预先宣称已通过。
+- 真实 PostgreSQL 集成（Linux CI，`npm run test:ranking`）：窗口缺陷的真实复现回归、重复词/中英文/emoji、项目与主体隔离、显式共享、candidate/archived/失效派生排除、只读身份、SQL 注入字面值、search 分页、字节预算、连接不被只读/超时设置污染、日期与 UUID 平局钉住，以及 **450 条合成记录 × 20 组查询的 SQL 与 JavaScript 排序完全一致**校验。早期本地复审只模拟了部分语料，未运行 PostgreSQL，接收端真实执行随后发现了其他夹具缺陷；修复与首证见 `reviews/PERSONAL-RANKING-RECEIVER.md`。最终验收以 PR 中对应完整提交的实际测试和独立复审为准。
+
+## 接收端追加验收
+
+`test:ranking` 同时执行排序集成和安全集成。后者验证 1005 条新 normal 偏好不会挤掉旧 high 偏好、严格的完整响应字节预算、不同源与非 ASCII 字面词边界；单连接原生适配器记录 PostgreSQL backend PID，在另一事务持有测试表锁时运行真实 context 查询，验证 PostgreSQL `57014` 超时经 MCP 返回 `personal_storage_error`，而不是成功空结果。解除锁后核对同一 backend 的超时和只读设置恢复，写入仍可执行。只允许在隔离合成数据库使用该测试，绝不能对生产记忆库运行。
+
+此排序窗口不是分页快照；`dropped` 只统计已取得候选窗口内未纳入结果的记录，不统计数据库中窗口之外的所有记忆。词匹配是字面优先级，不是 embedding 或真实模型质量指标。agent_id 是登记标签/筛选条件，不是独立用户认证；私有性由服务器认证主体与 source 限制。

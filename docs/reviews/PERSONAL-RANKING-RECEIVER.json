@@ -1,0 +1,50 @@
+{
+  "format": 1,
+  "phase": "personal-ranking",
+  "base_commit": "5f175cb4b4ba7f8d603ee9a61b59c414ab983e0d",
+  "imported_commit": "bcef3abfb92aef95567e5949e70c8e7ba25ab6d4",
+  "imported_tree": "32aacf399c1592408785ea8d62c6e58850109714",
+  "review_kind": "implementation assistant separate self-check; NOT an independent agent",
+  "independent_review": "pending new final-SHA review in PR",
+  "merge_allowed": false,
+  "executed": {
+    "original_javascript_pass": 476,
+    "original_python_pass": 119,
+    "original_ranking_integration": "FAIL personal_owner_shape; preserved first failure",
+    "repaired_javascript": {
+      "pass": 478,
+      "fail": 0,
+      "skip": 0
+    },
+    "repaired_python_pass": 119,
+    "ranking_checks": 20,
+    "ranking_safety_checks": 10,
+    "personal_core_checks": 43,
+    "console_checks": 21,
+    "consolidation_checks": 29,
+    "provider_admission_checks": 7,
+    "authenticated_http_checks": 49
+  },
+  "limits": [
+    "Synthetic data only; no real-model quality certification",
+    "100 candidate cap and actual response budgets remain",
+    "Ranking scores are not confidence",
+    "Current GitHub CI and independent review not predeclared successful"
+  ],
+  "local_log_sha256": {
+    "original-node.log": "505d5596e53afd4b02b0e48b7fb62c4feff5a12e3450ffc953a5b28444cbdfea",
+    "original-python.log": "1f75f0a11762d35992955c3cbbb7ca5a9e29b2a2e01782e9bb4abed1759e2f4e",
+    "original-ranking.log": "486ce716101b6ecd42bce894ce13753c02e1744df0ce819286b7bf498ffa34c6",
+    "ranking-actor-fixed.log": "f98a3dd461cfbc1eb8c164d54a999a3f3d7db08393bd226af16abc1c235c054a",
+    "exact-base-reproduction.log": "3d70940b45d6ee90118eb7ce302dd7bc81978e8493ae9456abc38a4ec6841c88",
+    "repaired-node.log": "fa75b66d849356eec58f33dc8ffbf01a5777af5234ce2b43b738370293782806",
+    "repaired-python.log": "1ff921005134f276fcbb0d7fe62294d4a57729fb660db0ff0dfa3b92744a3414",
+    "repaired-personal-ranking-integration.log": "2f1e1ff9dffb87409ebe053a12f5d03b0932f0a96dee9a7268afe1ba537a926e",
+    "repaired-personal-ranking-safety-integration.log": "bf75b5d713b1e7a8562a212a314382e30aab7114dee680c64fae0bac027f7f16",
+    "repaired-personal-integration.log": "b159d14e1ad18a1f7ac37d135b2bad848cff5d68761be0edbb8e820068ec8e39",
+    "repaired-personal-console-integration.log": "5425a6b89fa133cca76d1d77cbbcedff34b44f1ee3701c92df1dd8cf436cc8cf",
+    "repaired-personal-consolidation-integration.log": "3395dbe2ad1273b1826117ec6d1128f7322da9617168824c3830fe16417553c4",
+    "repaired-personal-dispatch-integration.log": "f9c19c35a73d8e25cde96027108d533275fac2aa642af7cc5a56ca1f472b9506",
+    "repaired-http-integration.log": "a229bfb5e5a954303917fe5206102eed9f6c52c511398b12ae6dedb470e65b52"
+  }
+}

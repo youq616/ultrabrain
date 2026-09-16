@@ -25,7 +25,7 @@ test('importance scores 3/2/1 plus one point per distinct matched term',()=>{
   assert.equal(rankMemory(memory,{task:'full commands'}),5);
   assert.equal(rankMemory(memory,{task:'full commands commands commands'}),5); // duplicates count once
   assert.equal(rankMemory(active({content:'plain',importance:'low'}),{task:'absent'}),1);
-  assert.equal(rankMemory(active({content:'plain',importance:'unknown'},{importance:'odd'}),{}),0);
+  assert.equal(rankMemory(active({content:'plain',importance:'unknown'}),{}),0);
 });
 test('ties break on true millisecond time descending, then full UUID ascending',()=>{
   const rows=[
@@ -66,9 +66,9 @@ test('assembler excludes non-active, stale derivations and other projects; keeps
   assert.equal(ctx.exhaustive,false);
   assert.equal(ctx.trust,'untrusted-memory-data');
   // Budget drops whole entries only; a single oversized entry is dropped, not truncated.
-  const big=active({id:'6',content:'x'.repeat(5000),importance:'high',updated_at:new Date()});
+  const big=active({id:'6',type:'preference',content:'x'.repeat(5000),importance:'high',updated_at:new Date()});
   const tight=buildPersonalContext([big],{limit:10,budget_bytes:512});
-  assert.ok(tight.memories.length===0||JSON.stringify(tight.memories[0]).length<600);
+  assert.equal(tight.memories.length,0);assert.equal(tight.dropped,1);
   assert.ok(!JSON.stringify(tight).includes('xxxx')); // nothing partially truncated into output
 });
 test('task text is treated as literals: SQL metacharacters never form query fragments',()=>{
@@ -91,5 +91,18 @@ test('context rejects a non-zero offset before touching the database',async()=>{
   const auth={sourceId:'rank-offset',principal:{kind:'oauth_client',id:'a'},scopes:['read','write'],hasSourceGrant:true};
   const store=new PersonalMemoryStore({sourceId:'rank-offset',remote:true,transport:'http',auth,engine});
   await assert.rejects(store.context({offset:20}),{code:'invalid_params'});
-  await assert.rejects(store.profile({offset:5}),{code:'invalid_params'}); // profile forwards to context
+  await assert.rejects(store.profile({offset:5}),{code:'invalid_params'}); // profile rejects unsupported fields before context
+});
+
+test('Unicode White_Space deliberately differs from JavaScript whitespace at NEL/BOM',()=>{
+  assert.deepEqual(taskTerms('alpha\u0085beta'),['alpha','beta']);
+  assert.deepEqual(taskTerms('alpha\uFEFFbeta'),['alpha\uFEFFbeta']);
+});
+test('invalid or oversized caller tasks are rejected before database access',async()=>{
+  const {PersonalMemoryStore}=await import('../src/personal-memory-store.mjs');
+  const unreachable=()=>assert.fail('Validation must finish before accessing the database');
+  const engine={kind:'postgres',executeRaw:unreachable,transaction:unreachable};
+  const store=new PersonalMemoryStore({sourceId:'rank-input',remote:false,transport:'stdio',engine});
+  for(const task of ['a'.repeat(4097),'中'.repeat(1366),'bad\0input','\ud800',null,{}])
+    await assert.rejects(store.context({task}),{code:'invalid_params'});
 });
