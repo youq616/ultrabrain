@@ -208,9 +208,15 @@ def reject_unit_search_path(output):
          'unit_search_path_refused')
 
 
+def file_metadata(value):
+    return (value.st_dev, value.st_ino, value.st_mode, value.st_uid, value.st_gid,
+            value.st_nlink, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+
+
 def verify_contents(directory, wanted):
     """Validate one descriptor-bound inventory, including changes during the read."""
     initial = os.fstat(directory)
+    observed = {}
     need(set(os.listdir(directory)) == set(wanted), 'export_inventory_mismatch')
     for name, text in wanted.items():
         fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
@@ -233,8 +239,15 @@ def verify_contents(directory, wanted):
             current = os.stat(name, dir_fd=directory, follow_symlinks=False)
             need((current.st_dev, current.st_ino) == (before.st_dev, before.st_ino),
                  'output_path_changed')
+            observed[name] = file_metadata(before)
         finally:
             os.close(fd)
+    # Directory timestamps cannot detect in-place changes to an earlier file.
+    # Recheck every observed identity, mode and content timestamp after all reads.
+    # This detects observable changes, not an atomic lock against later writers.
+    for name, metadata in observed.items():
+        current = os.stat(name, dir_fd=directory, follow_symlinks=False)
+        need(file_metadata(current) == metadata, 'export_content_changed')
     final = os.fstat(directory)
     need(set(os.listdir(directory)) == set(wanted)
          and (initial.st_mtime_ns, initial.st_ctime_ns) ==

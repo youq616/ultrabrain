@@ -143,5 +143,41 @@ class PersonalServicesGuardrails(unittest.TestCase):
                 self.do_export()
         self.assertFalse(self.output.exists())
 
+    def test_later_read_cannot_hide_rewrite_of_an_already_checked_unit(self):
+        self.do_export()
+        original = m.os.read
+        triggered = False
+        first = self.output / m.TARGET
+        metadata = os.stat(first)
+        def change_previous(fd, count):
+            nonlocal triggered
+            raw = original(fd, count)
+            if raw and not triggered and os.fstat(fd).st_ino != metadata.st_ino:
+                triggered = True
+                first.write_bytes(b"#" + first.read_bytes()[1:])
+            return raw
+        with patch.object(m.os, 'read', side_effect=change_previous):
+            with self.assertRaisesRegex(m.ServicePlanError, 'export_content_changed'):
+                m.verify_export(self.value, self.output, self.value['plan_sha256'])
+        self.assertTrue(triggered)
+
+    def test_later_read_cannot_hide_permission_widening_of_checked_unit(self):
+        self.do_export()
+        original = m.os.read
+        changed = False
+        first = self.output / m.TARGET
+        metadata = os.stat(first)
+        def widen_previous(fd, count):
+            nonlocal changed
+            raw = original(fd, count)
+            if raw and not changed and os.fstat(fd).st_ino != metadata.st_ino:
+                changed = True
+                first.chmod(0o644)
+            return raw
+        with patch.object(m.os, 'read', side_effect=widen_previous):
+            with self.assertRaisesRegex(m.ServicePlanError, 'export_content_changed'):
+                m.verify_export(self.value, self.output, self.value['plan_sha256'])
+        self.assertTrue(changed)
+
 if __name__ == '__main__':
     unittest.main()
