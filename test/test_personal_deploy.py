@@ -52,7 +52,7 @@ class FixtureManager:
 
     @staticmethod
     def absent(name):
-        return dict(Id=name, LoadState='not-found', ActiveState='inactive',
+        return dict(Id=name, Names=name, LoadState='not-found', ActiveState='inactive',
                     SubState='dead', FragmentPath='', DropInPaths='',
                     NeedDaemonReload='no', Job='')
 
@@ -353,6 +353,22 @@ class DeploymentFixtureTests(unittest.TestCase):
         (extra / s.CONSOLE).write_text('[Service]\nExecStart=/bin/true\n')
         self.assert_refused_without_changes(lambda: self.review(pair))
 
+    def test_upholds_dependencies_in_every_unit_path_are_refused_before_mutation(self):
+        pair = self.export()
+        extra = self.root / 'extra-upholds-unit-path'
+        extra.mkdir(mode=0o700)
+        self.manager.unit_paths = (self.units, extra)
+        for directory in self.manager.unit_paths:
+            for name in m.PERSONAL_UNITS:
+                with self.subTest(directory=directory.name, name=name):
+                    reviewed = self.review(pair)
+                    dependency = directory / (name + '.upholds')
+                    dependency.mkdir(mode=0o700)
+                    (dependency / 'unreviewed.service').symlink_to('/tmp/unreviewed.service')
+                    self.assert_refused_without_changes(lambda: self.review(pair))
+                    self.assert_refused_without_changes(lambda: self.apply(pair, reviewed))
+                    shutil.rmtree(dependency)
+
     def test_active_and_transitioning_units_are_refused(self):
         pair = self.export()
         for active, sub in (('active', 'running'), ('activating', 'start'),
@@ -370,6 +386,17 @@ class DeploymentFixtureTests(unittest.TestCase):
             with self.subTest(properties=properties):
                 self.manager.overrides = {s.CONSOLE: properties}
                 self.assert_refused_without_changes(lambda: self.review(pair))
+
+    def test_manager_alias_names_refuse_update_without_mutating_installed_units(self):
+        self.apply(self.export())
+        pair = self.export(port=4132)
+        reviewed = self.review(pair)
+        for names in (s.CONSOLE + ' unreviewed-alias.service',
+                      'unreviewed-alias.service ' + s.CONSOLE):
+            with self.subTest(names=names):
+                self.manager.overrides = {s.CONSOLE: dict(Names=names)}
+                self.assert_refused_without_changes(lambda: self.review(pair))
+                self.assert_refused_without_changes(lambda: self.apply(pair, reviewed))
 
     def test_manager_becoming_active_after_review_prevents_apply(self):
         pair = self.export()
@@ -611,6 +638,59 @@ class DeploymentFixtureTests(unittest.TestCase):
         self.assert_refused_without_changes(
             lambda: other.plan(value, destination, value['plan_sha256']))
         self.context.recover(pending)
+
+    def test_crash_after_first_journal_publication_blocks_other_home_and_recovers(self):
+        # Prepare another HOME's reviewed plan before A publishes any journal.
+        # The same fixed unit names must remain reserved if A loses the process
+        # between the coordinator publication and the local mirror publication.
+        other_home = self.root / 'other-data-before-journal'
+        other_home.mkdir(mode=0o700)
+        other = m.Context(other_home, user_home=self.account, manager=self.manager)
+        value = s.plan(ROOT, other_home, '/usr/bin/bun')
+        destination = self.root / 'other-export-before-journal'
+        s.export_plan(value, destination, value['plan_sha256'])
+        other_reviewed = other.plan(value, destination, value['plan_sha256'])
+        pair = self.export()
+        reviewed = self.review(pair)
+        original = self.context._atomic_new
+        published = []
+
+        def interrupt_first_publication(path, raw):
+            original(path, raw)
+            if path.name == 'pending.json':
+                published.append(path)
+                raise SimulatedPowerLoss('first pending journal published')
+
+        with patch.object(self.context, '_atomic_new', side_effect=interrupt_first_publication):
+            with self.assertRaises(SimulatedPowerLoss):
+                self.apply(pair, reviewed)
+        self.assertEqual(len(published), 1)
+        self.assertEqual(self.links(), {})
+        self.assertEqual(self.manager.reloads, 0)
+        self.assert_refused_without_changes(
+            lambda: other.plan(value, destination, value['plan_sha256']))
+        self.assert_refused_without_changes(
+            lambda: other.apply(value, destination, value['plan_sha256'],
+                                other_reviewed['deployment_sha256']))
+        self.assertEqual(published, [self.context.shared / 'pending.json'])
+        self.assertFalse((self.context.state / 'pending.json').exists())
+        pending = self.context.status()['pending_sha256']
+        self.assertIsInstance(pending, str)
+        self.assertEqual(len(pending), 64)
+        recovered = self.context.recover(pending)
+        self.assertIsNone(recovered['current_sha256'])
+        self.assertIsNone(recovered['pending_sha256'])
+        self.assertEqual(self.links(), {})
+        self.assertFalse((self.context.shared / 'pending.json').exists())
+        self.assertFalse((self.context.state / 'pending.json').exists())
+        # After A's explicit recovery, the independent HOME may obtain a new
+        # review and use the released names without adopting A's staged units.
+        other_reviewed = other.plan(value, destination, value['plan_sha256'])
+        result = other.apply(value, destination, value['plan_sha256'],
+                             other_reviewed['deployment_sha256'])
+        self.assertTrue(result['installed'])
+        for target in self.links().values():
+            self.assertTrue(Path(target).is_relative_to(other_home / 'personal-deployment'))
 
     def test_lock_contention_refuses_before_state_or_unit_mutation(self):
         pair = self.export()

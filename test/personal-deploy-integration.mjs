@@ -28,7 +28,9 @@ async function run(command,args,{ok=true,timeout=120000}={}){
 }
 const ctl=(...args)=>run('/usr/bin/systemctl',['--user','--no-pager','--no-ask-password',...args]);
 const call=(args,options)=>run(process.execPath,[ROOT+'/src/cli.mjs','personal-deploy',...args],options);
-async function deploy(args){const r=await call(args),v=JSON.parse(r.text);assert.equal(v.ok,true);return v.result;}
+async function deploy(args){const r=await call(args,{ok:false}),v=JSON.parse(r.text);
+ const code=typeof v.error==='string'&&/^[a-z][a-z_]{0,79}$/.test(v.error)?v.error:'unclassified_failure';
+ assert.equal(r.code,0,`Deployment ${args[0]} failed after ${checks} checks: ${code}`);assert.equal(v.ok,true);return v.result;}
 async function status(){return deploy(['status','--home',HOME]);}
 async function missing(unit){requireMissingUnit(await run('/usr/bin/systemctl',['--user','show',unit,
  '--property=LoadState,ActiveState,FragmentPath','--no-pager'],{ok:false}));}

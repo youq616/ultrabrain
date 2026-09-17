@@ -35,7 +35,7 @@ SERVICES = sibling('personal_deploy_services', 'personal-services.py')
 FS = sibling('personal_deploy_store', 'personal_deploy_store.py')
 DeployError, need = FS.DeployError, FS.need
 PERSONAL_UNITS = (SERVICES.TARGET, SERVICES.CONSOLE, SERVICES.WORKER)
-PROPERTIES = ('Id', 'LoadState', 'ActiveState', 'SubState', 'FragmentPath',
+PROPERTIES = ('Id', 'Names', 'LoadState', 'ActiveState', 'SubState', 'FragmentPath',
               'DropInPaths', 'NeedDaemonReload', 'Job')
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -295,7 +295,7 @@ class Context:
         extra = {'service.d', 'target.d', 'ultrabrain-.service.d', 'ultrabrain-.target.d',
                  'ultrabrain-personal-.service.d'}
         for name in PERSONAL_UNITS:
-            extra.update((name+'.d', name+'.wants', name+'.requires'))
+            extra.update((name+'.d', name+'.wants', name+'.requires', name+'.upholds'))
         for directory in paths:
             for name in extra:
                 need(self.store.absent(directory/name), 'personal_unit_override_refused')
@@ -315,6 +315,9 @@ class Context:
                  'invalid_manager_response')
             need(row['ActiveState'] == 'inactive' and row['SubState'] in ('dead', 'inactive')
                  and row['Job'] in ('', '0'), 'personal_units_must_be_stopped')
+            # Alias names can supply their own dependency directories without
+            # appearing in DropInPaths. This fixed-name installer admits none.
+            need(row['Names'] == name, 'personal_unit_alias_refused')
             need(row['DropInPaths'] == '', 'personal_unit_override_refused')
             need(row['NeedDaemonReload'] in ('no', 'yes'), 'invalid_manager_response')
             need(transitional or row['NeedDaemonReload'] == 'no', 'manager_reload_required')
@@ -503,8 +506,10 @@ class Context:
 
     def _publish_journal(self, journal):
         need(self._pending() is None, 'deployment_pending')
-        self._atomic_new(self.state/'pending.json', FS.canonical(journal))
+        # Reserve the shared fixed-name namespace before publishing the local
+        # mirror. A crash between these writes must still block other homes.
         self._atomic_new(self.shared/'pending.json', FS.canonical(journal))
+        self._atomic_new(self.state/'pending.json', FS.canonical(journal))
         self.fault('after_journal')
 
     def _check_transaction(self, journal):
