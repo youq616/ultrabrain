@@ -2,6 +2,8 @@
 
 本阶段提供 `personal-services` 配置计划、独占导出和逐字节校验。生成器不安装、不启用、不启动、不停止服务，不连接数据库、不调用模型，也不修改其他客户端或原有 systemd 单元。实际启用是操作者另行执行的操作。Linux 普通服务账号、已初始化且完成 migrate 的同一安装，以及可用的 systemd 用户管理器是运行前提；先执行 DEPLOYMENT-PREFLIGHT.md 和现有 health 检查。
 
+新增的 `personal-deploy` 可将这份导出安装为独立副本，并在个人服务停止时更新、回滚和恢复中断事务，详见 [个人服务部署](PERSONAL-DEPLOY.md)。下文手工 link 流程保留作为旧安装说明；新工具拒绝自动认领已有手工链接，不能把两种流程混用为同一受管安装。
+
 ## 生成内容与身份
 
 默认只生成 `ultrabrain-personal.target` 和 `ultrabrain-personal-console.service`。管理台使用原有 `personal-ui`，只能监听 127.0.0.1，仍需私有令牌；该令牌不写入单元文件。它代表当前 Linux 服务账号的本机所有者，不会接管独立 HTTP 主体的私有记忆。
