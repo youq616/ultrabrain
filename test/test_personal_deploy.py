@@ -39,10 +39,15 @@ class ForbiddenManagerAction(BaseException):
 
 
 class FixtureManager:
-    """Cached manager rows change only when the fixture reloads its unit files."""
+    """Cached rows/bytes, with optional discovery of new names during show."""
 
-    def __init__(self, units):
+    def __init__(self, units, *, fragment_mode='generation', load_new_on_show=False):
+        if fragment_mode not in ('generation', 'installed_link'):
+            raise ValueError('unknown fixture fragment representation')
         self.units = units
+        self.fragment_mode = fragment_mode
+        self.load_new_on_show = load_new_on_show
+        self.show_observations = []
         self.actions = []
         self.reloads = 0
         self.overrides = {}
@@ -50,6 +55,7 @@ class FixtureManager:
         self.crash_reloads = set()
         self.before_action = None
         self.rows = {name: self.absent(name) for name in m.PERSONAL_UNITS}
+        self.loaded_bytes = {name: None for name in m.PERSONAL_UNITS}
 
     @staticmethod
     def absent(name):
@@ -57,15 +63,19 @@ class FixtureManager:
                     SubState='dead', FragmentPath='', DropInPaths='',
                     NeedDaemonReload='no', Job='')
 
-    def read_units(self):
+    def read_units(self, *, only_missing=False):
         for name in m.PERSONAL_UNITS:
+            if only_missing and self.rows[name]['LoadState'] != 'not-found':
+                continue
             row = self.absent(name)
             path = self.units / name
             if path.is_symlink() and path.exists():
-                row.update(LoadState='loaded', FragmentPath=str(path.resolve()))
+                fragment = path if self.fragment_mode == 'installed_link' else path.resolve()
+                row.update(LoadState='loaded', FragmentPath=str(fragment))
             elif path.exists():
                 row.update(LoadState='loaded', FragmentPath=str(path))
             self.rows[name] = row
+            self.loaded_bytes[name] = path.read_bytes() if row['LoadState'] == 'loaded' else None
 
     def __call__(self, action):
         # An added start/stop/enable operation fails loudly in every test.
@@ -82,9 +92,17 @@ class FixtureManager:
                 raise m.DeployError('fixture_reload_failed')
             self.read_units()
             return None
+        if self.load_new_on_show:
+            # Name lookup can load newly linked units before daemon-reload.
+            # Loaded units remain cached after unlink until a reload occurs.
+            self.read_units(only_missing=True)
         rows = copy.deepcopy(self.rows)
         for name, properties in self.overrides.items():
             rows[name].update(properties)
+        if self.load_new_on_show:
+            self.show_observations.append({name: {
+                'load_state': row['LoadState'], 'fragment': row['FragmentPath'],
+                'link_exists': os.path.lexists(self.units / name)} for name, row in rows.items()})
         return rows
 
 
@@ -206,6 +224,33 @@ class DeploymentFixtureTests(unittest.TestCase):
         self.assertEqual(len(pending), 64)
         return pending
 
+    def restore_links_while_manager_still_caches_newer_contents(self):
+        self.manager.fragment_mode = 'installed_link'
+        first = self.export(port=3132)
+        self.apply(first)
+        initial_current = self.context.status()['current_sha256']
+        second = self.export(port=4132)
+        pending = self.interrupt_apply(second, 'after_reload')
+        fired = []
+
+        def interrupt(label):
+            if label == 'before_reload':
+                fired.append(label)
+                raise SimulatedPowerLoss('restore interrupted before manager reload')
+
+        with self.assertRaises(SimulatedPowerLoss):
+            self.context_with_fault(interrupt).recover(pending)
+        self.assertEqual(fired, ['before_reload'])
+        self.assert_installed(first)
+        status = self.context.status()
+        self.assertEqual(status['current_sha256'], initial_current)
+        self.assertEqual(status['pending_sha256'], pending)
+        self.assertEqual(self.manager.rows[s.CONSOLE]['FragmentPath'], str(self.units / s.CONSOLE))
+        self.assertEqual(self.manager.rows[s.CONSOLE]['NeedDaemonReload'], 'no')
+        self.assertEqual(self.manager.loaded_bytes[s.CONSOLE], second[0]['units'][s.CONSOLE].encode())
+        self.assertNotEqual(self.manager.loaded_bytes[s.CONSOLE], (self.units / s.CONSOLE).read_bytes())
+        return first, second, pending, initial_current
+
     def test_plan_is_read_only_and_deterministic(self):
         pair = self.export()
         before = tree_snapshot(self.root)
@@ -245,6 +290,161 @@ class DeploymentFixtureTests(unittest.TestCase):
         self.assert_installed(pair)
         self.assertEqual(self.manager.reloads, 1)
         self.assertIs(self.context.status()['services_started'], False)
+
+    def test_installed_link_fragment_supports_update_rollback_and_interrupted_recovery(self):
+        self.manager.fragment_mode = 'installed_link'
+        first = self.export()
+        self.apply(first)
+        self.assert_installed(first)
+        initial_current = self.context.status()['current_sha256']
+        initial_links = self.links()
+        for name in first[0]['units']:
+            self.assertEqual(self.manager.rows[name]['FragmentPath'], str(self.units / name))
+
+        second = self.export(port=4132, worker=True, allow_model_call=True)
+        reviewed = self.review(second)
+        self.manager.overrides = {s.CONSOLE: dict(ActiveState='active', SubState='running')}
+        self.assert_refused_without_changes(lambda: self.apply(second, reviewed))
+        self.manager.overrides = {}
+        self.apply(second, reviewed)
+        self.assert_installed(second)
+        second_current = self.context.status()['current_sha256']
+        self.assertNotEqual(second_current, initial_current)
+        for name in second[0]['units']:
+            self.assertEqual(self.manager.rows[name]['FragmentPath'], str(self.units / name))
+
+        self.context.rollback(second_current)
+        self.assertEqual(self.context.status()['current_sha256'], initial_current)
+        self.assertEqual(self.links(), initial_links)
+        self.assert_installed(first)
+        self.assertEqual(self.manager.rows[s.WORKER]['LoadState'], 'not-found')
+
+        pending = self.interrupt_apply(second, 'after_reload')
+        self.assertEqual(self.manager.rows[s.WORKER]['FragmentPath'], str(self.units / s.WORKER))
+        self.context.recover(pending)
+        self.assertEqual(self.context.status()['current_sha256'], initial_current)
+        self.assertIsNone(self.context.status()['pending_sha256'])
+        self.assertEqual(self.links(), initial_links)
+        self.assert_installed(first)
+        self.assertEqual(self.manager.rows[s.WORKER]['LoadState'], 'not-found')
+
+        self.context.rollback(initial_current)
+        self.assertEqual(self.links(), {})
+        self.assertIsNone(self.context.status()['current_sha256'])
+        for name in m.PERSONAL_UNITS:
+            self.assertEqual(self.manager.rows[name]['LoadState'], 'not-found')
+            self.assertEqual(self.manager.rows[name]['FragmentPath'], '')
+
+    def test_installed_link_fragment_does_not_authorize_a_foreign_link_target(self):
+        self.manager.fragment_mode = 'installed_link'
+        self.apply(self.export())
+        current = self.context.status()['current_sha256']
+        pair = self.export(port=4132)
+        reviewed = self.review(pair)
+        foreign = self.root / 'unreviewed-console.service'
+        foreign.write_text('[Service]\nExecStart=/bin/true\n')
+        link = self.units / s.CONSOLE
+        link.unlink()
+        link.symlink_to(foreign)
+        self.assertEqual(self.manager.rows[s.CONSOLE]['FragmentPath'], str(link))
+        self.assert_refused_without_changes(lambda: self.review(pair))
+        self.assert_refused_without_changes(lambda: self.apply(pair, reviewed))
+        self.assert_refused_without_changes(lambda: self.context.rollback(current))
+
+    def test_installed_link_fragment_mode_still_rejects_unknown_manager_paths(self):
+        self.manager.fragment_mode = 'installed_link'
+        self.apply(self.export())
+        pair = self.export(port=4132)
+        reviewed = self.review(pair)
+        self.manager.overrides = {s.CONSOLE: dict(FragmentPath='/tmp/unreviewed-fragment.service')}
+        self.assert_refused_without_changes(lambda: self.review(pair))
+        self.assert_refused_without_changes(lambda: self.apply(pair, reviewed))
+
+    def test_loaded_installed_link_path_is_refused_when_all_managed_targets_are_absent(self):
+        self.manager.fragment_mode = 'installed_link'
+        pair = self.export()
+        reviewed = self.review(pair)
+        self.manager.overrides = {s.CONSOLE: dict(
+            LoadState='loaded', FragmentPath=str(self.units / s.CONSOLE))}
+        self.assertEqual(self.links(), {})
+        self.assert_refused_without_changes(lambda: self.review(pair))
+        self.assert_refused_without_changes(lambda: self.apply(pair, reviewed))
+
+    def test_installed_link_fragment_handles_lazy_name_loading_and_unlinked_cached_units(self):
+        self.manager.fragment_mode = 'installed_link'
+        self.manager.load_new_on_show = True
+        pair = self.export(worker=True, allow_model_call=True)
+        self.apply(pair)
+        self.assert_installed(pair)
+        self.assertTrue(any(
+            rows[s.TARGET]['load_state'] == 'loaded'
+            and rows[s.TARGET]['fragment'] == str(self.units / s.TARGET)
+            and rows[s.CONSOLE]['load_state'] == 'not-found'
+            for rows in self.manager.show_observations),
+            'show must observe the new target before the console link exists')
+        self.context.rollback(self.context.status()['current_sha256'])
+        self.assertTrue(any(
+            rows[s.TARGET]['load_state'] == 'loaded'
+            and rows[s.TARGET]['fragment'] == str(self.units / s.TARGET)
+            and not rows[s.TARGET]['link_exists']
+            for rows in self.manager.show_observations),
+            'loaded target must remain cached after unlink until daemon-reload')
+        self.assertEqual(self.links(), {})
+        self.assertIsNone(self.context.status()['current_sha256'])
+        self.assertEqual(self.manager.reloads, 2)
+        for name in m.PERSONAL_UNITS:
+            self.assertEqual(self.manager.rows[name]['LoadState'], 'not-found')
+
+    def test_recovery_reloads_newer_cached_contents_even_when_links_are_already_restored(self):
+        first, _, pending, initial_current = self.restore_links_while_manager_still_caches_newer_contents()
+        before = self.manager.reloads
+        result = self.context.recover(pending)
+        self.assertEqual(self.manager.reloads, before + 1)
+        self.assertEqual(self.manager.loaded_bytes[s.CONSOLE], first[0]['units'][s.CONSOLE].encode())
+        self.assertEqual(result['current_sha256'], initial_current)
+        self.assertIsNone(result['pending_sha256'])
+        self.assert_installed(first)
+
+    def test_failed_retry_reload_preserves_pending_and_newer_cache_until_success(self):
+        first, second, pending, initial_current = self.restore_links_while_manager_still_caches_newer_contents()
+        before = self.manager.reloads
+        self.manager.fail_reloads = {before + 1}
+        with self.assertRaisesRegex(m.DeployError, 'deployment_recovery_required'):
+            self.context.recover(pending)
+        self.assertEqual(self.manager.reloads, before + 1)
+        self.assertEqual(self.manager.loaded_bytes[s.CONSOLE], second[0]['units'][s.CONSOLE].encode())
+        self.assertEqual(self.context.status()['pending_sha256'], pending)
+        self.assertTrue((self.context.shared / 'pending.json').exists())
+        self.assertEqual(self.context.status()['current_sha256'], initial_current)
+        self.assert_installed(first)
+        self.manager.fail_reloads = set()
+        self.context.recover(pending)
+        self.assertEqual(self.manager.reloads, before + 2)
+        self.assertEqual(self.manager.loaded_bytes[s.CONSOLE], first[0]['units'][s.CONSOLE].encode())
+        self.assertIsNone(self.context.status()['pending_sha256'])
+
+    def test_final_reload_must_not_report_a_loaded_link_path_after_rollback_to_absence(self):
+        self.manager.fragment_mode = 'installed_link'
+        pair = self.export()
+        self.apply(pair)
+        current = self.context.status()['current_sha256']
+        original_read_units = self.manager.read_units
+        stale = []
+
+        def retain_stale_rows(*, only_missing=False):
+            if self.manager.reloads == 2 and not only_missing:
+                stale.append(True)
+                return
+            return original_read_units(only_missing=only_missing)
+
+        with patch.object(self.manager, 'read_units', side_effect=retain_stale_rows):
+            with self.assertRaisesRegex(m.DeployError, 'deployment_failed_restored'):
+                self.context.rollback(current)
+        self.assertEqual(stale, [True])
+        self.assertEqual(self.manager.reloads, 3)
+        self.assertEqual(self.context.status()['current_sha256'], current)
+        self.assertIsNone(self.context.status()['pending_sha256'])
+        self.assert_installed(pair)
 
     def test_identical_reapplication_keeps_receipt_links_and_reload_count(self):
         self.apply(self.export())

@@ -16,6 +16,7 @@ const units=['ultrabrain-personal.target','ultrabrain-personal-console.service',
 const [target,consoleUnit,worker]=units,db='ultrabrain-postgres.service';
 const privateDir=mkdtempSync(join(homedir(),'.ub-deploy-verification-')),unitDir=join(homedir(),'.config/systemd/user');
 let engine,dbLink,dbBytes,dbIdentity,originalUnits,current=null,owned=new Map(),checks=0,complete=false,primaryError;
+const fragmentPathForms=new Set();
 const pass=()=>checks++,sha=value=>createHash('sha256').update(value).digest('hex');
 async function run(command,args,{ok=true,timeout=120000}={}){
  const p=spawn(command,args,{env:process.env,cwd:ROOT,stdio:['ignore','pipe','pipe']});let text='',size=0,overflow=false;
@@ -35,6 +36,17 @@ async function status(){return deploy(['status','--home',HOME]);}
 async function missing(unit){requireMissingUnit(await run('/usr/bin/systemctl',['--user','show',unit,
  '--property=LoadState,ActiveState,FragmentPath','--no-pager'],{ok:false}));}
 async function property(unit,key){return (await ctl('show',unit,'--property='+key,'--value')).text.trim();}
+async function failureObservation(){
+ // Only fixed unit properties from this disposable fixture; no environment,
+ // tokens, configuration contents, or raw service journal enter CI output.
+ const keys=['Id','Names','LoadState','ActiveState','SubState','FragmentPath','DropInPaths','NeedDaemonReload','Job'];
+ const result=await run('/usr/bin/systemctl',['--user','--no-pager','--all','show',
+  '--property='+keys.join(','),'--',...units],{ok:false,timeout:10000});
+ const rows=result.text.trim().split(/\n\n+/).map(block=>Object.fromEntries(block.split('\n').map(line=>{
+  const at=line.indexOf('=');return [line.slice(0,at),line.slice(at+1)];
+ }).filter(([key,value])=>keys.includes(key)&&value.length<=2048&&!/[\x00-\x1f\x7f]/.test(value))));
+ console.log(JSON.stringify({deployment_failure_after_checks:checks,manager_observation:rows}));
+}
 function recordOwned(paths){assert.deepEqual(Object.keys(paths).sort(),[...units].sort());
  owned=new Map(units.filter(n=>{if(paths[n]===null){assert.equal(existsSync(join(unitDir,n)),false);return false;}return true;}).map(n=>{
  const file=join(unitDir,n),stat=lstatSync(file),link=readlinkSync(file);
@@ -60,7 +72,10 @@ async function until(fn,label){const end=Date.now()+15000;while(Date.now()<end){
 async function verifyStopped(spec){
  for(const name of units){if(name===worker&&!spec.worker){await missing(name);continue;}
   assert.equal(await property(name,'ActiveState'),'inactive');assert.equal(await property(name,'Job'),'');
-  assert.equal(await property(name,'DropInPaths'),'');assert.equal(await property(name,'FragmentPath'),readlinkSync(join(unitDir,name)));}
+  assert.equal(await property(name,'DropInPaths'),'');
+  const fragment=await property(name,'FragmentPath'),installed=join(unitDir,name),generation=readlinkSync(installed);
+  assert.ok(fragment===installed||fragment===generation,'Manager fragment must name the verified installed link or its generation');
+  fragmentPathForms.add(fragment===installed?'installed-link':'generation');}
  assert.equal(readlinkSync(join(unitDir,db)),dbLink);assert.equal(sha(readFileSync(dbLink)),dbBytes);
  // Preserve every unrelated file/dependency directory, including all enablement links.
  assert.deepEqual(unrelatedUnits(),originalUnits);
@@ -115,11 +130,28 @@ try{
  assert.equal(ownsLinks(),true);pass();await stop();
  const crashPlan=await reviewed(b);
  const interrupted=await run('python3',['-I','-B',ROOT+'/test/personal-deploy-crash.py',
-  '--expected-deployment',crashPlan.deployment_sha256,...b.args],{ok:false});
+  'apply','--expected-deployment',crashPlan.deployment_sha256,...b.args],{ok:false});
  assert.equal(interrupted.code,73,'The fixture must interrupt the actual transaction after a durable link change');
  const pending=await status();assert.match(pending.pending_sha256,/^[a-f0-9]{64}$/);pass();
  const recovered=await deploy(['recover','--home',HOME,'--expected-pending',pending.pending_sha256]);
  assert.equal(recovered.current_sha256,aid);assert.equal(recovered.pending_sha256,null);current=aid;recordOwned(recovered.unit_paths);
+ await verifyStopped(a);await verifyHTTP(a);await stop();pass();
+ // A second crash during recovery must not leave the newer parsed config in
+ // systemd merely because the restored link pathname is unchanged.
+ const cachedPlan=await reviewed(b);
+ const afterReload=await run('python3',['-I','-B',ROOT+'/test/personal-deploy-crash.py','apply',
+  '--checkpoint','after_reload','--expected-deployment',cachedPlan.deployment_sha256,...b.args],{ok:false});
+ assert.equal(afterReload.code,73);const cachedPending=await status();
+ assert.ok((await property(consoleUnit,'ExecStart')).includes(b.source));
+ const restoreCrash=await run('python3',['-I','-B',ROOT+'/test/personal-deploy-crash.py','recover',
+  '--home',HOME,'--expected-pending',cachedPending.pending_sha256],{ok:false});
+ assert.equal(restoreCrash.code,73);const restoredPending=await status();
+ assert.equal(restoredPending.current_sha256,aid);assert.equal(restoredPending.pending_sha256,cachedPending.pending_sha256);
+ assert.ok((await property(consoleUnit,'ExecStart')).includes(b.source),'The actual manager still caches the newer source before recovery reload');pass();
+ const recoveredAgain=await deploy(['recover','--home',HOME,'--expected-pending',restoredPending.pending_sha256]);
+ assert.equal(recoveredAgain.current_sha256,aid);assert.equal(recoveredAgain.pending_sha256,null);
+ assert.equal(recoveredAgain.configuration_changed,false);recordOwned(recoveredAgain.unit_paths);
+ assert.ok((await property(consoleUnit,'ExecStart')).includes(a.source),'Recovery must replace the actual cached source even when no links changed');
  await verifyStopped(a);await verifyHTTP(a);await stop();pass();
  const bid=await apply(b);assert.notEqual(bid,aid);await verifyStopped(b);await verifyHTTP(b);await stop();pass();
  const cid=await apply(c);assert.notEqual(cid,bid);await verifyStopped(c);pass();
@@ -128,7 +160,7 @@ try{
  assert.equal(await rollback(),null);for(const n of units)await missing(n);pass();
  assert.equal((await status()).pending_sha256,null);assert.equal(sha(readFileSync(HOME+'/gbrain/.gbrain/config.json')),originalConfig);
  assert.equal(await property(db,'ActiveState'),'active');assert.equal(readlinkSync(join(unitDir,db)),dbLink);pass();complete=true;
-}catch(error){primaryError=error;}finally{
+}catch(error){primaryError=error;try{await failureObservation();}catch{console.log(JSON.stringify({manager_observation:'unavailable'}));}}finally{
  // On failure retain private evidence unless every remaining link is provably ours.
  const cleanupErrors=[];
  const attempt=async operation=>{try{await operation();}catch(error){cleanupErrors.push(error);}};
@@ -146,4 +178,5 @@ try{
 }
 if(primaryError)throw primaryError;
 console.log(JSON.stringify({ok:true,checks,systemd:'actual-user-manager',postgresql:'actual',http:'authenticated-local-console',
- interruption:'actual-process-exit-and-cli-recovery',model_calls:0,user_host_deployed:false}));
+ interruption:'actual-process-exit-and-cli-recovery',repeated_recovery:'actual-stale-manager-cache-reloaded',
+ fragment_path_forms:[...fragmentPathForms].sort(),model_calls:0,user_host_deployed:false}));

@@ -329,7 +329,14 @@ class Context:
             if row['LoadState'] == 'not-found':
                 need(None in allowed and row['FragmentPath'] == '', 'unit_manager_binding_mismatch')
             else:
-                need(row['LoadState'] == 'loaded' and row['FragmentPath'] in allowed,
+                # systemd 255 name lookup can report the installed symlink as
+                # FragmentPath. Callers already validate its owned identity and
+                # generation (or journal transition); an absent-only set cannot
+                # authorize a loaded unit merely by its installed pathname.
+                installed_path = (any(target is not None for target in allowed)
+                                  and row['FragmentPath'] == str(self.unit_dir/name))
+                need(row['LoadState'] == 'loaded'
+                     and (row['FragmentPath'] in allowed or installed_path),
                      'unit_manager_binding_mismatch')
             observed[name] = {key: row[key] for key in PROPERTIES}
         return observed
@@ -604,15 +611,13 @@ class Context:
                                absent_expected=state_identity is None)
         self.fault('after_current')
 
-    def _reload(self, journal, side, *, changed=True):
+    def _reload(self, journal, side):
         self._check_transaction(journal)
         wanted = self._targets(self._receipt(journal[('before' if side == 'restore' else side)+'_current']))
-        if not changed:
-            try:
-                self._manager_guard(wanted)
-                return
-            except DeployError as error:
-                need(str(error) in ('manager_reload_required', 'unit_manager_binding_mismatch'), str(error))
+        # Recovery may have already restored the symlinks before a crash. The
+        # cached newer generation can share the same FragmentPath and report no
+        # reload needed when restored files are older. Every pending transaction
+        # therefore needs an acknowledged reload before its journal is cleared.
         self.fault('before_reload')
         self.manager('reload')
         self.fault('after_reload')
@@ -633,7 +638,7 @@ class Context:
     def _restore(self, journal):
         changed = self._change_links(journal, 'restore')
         self._change_current(journal, 'restore')
-        self._reload(journal, 'restore', changed=changed)
+        self._reload(journal, 'restore')
         self._clear(journal)
         return changed
 
