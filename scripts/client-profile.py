@@ -50,12 +50,21 @@ def make_profile(a):
     if scopes:
         check(a.allow_capture and outbox is not None)
         result['automatic_capture']=scopes
+    task_allowed=getattr(a,'allow_task_context',False)
+    task_scopes=getattr(a,'automatic_task_context',[]) or []
+    check(type(task_allowed) is bool and isinstance(task_scopes,list) and len(task_scopes)<=1 and all(x=='claude-user' for x in task_scopes))
+    check(not task_scopes or task_allowed)
+    if task_allowed:
+        check(a.workspace and a.expected_instance and a.expected_actor)
+        result['allow_task_context']=True
+    if task_scopes:result['automatic_task_context']=task_scopes
     return result
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);g=p.add_mutually_exclusive_group(required=True)
     g.add_argument('--ssh');g.add_argument('--local',action='store_true');g.add_argument('--url')
     for name in ('repo','home','bun','bearer-env','project','workspace','expected-instance','expected-actor'):p.add_argument('--'+name)
+    p.add_argument('--allow-task-context',action='store_true');p.add_argument('--automatic-task-context',action='append',choices=['claude-user'],default=[])
     p.add_argument('--outbox');p.add_argument('--automatic-capture',action='append',choices=['claude-user','claude-assistant','opencode-user','opencode-assistant'],default=[]);p.add_argument('--source',default='default');p.add_argument('--output',required=True);p.add_argument('--allow-documents',action='store_true');p.add_argument('--allow-capture',action='store_true');a=p.parse_args()
     try:
         result=make_profile(a);target=Path(os.path.abspath(a.output))

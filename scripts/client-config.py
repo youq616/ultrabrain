@@ -12,7 +12,7 @@ import stat
 import sys
 import tomllib
 
-CLIENTS = ('codex','claude-code','opencode','zcode','claude-hooks','claude-capture-hooks')
+CLIENTS = ('codex','claude-code','opencode','zcode','claude-hooks','claude-capture-hooks','claude-task-hooks')
 MAX_FILE = 2 * 1024 * 1024
 class ConfigError(Exception):
     pass
@@ -81,7 +81,34 @@ def command_spec(node,cli,profile):
     check(Path(cli).is_absolute() and Path(profile).is_absolute(),'absolute_cli_and_profile_required')
     return [node,cli,'mcp','--profile',profile]
 
-def patch(client,old,command,capture_scopes=()):
+def guard_task_hook(hooks, expected):
+    """A single selected settings file may retain only this exact generated task Hook.
+
+    Do not interpret/execute shell code or rewrite custom hooks. Conservative
+    command recognition also catches ordinary shell re-quoting; unknown wrappers
+    and other settings layers remain the operator's responsibility.
+    """
+    matches=0
+    for event, groups in hooks.items():
+        check(isinstance(groups,list),'invalid_hook_list')
+        for group in groups:
+            check(isinstance(group,dict) and isinstance(group.get('hooks'),list),'invalid_hook_group')
+            for hook in group['hooks']:
+                check(isinstance(hook,dict),'invalid_hook_entry')
+                cmd=hook.get('command')
+                if not isinstance(cmd,str):
+                    continue
+                try:
+                    words=shlex.split(cmd,posix=True)
+                except ValueError:
+                    words=[]
+                if 'claude-task-hook' not in cmd and 'claude-task-hook' not in words:
+                    continue
+                matches+=1
+                check(matches==1 and event=='UserPromptSubmit' and group==expected,
+                      'existing_task_hook_conflict')
+
+def patch(client,old,command,capture_scopes=(),task_scopes=()):
     if client=='codex':
         text='' if old is None else old.decode('utf-8');parsed=tomllib.loads(text)
         servers=parsed.get('mcp_servers',{});check(isinstance(servers,dict),'invalid_mcp_table')
@@ -91,14 +118,19 @@ def patch(client,old,command,capture_scopes=()):
         block='\n[mcp_servers.ultrabrain]\n'+'\n'.join(k+' = '+json.dumps(v,ensure_ascii=False) for k,v in entry.items())+'\n'
         out=(text+block).encode('utf-8');check(tomllib.loads(out.decode())['mcp_servers']['ultrabrain']==entry,'toml_validation_failed');return out
     data={} if old is None else json_load(old);check(isinstance(data,dict),'object_config_required')
-    if client in ('claude-hooks','claude-capture-hooks'):
+    if client in ('claude-hooks','claude-capture-hooks','claude-task-hooks'):
         # Paths are command data quoted for Claude command hooks' POSIX/Git-Bash shell.
         check(data.get('disableAllHooks') is not True,'hooks_disabled')
         action='claude-capture-hook' if client=='claude-capture-hooks' else 'claude-hook'
         events=('SessionStart','UserPromptSubmit') if client=='claude-hooks' else tuple(e for scope,e in [('claude-user','UserPromptSubmit'),('claude-assistant','Stop')] if scope in capture_scopes)
+        if client=='claude-task-hooks':
+            check(task_scopes==['claude-user'],'explicit_automatic_task_scope_required')
+            action='claude-task-hook';events=('UserPromptSubmit',)
         check(bool(events),'explicit_automatic_capture_scopes_required')
         hook_cmd=shlex.join([command[0].replace('\\','/'),command[1].replace('\\','/'),action,'--profile',command[-1].replace('\\','/')])
         hooks=data.setdefault('hooks',{});check(isinstance(hooks,dict),'invalid_hooks')
+        if client=='claude-task-hooks':
+            guard_task_hook(hooks,{'matcher':'','hooks':[{'type':'command','command':hook_cmd,'timeout':30}]})
         for event in events:
             group={'matcher':'','hooks':[{'type':'command','command':hook_cmd,'timeout':30}]}
             entries=hooks.setdefault(event,[]);check(isinstance(entries,list),'invalid_hook_list')
@@ -159,7 +191,12 @@ def main(argv=None):
             cli_path=safe_path(a.cli);check(cli_path.is_file(),'client_cli_missing')
             if a.client=='claude-capture-hooks':
                 check(profile.get('allow_capture') is True and profile.get('workspace') and profile.get('expected_instance') and profile.get('expected_actor') and profile.get('outbox_directory'),'automatic_capture_profile_required')
-            command=command_spec(a.node,str(cli_path),str(profile_path));old=read_file(target);new=patch(a.client,old,command,profile.get('automatic_capture',[]))
+            if a.client=='claude-task-hooks':
+                check(profile.get('allow_task_context') is True and profile.get('automatic_task_context')==['claude-user']
+                      and Path(profile.get('workspace','')).is_absolute()
+                      and bool(re.fullmatch(r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}',profile.get('expected_instance','')))
+                      and bool(re.fullmatch(r'[a-f0-9]{64}',profile.get('expected_actor',''))),'task_context_profile_required')
+            command=command_spec(a.node,str(cli_path),str(profile_path));old=read_file(target);new=patch(a.client,old,command,profile.get('automatic_capture',[]),profile.get('automatic_task_context',[]))
             result={'client':a.client,'target':str(target),'changed':old!=new,'before_sha256':'absent' if old is None else digest(old),'after_sha256':digest(new),'mode':'plan','contains_memory':False}
             if a.apply:
                 write_new(lock,b'local configuration transaction\n')

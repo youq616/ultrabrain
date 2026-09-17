@@ -1,0 +1,78 @@
+{
+  "format": 1,
+  "phase": "task-context-receiver",
+  "base_commit": "a5e76f7ab2af4dddb1f72d8a95ab02d2f32593f6",
+  "prior_candidate": "e52ce8418ead81283f2b27094892984cb66136dc",
+  "source_archive_sha256": "5079f177273b15b06b72b273afef26399f0ad22ba9d67c22d4f34e89be7e848b",
+  "changed_execution_files": {
+    "scripts/client-config.py": "6061d2338397c3643f0e514ab9be9e9673f08c6a2d2f2b5963bb51d324d14882",
+    "packages/ultrabrain-client/src/cli.mjs": "5b6d9737d68a0f5f24d904c141e0b2cf13711c160fbc0c81cbab4dcc42671f69",
+    "test/test_task_context_config.py": "10a1142f0e6a4e1759fb0915dbafeb8952bc346054271abcaae265e69c60cd82",
+    "test/task-context-integration.mjs": "73a2a7260c344e62913acf32a7f26622e6e0766cc64a068b02c5284f4a10c9cb"
+  },
+  "tests": {
+    "node": 520,
+    "python": 280,
+    "task_integration": 21,
+    "task_config": 16,
+    "client": 19,
+    "capture": 20,
+    "documents": 12,
+    "personal": 43,
+    "ranking": 20
+  },
+  "checks": {
+    "node-full": {
+      "exit_code": 0,
+      "log_sha256": "8050049ad68e94170271e21a6898a293a89c46f703bc29eb5a80a9bd63940e2b"
+    },
+    "python-isolated": {
+      "exit_code": 0,
+      "log_sha256": "8c64850fdc8d24ef1963f84298a935a4b296a42195964baa4f21c613958486eb"
+    },
+    "task-final": {
+      "exit_code": 0,
+      "log_sha256": "400b4f2f656ec57dd73309dc71d77a4710a5aee845094be5001e0fb5ba030c77"
+    },
+    "client-kit-integration": {
+      "exit_code": 0,
+      "log_sha256": "31bd10c8466112cb97fc5a29498255ea253992f9e07c279c2f7332464e848ea5"
+    },
+    "capture-integration": {
+      "exit_code": 0,
+      "log_sha256": "ef8c14c7de367e3d9d8b836dd2479bb801c39e20bb2658fe17b1463d42383c6e"
+    },
+    "document-client-integration": {
+      "exit_code": 0,
+      "log_sha256": "5de99bbffb338fe0909e38b97f12dfde9d2137ea06df4cbc61f8b9d33c51326a"
+    },
+    "personal-integration": {
+      "exit_code": 0,
+      "log_sha256": "b159d14e1ad18a1f7ac37d135b2bad848cff5d68761be0edbb8e820068ec8e39"
+    },
+    "personal-ranking-integration": {
+      "exit_code": 0,
+      "log_sha256": "2f1e1ff9dffb87409ebe053a12f5d03b0932f0a96dee9a7268afe1ba537a926e"
+    }
+  },
+  "first_failure_log_hashes": {
+    "config-before.log": "052c9255f42714ad1da28aa568a8fbeec3c05d57f2a6969f0869326d435f6ddf",
+    "query-delivery-before.log": "b29785f70c2db9976139387ae598778129792d41a0ba0d5e24a436c8eda3eb23",
+    "python-full.log": "f61d4e087de3192c3741117e6b826dc498630172182fad81e4a2edbd660e643a",
+    "task-fixed.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "limitations": [
+    "The first Python run under concurrent full Node tests had 2 fixture timing errors. A subsequent full Python run completed with 280 passing methods; no affected preflight/status source was changed.",
+    "One outer 45-second runner timed out; its incomplete task run is not a pass. A separate completed run passed 21 task integration checks.",
+    "Historical pinned PostgreSQL/Bun/SDK cache reused, not freshly compiled or installed from npm locally. CI performs actual npm installation.",
+    "Two response-loss cases instrument the SDK after a successful real context read; normal paths are uninstrumented. Claude stdin events are synthetic."
+  ],
+  "independent_review": {
+    "prior_reviewer": "chatgpt-codex-connector[bot]",
+    "prior_review": 5231887900,
+    "blocking_comment": 4033742038,
+    "corrected_candidate": "requires_new_sha_review"
+  },
+  "remote_ci": "pending_current_candidate",
+  "merge_allowed": false
+}

@@ -1,0 +1,19 @@
+# Task-context receiver: implementation review and regression evidence
+
+This is the implementation assistant's separate review, **not** an independent-agent approval. PR #10 must retain an actual current-SHA independent review and successful CI before merge. Base a5e76f7ab2af4dddb1f72d8a95ab02d2f32593f6; previous candidate e52ce8418ead81283f2b27094892984cb66136dc. The downloaded source snapshot was checksum-verified and reconstructed the exact 53b7dfe30d2e0a6cdf3f76fe408d7030396f7bb0 tree. No original history is rewritten.
+
+## Findings and implemented corrections
+
+Independent Codex review 5231887900, finding 4033742038 (P1): adding a task Hook after changing profile/CLI retained the old command and could continue sending prompts to a stale destination. Receiver added seven test methods: the original candidate produced ten failing assertions including subtests. The fix permits only one exact canonical task Hook in the selected settings file, rejects rotation/duplicates/changed groups before any write, and preserves unrelated hooks. Explicit rollback followed by a new plan/apply is tested. Ordinary shell re-quoting is treated conservatively, not evaluated. This is not a scanner of all host settings, plugins or arbitrary hidden shell wrappers.
+
+Separate implementation review also verified the already-reported diagnostic defect: after a real MCP context response, a locally injected lost reply caused the original CLI to return generic delivery:not_submitted. New errors distinguish query_delivery:not_started/unconfirmed and memory_writes_requested:false; the Claude Hook reports uncertainty and returns no recalled context. A failure after entering delivery is conservatively uncertain, not proof the task was sent or unsent. Existing commands' error formats are preserved.
+
+Review scope included the entire phase's profile flags, fixed identity/project/workspace, stdin and identity waits, last-mile revocation and response suppression, strict UTF-8 task bounds, unchanged raw MCP context permissions, server ownership filters, logging limitations, packaging and configuration rollback. No new data capture, model calls, Agent registration or automatic retry was introduced. Historical migrations, upstream pins, service/Worker/console implementations and existing server ranking were not changed.
+
+## Executed evidence
+
+Final completed runs: 520 Node tests (zero failures/skips); 280 Python methods; 21 real task integration checks using the built CLI, stdio and read-only HTTP MCP and PostgreSQL; 16 task-configuration tests included in Python. Other completed real regressions: client/proxy 19, capture/outbox 20, document client 12, personal core 43, ranking 20. Query/read tests leave full memory/registry/jobs/document fingerprints unchanged. Two task checks inject local response loss after a real successful read; this is separate from normal uninstrumented tests and is not a live Claude model test.
+
+The first fully concurrent Python run had two timing errors in existing status/preflight subprocess fixtures; the complete rerun passed without editing those files. One outer runner was killed by its 45-second execution limit before integration completion and is not counted as passed. Logs are retained locally and their hashes, exact changed execution-file hashes and scope limits are in TASK-CONTEXT-RECEIVER.json. Raw temporary paths, task text, logs, credentials and databases are not published.
+
+The runtime uses a previously supplied pinned PostgreSQL/Bun/SDK diagnostic cache, not a fresh local rebuild or npm network install. Current-SHA CI must build/install the exact client tgz and run task, complete historical upgrade/browser/n8n, portability, native clients, recovery and live personal-services workflows. Old green runs and the prior finding are not final acceptance. A matching source tree/test count does not establish zero defects or complete Personal V1.
