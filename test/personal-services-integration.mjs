@@ -33,6 +33,16 @@ async function run(command,args,{ok=true,timeout=120000}={}){
  finally{clearTimeout(timer);}
 }
 const ctl=(...args)=>run('systemctl',['--user',...args]);
+async function unitStatus(expectWorker=false){
+ const r=await run(process.execPath,[ROOT+'/src/cli.mjs','personal-status',...(expectWorker?['--expect-worker']:[])],{ok:false,timeout:10000});
+ const value=JSON.parse(r.text);
+ assert.equal(value.application_ready,'not_checked');assert.equal(value.installation_binding_verified,false);assert.equal(value.database_connected,false);
+ assert.equal(value.model_called,false);assert.equal(value.configuration_changed,false);
+ assert.equal(value.services_started,false);assert.equal(value.services_stopped,false);
+ assert.notEqual(value.status,'unavailable','Actual runner user manager must be observed');
+ assert.equal(value.units.length,4);assert.equal(value.worker_required,expectWorker);
+ return {code:r.code,value};
+}
 async function missing(unit){
  const result=await run('systemctl',['--user','show',unit,
   '--property=LoadState,ActiveState,FragmentPath','--no-pager'],{ok:false});
@@ -68,6 +78,8 @@ async function unlinkOwned(name){
 }
 try{
  for(const n of names)await missing(n);
+ const absent=await unitStatus();assert.equal(absent.code,1);
+ assert.ok(absent.value.units.every(u=>u.reason==='unit_not_found'));pass();
  engine=await connect();const source='services-'+randomBytes(4).toString('hex');
  await engine.executeRaw('INSERT INTO sources(id,name) VALUES($1,$1)',[source]);
  const store=new PersonalMemoryStore({sourceId:source,engine,remote:false,transport:'stdio'});await store.register({agent_id:'service-fixture'});
@@ -84,6 +96,9 @@ try{
  const base=join(privateDir,'database');await run('python3',[ROOT+'/scripts/install-service.py','--output',base]);
  await link(join(base,db));await link(join(minimal,target));await link(join(minimal,consoleUnit));await ctl('daemon-reload');
  await ctl('start',target);await until(ready,'console HTTP');await missing(worker);pass();
+ const minimalStatus=await unitStatus();assert.equal(minimalStatus.code,0);
+ assert.equal(minimalStatus.value.units.find(u=>u.unit===db).sub_state,'exited');
+ assert.equal((await unitStatus(true)).code,1);assert.equal((await status(job.job_id)).attempts,0);pass();
  const token=readFileSync(HOME+'/personal-console-token','utf8').trim();
  const response=await fetch(url+'/api/call',{method:'POST',headers:{Origin:url,'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({operation:'info'})});
  assert.equal(response.status,200);assert.equal((await response.json()).result.source_id,source);pass();
@@ -95,6 +110,10 @@ try{
  for(const n of [target,consoleUnit,worker])await link(join(automated,n));await ctl('daemon-reload');await ctl('start',target);
  await until(async()=>await property(worker,'ActiveState')==='failed','needs_model stops worker');
  assert.equal(await property(worker,'ExecMainStatus'),'2');assert.equal(await property(worker,'NRestarts'),'0');
+ assert.equal((await status(job.job_id)).attempts,0);pass();
+ const failedWorker=await unitStatus(true);assert.equal(failedWorker.code,1);
+ assert.equal(failedWorker.value.units.find(u=>u.unit===worker).reason,'worker_exit_2_check_model_configuration');
+ assert.equal((await unitStatus()).value.warnings.includes('optional_worker_failed'),true);
  assert.equal((await status(job.job_id)).attempts,0);pass();
  provider=createServer(async(req,res)=>{try{
   let body='';for await(const b of req){body+=b;if(body.length>131072)throw Error();}const p=JSON.parse(body);calls++;
@@ -109,6 +128,8 @@ try{
  writeFileSync(configFile,JSON.stringify(enabled)+'\n',{mode:0o600});
  await ctl('reset-failed',worker);await ctl('start',worker);
  await until(async()=> (await status(job.job_id)).state==='completed','first queued observation');assert.equal(calls,1);pass();
+ const running=await unitStatus(true);assert.equal(running.code,0);
+ assert.equal(running.value.units.find(u=>u.unit===worker).observed_active,true);assert.equal(calls,1);pass();
  const candidate=(await status(job.job_id)).result.entries[0];
  const memory=(await store.search({status:'candidate'})).memories.find(r=>r.id===candidate.id);
  assert.equal(memory.status,'candidate');assert.equal(memory.visibility,'private');assert.equal(memory.derivation.quote,'do not erase source evidence');pass();
@@ -116,9 +137,16 @@ try{
  await until(async()=> (await status(second.job_id)).state==='completed','periodic next batch',50000);assert.equal(calls,2);pass();
  const prior=await property(consoleUnit,'MainPID');await ctl('kill','--kill-who=main','--signal=SIGKILL',consoleUnit);
  await until(async()=>{const pid=await property(consoleUnit,'MainPID');return pid!=='0'&&pid!==prior&&await ready();},'console automatic restart',45000);
- assert.equal(await property(consoleUnit,'NRestarts'),'1');pass();
+ assert.equal(await property(consoleUnit,'NRestarts'),'1');
+ const restarted=await unitStatus(true);assert.equal(restarted.code,0);
+ assert.equal(restarted.value.units.find(u=>u.unit===consoleUnit).restarts,1);
+ assert.ok(restarted.value.warnings.includes('service_restart_observed'));pass();pass();
  await ctl('stop',target);await until(async()=>await property(worker,'ActiveState')==='inactive','worker graceful shutdown');
  assert.equal(await property(consoleUnit,'ActiveState'),'inactive');assert.equal(await property(db,'ActiveState'),'active');pass();
+ const stopped=await unitStatus(true);assert.equal(stopped.code,1);
+ assert.equal(stopped.value.units.find(u=>u.unit===db).observed_active,true);
+ assert.equal(stopped.value.units.find(u=>u.unit===consoleUnit).observed_active,false);
+ assert.equal(stopped.value.units.find(u=>u.unit===worker).observed_active,false);pass();
  assert.equal((await store.profile()).memories.length,0);assert.equal(calls,2);pass();
  report={passed:true,checks,scope:'actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment',model_calls_to_local_fixture:calls};
 }finally{

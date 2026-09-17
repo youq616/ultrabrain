@@ -96,3 +96,7 @@ context/profile 改为先排名后取前 100（修复旧 high 偏好被时间窗
 ## 离线部署前检查
 
 `python3 -B scripts/preflight.py --mode install` 可在尚未安装 Bun 时报告本地前置条件；`bun src/cli.mjs preflight --mode runtime` 检查已有托管配置和运行时元数据。均不安装、不修复、不连接数据库、不调用模型。通过不代表服务已启动或全部 Agent 已接通，详见 [部署预检](docs/DEPLOYMENT-PREFLIGHT.md)。阶段发布以实际候选 CI 和独立审核为准。
+
+## 个人服务状态（按提交验收）
+
+新增只读 `personal-status [--expect-worker]`，区分管理器不可访问、缺少单元、管理台/Worker状态和重启记录。诊断不启停服务、不读记忆或秘密，不把用户单元的活动状态当作数据库/HTTP/MCP就绪。说明见 [个人服务状态](docs/PERSONAL-STATUS.md)。验收以最终提交的独立代理审核及真实systemd CI为准，不是整个个人V1已完成的声明。
