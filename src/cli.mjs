@@ -7,6 +7,7 @@ const [command, ...rest] = args;
 try {
   if (!command || ['help','--help','-h'].includes(command)) {
     console.log(`ultrabrain 0.14.0-alpha.1 — Linux / managed PostgreSQL
+  personal-status [--expect-worker]           Read user-unit state; not application readiness
   personal-services [--output PATH --expected-plan SHA]   Plan personal user services; no activation
   preflight --mode install|runtime            Offline, read-only installation checks
   recovery create|verify|stage|restore-database   Private recovery set; never auto-activate
@@ -31,9 +32,9 @@ No arbitrary SQL MCP endpoint is added. HTTP/OAuth: native serve --help.
 Lifecycle bridge: bun scripts/agent-bridge.mjs --url URL --token-file PATH --root ultra://SOURCE/ < event.json
 Deferred worker: bun scripts/consolidate.mjs --url URL --token-file PATH --source SOURCE
 Upstream-dependent features require their original providers/configuration.`);
-  } else if (['db','upstream','summary-config','personal-model-config','recovery','preflight','personal-services'].includes(command)) {
-    const script = command === 'personal-services' ? 'personal-services.py' : command === 'preflight' ? 'preflight.py' : command === 'recovery' ? 'recovery.py' : command === 'personal-model-config' ? 'configure-personal-model.py' : command === 'db' ? (['vector-plan','vector-upgrade','vector-recover'].includes(rest[0]) ? 'vector-upgrade.py' : 'postgres.py') : command === 'summary-config' ? 'configure-summary.py' : 'upstreams.py';
-    const p = spawnSync('python3', [...(command === 'preflight' ? ['-B'] : []), `${ROOT}/scripts/${script}`, ...rest], { stdio: 'inherit' });
+  } else if (['db','upstream','summary-config','personal-model-config','recovery','preflight','personal-services','personal-status'].includes(command)) {
+    const script = command === 'personal-status' ? 'personal-status.py' : command === 'personal-services' ? 'personal-services.py' : command === 'preflight' ? 'preflight.py' : command === 'recovery' ? 'recovery.py' : command === 'personal-model-config' ? 'configure-personal-model.py' : command === 'db' ? (['vector-plan','vector-upgrade','vector-recover'].includes(rest[0]) ? 'vector-upgrade.py' : 'postgres.py') : command === 'summary-config' ? 'configure-summary.py' : 'upstreams.py';
+    const p = spawnSync('python3', [...(command === 'personal-status' ? ['-I','-B'] : command === 'preflight' ? ['-B'] : []), `${ROOT}/scripts/${script}`, ...rest], { stdio: 'inherit' });
     if (p.error) throw p.error;
     process.exitCode = p.status ?? 1;
   } else if (command === 'personal-ui') {

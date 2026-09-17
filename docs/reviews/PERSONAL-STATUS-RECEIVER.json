@@ -1,0 +1,66 @@
+{
+  "format": 1,
+  "phase": "personal-status-receiver",
+  "base_commit": "1a1c74474a057d2e60eac83a6b8e190792d234e0",
+  "recovered_checkpoint_tree": "8636f07d576c6aef53b0ab83dd4f173957ad3e0e",
+  "original_checkpoint_zip_sha256": "75d955ee65ca87510158a8291d877c9358eab3a307e08baa23b78488565be6f0",
+  "original_patch_sha256": "9f9527ea8d0c4bea1d08c8d7229668b691fbdf71dd073b5bf2bc4b5d010708c9",
+  "tests": {
+    "recovered_node": {
+      "passed": 497,
+      "failed": 0,
+      "skipped": 0
+    },
+    "recovered_python": {
+      "passed": 255,
+      "failed": 0
+    },
+    "repaired_node": {
+      "passed": 497,
+      "failed": 0,
+      "skipped": 0
+    },
+    "repaired_python": {
+      "passed": 264,
+      "failed": 0
+    },
+    "receiver_review_methods": 9,
+    "before_review_failure_assertions_including_subtests": 9,
+    "repaired_status_python_methods": 52,
+    "actual_local_manager": "unavailable; real CLI exit3, no service activation",
+    "syntax": "passed"
+  },
+  "independent_review": "pending; require final-SHA external PR verdict",
+  "current_candidate_ci": "pending; require real user-systemd and full workflows",
+  "self_review": "same implementation assistant; not independent Agent",
+  "evidence_sha256": {
+    "actual-status.exit": "1121cfccd5913f0a63fec40a6ffd44ea64f9dc135c66634ba001d10bcf4302a2",
+    "actual-status.json": "de3d7372506eab1c4208e29a7fe8050129d9850167468fdbe179ec17a9ab8b30",
+    "actual-status.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "node-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "node-final.log": "d919e70a5e1250ac3c95363ef8f52f88dc220d718bf789abe965fbc40ad0a54e",
+    "node-recovered.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "node-recovered.log": "a4f72ea48716589e9e6eda5b959e41c3ad708e34fefc14f0a91b67056ea5ce5d",
+    "python-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "python-final.log": "92446dca5ef540bfae12d5f4b2a810ee1254090ef8809355e39db65175288698",
+    "python-recovered.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "python-recovered.log": "47f735d07d8c44613da93f6328daefb0458961d20d6a2a06381911dd8724f809",
+    "review-after.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "review-after.log": "a089b22fab3fc8e4334e41bced20e703fc02787eb3192bca0e29d87db3329531",
+    "review-before.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "review-before.log": "5a087ee5b0fff82e2b80e12a653013e47a8e23f248495e969f0825a9ac6fddc5",
+    "static-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "publication": "this record describes local execution; see final PR for subsequent publication/review/CI/merge",
+  "unchanged": [
+    "historical migrations",
+    "upstream locks and gitlinks",
+    "AGENTS.md",
+    "service generator and installer",
+    "console and Worker logic",
+    "MCP and enterprise tool surfaces"
+  ],
+  "real_user_content_used": false,
+  "paid_models_called": false,
+  "user_services_started": false
+}

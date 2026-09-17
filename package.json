@@ -49,6 +49,8 @@
     "test:recovery": "python3 test/recovery-integration.py",
     "preflight": "python3 -B scripts/preflight.py",
     "test:preflight": "python3 -B -m unittest discover -s test -p 'test_preflight*.py' -v",
-    "test:personal-services": "bun test/personal-services-integration.mjs"
+    "test:personal-services": "bun test/personal-services-integration.mjs",
+    "personal:status": "python3 -I -B scripts/personal-status.py",
+    "test:personal-status": "python3 -B -m unittest discover -s test -p 'test_personal_status*.py' -v"
   }
 }
