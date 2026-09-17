@@ -90,7 +90,14 @@ async function verifyHTTP(spec){
  const anonymous=await fetch(url+'/api/call',{method:'POST',signal:AbortSignal.timeout(5000),
   headers:{Origin:url,'Content-Type':'application/json'},body:'{"operation":"info"}'});assert.equal(anonymous.status,401);
 }
-async function stop(){await ctl('stop',target);for(const n of [target,consoleUnit])assert.equal(await property(n,'ActiveState'),'inactive');}
+async function stop(){
+ await ctl('stop',target);
+ // The target's completed stop job can precede its PartOf service's final
+ // transition out of deactivating. Keep the deployer's strict stopped guard.
+ await until(async()=>{for(const n of [target,consoleUnit]){
+  if(await property(n,'ActiveState')!=='inactive'||await property(n,'Job')!=='')return false;
+ }return true;},'personal target and console fully stopped');
+}
 async function exported(name,workerEnabled=false){
  const spec={dir:join(privateDir,name),source:'deploy-'+randomBytes(5).toString('hex'),port:await port(),worker:workerEnabled};
  await engine.executeRaw('INSERT INTO sources(id,name) VALUES($1,$1)',[spec.source]);
