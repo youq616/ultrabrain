@@ -80,4 +80,6 @@ python3 -I -B scripts/personal-deploy.py recover --home "$ULTRABRAIN_HOME" \
 
 `Personal user services` 工作流在明确获准的一次性普通用户 runner 上，先执行既有服务集成，再执行 `test/personal-deploy-integration.mjs`：实际安装、删除导出后启动、令牌认证、运行中拒绝变更、真实事务子进程中断及公开 CLI 恢复、停止后更新、增删 Worker 配置和逐级回滚。测试分别检查实际 FragmentPath、无排队任务及数据库配置保留；部署工具本身只重载，所有 start/stop 由测试夹具明确调用。新部署集成不调用模型，既有周期 Worker 集成仍使用合成供应商响应。
 
+GitHub 托管 Ubuntu 镜像 `ubuntu24/20260907.300` 的 [构建脚本](https://github.com/actions/runner-images/blob/ubuntu24/20260907.300/images/ubuntu/scripts/build/configure-system.sh) 将 `/usr/share` 递归设为 0777，生产部署器会正确拒绝这种可写搜索路径。该一次性工作流逐级打开并检查 root 拥有的 `/usr/share`、`/usr/share/systemd`、`/usr/share/systemd/user`，只对实际存在的目录用文件描述符非递归移除组/其他用户写权限，并记录原权限与结果；缺失目录保持缺失。它没有给生产工具增加权限绕过，也没有修改用户主机。
+
 最终提交的测试运行与独立代理审核结果以 [项目状态](PROJECT-STATUS.md) 和审核记录为准。没有以这些 CI 代替用户实际主机、断电文件系统、真实客户端/模型或完整个人 V1 验收。

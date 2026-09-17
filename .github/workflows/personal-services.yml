@@ -33,6 +33,36 @@ jobs:
           key: native-ubuntu24-v1-${{ hashFiles('upstreams.lock.json', 'scripts/build-postgres.sh') }}
       - name: Initialize only synthetic installation
         run: bash scripts/bootstrap-linux.sh
+      - name: Harden system unit search directories only on this disposable runner
+        # The hosted ubuntu24/20260907.300 image makes /usr/share recursively 0777.
+        # Keep the production refusal; restore safe directory ancestry in this fixture.
+        run: |
+          sudo /usr/bin/python3 -I -B - <<'PY'
+          import json, os, stat
+          flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+          parent = os.open('/usr', flags)
+          path = '/usr'
+          try:
+              value = os.fstat(parent)
+              assert value.st_uid == 0 and not value.st_mode & 0o022
+              for component in ('share', 'systemd', 'user'):
+                  path += '/' + component
+                  try:
+                      child = os.open(component, flags, dir_fd=parent)
+                  except FileNotFoundError:
+                      print(json.dumps({'runner_directory': path, 'absent': True}))
+                      break
+                  os.close(parent)
+                  parent = child
+                  value = os.fstat(parent)
+                  assert value.st_uid == 0
+                  mode = stat.S_IMODE(value.st_mode) & ~0o022
+                  os.fchmod(parent, mode)
+                  print(json.dumps({'runner_directory': path, 'mode_before': oct(stat.S_IMODE(value.st_mode)),
+                                    'mode_after': oct(stat.S_IMODE(os.fstat(parent).st_mode))}))
+          finally:
+              os.close(parent)
+          PY
       - name: Start runner user manager (not a user production machine)
         run: |
           sudo loginctl enable-linger "$(id -un)"
