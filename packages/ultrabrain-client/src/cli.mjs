@@ -14,7 +14,7 @@ import {claudeContext,captureRequest} from '../../../src/client-kit.mjs';
 import {requireThat,UltraError} from '../../../src/core.mjs';
 export async function readBounded(stream,limit=65536){const chunks=[];let size=0;for await(const c of stream){const b=Buffer.from(c);size+=b.length;requireThat(size<=limit,'input_too_large','Input too large');chunks.push(b);}try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));}catch{throw new UltraError('invalid_params','Invalid input JSON');}}
 export async function main(args=process.argv.slice(2)) {
-  let connection,autoWriter,hook=args[0]==='claude-hook'||args[0]==='claude-capture-hook'||args[0]==='claude-task-hook',writing=false;
+  let connection,autoWriter,hook=args[0]==='claude-hook'||args[0]==='claude-capture-hook'||args[0]==='claude-task-hook',writing=false,taskQueryStarted=false;
   const controller=new AbortController(),deadline=setTimeout(()=>{controller.abort();process.stdin.destroy();},25000);deadline.unref();
   try{
     const command=args[0];
@@ -34,6 +34,8 @@ export async function main(args=process.argv.slice(2)) {
       const authorize=()=>requireThat(JSON.stringify(readClientProfile(resolve(args[2])).input)===JSON.stringify(input),
         'task_context_disabled','Profile changed; reload before task recall');
       authorize();connection=await connectClient(input,{signal:controller.signal});authorize();
+      // Entering delivery is uncertain on error, even if the read may already have reached the server.
+      taskQueryStarted=true;
       const result=await connection.taskContext(payload,{authorize});authorize();
       process.stdout.write(JSON.stringify(command==='claude-task-hook'?claudeContext('UserPromptSubmit',result):result)+'\n');return;
     }
@@ -85,8 +87,11 @@ export async function main(args=process.argv.slice(2)) {
       requireThat(r?.source_id===connection.profile.source&&r.event_id===p.event_id&&r.storage==='journaled'&&typeof r.job_id==='string','mcp_contract_changed','Unconfirmed capture receipt');output={ok:true,result:r};}
     process.stdout.write(JSON.stringify(output)+'\n');
   }catch(e){const code=e instanceof UltraError&&/^[a-z0-9_]{1,64}$/.test(e.code)?e.code:'client_failed';
-    if(hook)process.stdout.write(JSON.stringify({systemMessage:args[0]==='claude-task-hook'?'Ultrabrain task recall unavailable ('+code+'). Continue without task-ranked recall; this hook requested no memory writes.':args[0]==='claude-capture-hook'?'Ultrabrain automatic capture not confirmed ('+code+'). Check the client queue; do not assume the observation was saved.':'Ultrabrain personal memory unavailable ('+code+'). Continue without recalled memory; no text was captured.'})+'\n');
-    else{const out=args[0]==='mcp'?process.stderr:process.stdout;out.write(JSON.stringify({ok:false,error:code,delivery:writing?'unconfirmed':'not_submitted'})+'\n');process.exitCode=1;}
+    if(hook)process.stdout.write(JSON.stringify({systemMessage:args[0]==='claude-task-hook'?'Ultrabrain task recall unavailable ('+code+'). Task query delivery '+(taskQueryStarted?'is unconfirmed':'has not started')+'. Continue without task-ranked recall; this hook requested no memory writes.':args[0]==='claude-capture-hook'?'Ultrabrain automatic capture not confirmed ('+code+'). Check the client queue; do not assume the observation was saved.':'Ultrabrain personal memory unavailable ('+code+'). Continue without recalled memory; no text was captured.'})+'\n');
+    else{const out=args[0]==='mcp'?process.stderr:process.stdout;
+      const failure=args[0]==='task-context'?{ok:false,error:code,query_delivery:taskQueryStarted?'unconfirmed':'not_started',memory_writes_requested:false}:
+        {ok:false,error:code,delivery:writing?'unconfirmed':'not_submitted'};
+      out.write(JSON.stringify(failure)+'\n');process.exitCode=1;}
   }finally{autoWriter?.close();clearTimeout(deadline);if(connection)try{await connection.close();}catch{}}
 }
 void main();

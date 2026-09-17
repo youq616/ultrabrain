@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';import {join} from 'node:path';
+import {createRequire} from 'node:module';
 import {spawn} from 'node:child_process';import {once} from 'node:events';
 import {createServer} from 'node:net';import {randomBytes,createHash} from 'node:crypto';
 import {connect,ROOT} from '../src/runtime.mjs';
@@ -20,14 +21,22 @@ const profile={format:1,source,project_id:'alpha',workspace,server:{transport:'s
 const task='taskneedle QUERY_PRIVATE_MARKER_'+randomBytes(8).toString('hex'),request={task,workspace,consent:true};
 const event={hook_event_name:'UserPromptSubmit',session_id:'synthetic-main',cwd:workspace,prompt:task,transcript_path:'/never/read',tool_output:'TOOL_PRIVATE_MARKER'};
 const save=(p=profile)=>writeFileSync(profilePath,JSON.stringify(p),{mode:0o600});
-async function run(command,input,{swap}={}) {
+async function run(command,input,{swap,loseReply=false}={}) {
  const args=[cli,command,'--profile',profilePath];
  if(swap){
   const preload=join(dir,'stdin-boundary.cjs');
   writeFileSync(preload,`const original=process.stdin[Symbol.asyncIterator];process.stdin[Symbol.asyncIterator]=function(...args){process.send({ready:true},()=>process.disconnect());return original.apply(this,args);};`,{mode:0o600});
   args.unshift('--require',preload);
  }
- const p=spawn('node',args,{cwd:ROOT,env:process.env,stdio:swap?['pipe','pipe','pipe','ipc']:['pipe','pipe','pipe']});let out='',err='';
+ if(loseReply){
+  // Fault injection AFTER a real MCP context response. The other integration cases are uninstrumented.
+  const preload=join(dir,'lost-task-response.cjs');
+  const sdkPath=createRequire(join(packageRoot,'package.json')).resolve('@modelcontextprotocol/sdk/client/index.js');
+  writeFileSync(preload,`const {Client}=require(${JSON.stringify(sdkPath)});const original=Client.prototype.callTool;Client.prototype.callTool=async function(request,...args){const result=await original.call(this,request,...args);if(request.name==='ultra_personal_context'){if(result.isError)throw new Error('fixture context failed');await new Promise((done,fail)=>process.send({taskReplyObserved:true},e=>e?fail(e):done()));process.disconnect();throw new Error('QUERY_PRIVATE_MARKER simulated local response loss');}return result;};`,{mode:0o600});
+  args.unshift('--require',preload);
+ }
+ const p=spawn('node',args,{cwd:ROOT,env:process.env,stdio:(swap||loseReply)?['pipe','pipe','pipe','ipc']:['pipe','pipe','pipe']});let out='',err='',taskReplyObserved=false;
+ if(loseReply)p.on('message',m=>{if(m?.taskReplyObserved===true)taskReplyObserved=true;});
  p.stdout.on('data',b=>{out+=b;if(Buffer.byteLength(out)>100000)p.kill('SIGKILL');});p.stderr.on('data',b=>{err+=b;if(Buffer.byteLength(err)>100000)p.kill('SIGKILL');});p.stdin.on('error',()=>{});
  const ended=new Promise((done,fail)=>{p.once('error',fail);p.once('close',done);}),timer=setTimeout(()=>p.kill('SIGKILL'),35000);
  try{
@@ -35,7 +44,7 @@ async function run(command,input,{swap}={}) {
   p.stdin.end(input===undefined?undefined:JSON.stringify(input));const code=await ended;
   assert.ok(!out.includes('QUERY_PRIVATE_MARKER')&&!err.includes('QUERY_PRIVATE_MARKER'),'Query text exposed in CLI diagnostic');
   assert.ok(!out.includes('TOOL_PRIVATE_MARKER')&&!err.includes('TOOL_PRIVATE_MARKER'),'Tool body exposed');
-  return {code,out,data:JSON.parse(out)};
+  return {code,out,data:JSON.parse(out),taskReplyObserved};
  }finally{clearTimeout(timer);if(p.exitCode===null&&p.signalCode===null){p.kill('SIGKILL');await ended.catch(()=>{});}if(swap)save();}
 }
 async function snapshot() {
@@ -60,16 +69,19 @@ try {
  const shared=await insert('sharedneedle approved source rule',{project:null,visibility:'source'});
  save();let r=await run('probe');assert.equal(r.code,0);Object.assign(profile,{expected_instance:r.data.identity.instance_id,expected_actor:r.data.identity.actor_key});save();pass();
  const original=await snapshot();
- r=await run('task-context',request);assert.equal(r.data.error,'task_context_disabled');pass();
+ r=await run('task-context',request);assert.equal(r.data.error,'task_context_disabled');assert.equal(r.data.query_delivery,'not_started');assert.equal(r.data.memory_writes_requested,false);pass();
  Object.assign(profile,{allow_task_context:true});save();
  r=await run('context');assert.equal(r.code,0);assert.ok(!r.data.memories.some(m=>m.id===target));pass();
  r=await run('task-context',request);assert.equal(r.code,0);assert.equal(r.data.memories[0].id,target);assert.ok(Buffer.byteLength(r.out.trim())<=6000);pass();
  assert.ok(!r.data.memories.some(m=>[otherProject,candidate,archived].includes(m.id)));pass();
+ r=await run('task-context',request,{loseReply:true});assert.equal(r.taskReplyObserved,true,'Fault injection must follow a successful real context read');assert.equal(r.code,1);
+ assert.equal(r.data.query_delivery,'unconfirmed');assert.equal(r.data.memory_writes_requested,false);assert.equal(Object.hasOwn(r.data,'delivery'),false);pass();
  r=await run('task-context',{...request,task:"taskneedle '; DROP TABLE ultrabrain.personal_memories; --"});assert.equal(r.code,0);assert.equal(r.data.memories[0].id,target);pass();
  for(const p of [{...request,consent:false},{...request,workspace:dir},{...request,task:'x'.repeat(4097)},{...request,task:'\ud800'},{...request,project_id:'beta'}]){r=await run('task-context',p);assert.equal(r.code,1);assert.ok(!r.out.includes('不要删除'));}pass();
  r=await run('claude-task-hook',event);assert.match(r.data.systemMessage,/task_context_disabled/);pass();
  profile.automatic_task_context=['claude-user'];save();
  r=await run('claude-task-hook',event);assert.equal(r.code,0);assert.equal(JSON.parse(r.data.hookSpecificOutput.additionalContext).memories[0].id,target);pass();
+ r=await run('claude-task-hook',event,{loseReply:true});assert.equal(r.taskReplyObserved,true);assert.equal(r.code,0);assert.match(r.data.systemMessage,/unconfirmed/);assert.equal(Object.hasOwn(r.data,'hookSpecificOutput'),false);pass();
  // Legacy read Hook still sends no task, even when the NEW scope is present in the profile.
  r=await run('claude-hook',event);assert.ok(!JSON.parse(r.data.hookSpecificOutput.additionalContext).memories.some(m=>m.id===target));pass();
  for(const patch of [{agent_id:'child'},{hook_event_name:'SessionStart'},{cwd:dir},{session_id:undefined}]){r=await run('claude-task-hook',{...event,...patch});assert.ok(r.data.systemMessage);assert.ok(!r.out.includes('不要删除'));}pass();

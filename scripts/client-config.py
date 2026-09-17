@@ -81,6 +81,33 @@ def command_spec(node,cli,profile):
     check(Path(cli).is_absolute() and Path(profile).is_absolute(),'absolute_cli_and_profile_required')
     return [node,cli,'mcp','--profile',profile]
 
+def guard_task_hook(hooks, expected):
+    """A single selected settings file may retain only this exact generated task Hook.
+
+    Do not interpret/execute shell code or rewrite custom hooks. Conservative
+    command recognition also catches ordinary shell re-quoting; unknown wrappers
+    and other settings layers remain the operator's responsibility.
+    """
+    matches=0
+    for event, groups in hooks.items():
+        check(isinstance(groups,list),'invalid_hook_list')
+        for group in groups:
+            check(isinstance(group,dict) and isinstance(group.get('hooks'),list),'invalid_hook_group')
+            for hook in group['hooks']:
+                check(isinstance(hook,dict),'invalid_hook_entry')
+                cmd=hook.get('command')
+                if not isinstance(cmd,str):
+                    continue
+                try:
+                    words=shlex.split(cmd,posix=True)
+                except ValueError:
+                    words=[]
+                if 'claude-task-hook' not in cmd and 'claude-task-hook' not in words:
+                    continue
+                matches+=1
+                check(matches==1 and event=='UserPromptSubmit' and group==expected,
+                      'existing_task_hook_conflict')
+
 def patch(client,old,command,capture_scopes=(),task_scopes=()):
     if client=='codex':
         text='' if old is None else old.decode('utf-8');parsed=tomllib.loads(text)
@@ -102,6 +129,8 @@ def patch(client,old,command,capture_scopes=(),task_scopes=()):
         check(bool(events),'explicit_automatic_capture_scopes_required')
         hook_cmd=shlex.join([command[0].replace('\\','/'),command[1].replace('\\','/'),action,'--profile',command[-1].replace('\\','/')])
         hooks=data.setdefault('hooks',{});check(isinstance(hooks,dict),'invalid_hooks')
+        if client=='claude-task-hooks':
+            guard_task_hook(hooks,{'matcher':'','hooks':[{'type':'command','command':hook_cmd,'timeout':30}]})
         for event in events:
             group={'matcher':'','hooks':[{'type':'command','command':hook_cmd,'timeout':30}]}
             entries=hooks.setdefault(event,[]);check(isinstance(entries,list),'invalid_hook_list')

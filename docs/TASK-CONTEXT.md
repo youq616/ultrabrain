@@ -52,3 +52,13 @@ node /your/install/node_modules/ultrabrain-client/dist/cli.cjs task-context --pr
 任务确实离开客户端到达选定服务端。此路径不写个人记忆、Agent 登记、文档或整理任务，也不调用供应商模型；**不等于服务器、反向代理或操作者配置的完整参数日志完全不留记录**。已有原生默认日志使用参数形状摘要；启用了原生 `--log-full-params` 等设置时可能保存正文，部署方须审查日志策略。仍须信任客户端主机、选定服务器及其管理员，不宣称同账号沙箱。
 
 本阶段验证入口：`node --test test/client-task-context.test.mjs`、`python -m unittest discover -s test -p test_task_context_config.py -v`，以及隔离 Linux 安装中的 `ULTRABRAIN_TEST_ALLOW_WRITE=1 bun test/task-context-integration.mjs`。后者运行实际打包 Node 程序、stdio 与只读令牌 HTTP MCP、真实 PostgreSQL，检查旧相关条目召回、跨项目与主体隔离、错误输入、同步的 stdin 配置替换、预算和四类业务表指纹不变。不得对生产记忆库执行测试。最终验收仍需对应提交的 CI 和独立审核，本文件不预填成功结论。
+
+## 配置轮换与不确定查询结果
+
+配置工具现在检查本次选定 settings 文件内已有的任务 Hook：只有单个、同事件且命令/配置/选项完全相同的生成项可以原样保留。旧 profile、CLI 或解释器不同，重复项、不同 matcher/事件、混合或修改过的生成组都会返回 `existing_task_hook_conflict`，不追加第二个任务 Hook，不静默替换，也不写备份或回执。需要轮换时，先核查并使用原回滚回执移除旧生成项，再对新 profile 重新计划/应用；其他自定义 Hook 不被删除。等价但重新引用过的命令也可能保守拒绝，须明确检查，而非假设它可以安全合并。
+
+这个检查只覆盖显式指定的单个文件和可识别的任务命令，不扫描用户/项目/插件等其他配置层，不执行或展开 shell 变量及未知包装脚本。操作者仍须在宿主的 Hook 列表中核对实际启用项；旧的其他层 Hook 不会因本次单文件配置而自动撤销。Claude 官方说明所有匹配 Hook 会执行，只有相同命令自动去重，因此不能依赖宿主替不同服务器配置去重。依据：https://code.claude.com/docs/en/hooks-guide 。
+
+显式 `task-context` 失败现在单独报告 `query_delivery:not_started|unconfirmed` 和 `memory_writes_requested:false`，不沿用写入命令的 `delivery:not_submitted`。前者 `not_started` 只说明未进入任务查询交付阶段（连接/身份探测可能已发生）；进入交付阶段后遇到异常一律保守记为 `unconfirmed`，不能从失败推断任务正文未到服务端。新 Claude Hook 也会提示交付不确定，不输出失效上下文。其他旧命令的错误合同不变。自动重试仍未增加，且 `memory_writes_requested:false` 不代表服务器/代理日志无保留。
+
+新增故障测试在真实 MCP 查询返回后注入本地响应丢失，并分别核对显式命令和 Claude 合成 Hook 的输出；它是明确标记的故障注入，不冒称真实网络故障或真实 Claude 模型回合。其他正常集成路径不使用该注入。当前提交的验收见 PR #10 与 `docs/reviews/TASK-CONTEXT-RECEIVER.md`。

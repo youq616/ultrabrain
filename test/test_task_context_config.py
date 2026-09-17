@@ -58,4 +58,64 @@ class TaskContextConfigTests(unittest.TestCase):
         self.assertEqual(code,0);self.assertFalse(self.target.exists())
         with contextlib.redirect_stdout(io.StringIO()):code=config.main(argv+['--apply','--expected-sha','absent'])
         self.assertEqual(code,0);self.assertIn('claude-task-hook',self.target.read_text())
+    def test_rotation_rejects_old_profile_cli_or_interpreter(self):
+        old=config.patch('claude-task-hooks',None,self.cmd,task_scopes=['claude-user'])
+        for index,value in [(0,'other-node'),(1,str(self.base/'other-client.cjs')),(4,str(self.base/'other-profile.json'))]:
+            command=list(self.cmd);command[index]=value
+            with self.subTest(argument=index):
+                with self.assertRaisesRegex(config.ConfigError,'existing_task_hook_conflict'):
+                    config.patch('claude-task-hooks',old,command,task_scopes=['claude-user'])
+    def test_duplicate_canonical_groups_refused(self):
+        data=json.loads(config.patch('claude-task-hooks',None,self.cmd,task_scopes=['claude-user']))
+        data['hooks']['UserPromptSubmit']*=2
+        with self.assertRaisesRegex(config.ConfigError,'existing_task_hook_conflict'):
+            config.patch('claude-task-hooks',json.dumps(data).encode(),self.cmd,task_scopes=['claude-user'])
+    def test_existing_event_matcher_or_options_must_be_canonical(self):
+        from copy import deepcopy
+        original=json.loads(config.patch('claude-task-hooks',None,self.cmd,task_scopes=['claude-user']))
+        variants=[]
+        data=deepcopy(original);data['hooks']['Stop']=data['hooks'].pop('UserPromptSubmit');variants.append(data)
+        data=deepcopy(original);data['hooks']['UserPromptSubmit'][0]['matcher']='*';variants.append(data)
+        data=deepcopy(original);data['hooks']['UserPromptSubmit'][0]['hooks'][0]['async']=True;variants.append(data)
+        data=deepcopy(original);data['hooks']['UserPromptSubmit'][0]['hooks'][0]['timeout']=10;variants.append(data)
+        for data in variants:
+            with self.subTest(data=data):
+                with self.assertRaisesRegex(config.ConfigError,'existing_task_hook_conflict'):
+                    config.patch('claude-task-hooks',json.dumps(data).encode(),self.cmd,task_scopes=['claude-user'])
+    def test_mixed_group_or_requoted_command_refused_not_replaced(self):
+        from copy import deepcopy
+        original=json.loads(config.patch('claude-task-hooks',None,self.cmd,task_scopes=['claude-user']))
+        data=deepcopy(original);data['hooks']['UserPromptSubmit'][0]['hooks'].append({'type':'command','command':'echo unrelated'})
+        with self.assertRaisesRegex(config.ConfigError,'existing_task_hook_conflict'):
+            config.patch('claude-task-hooks',json.dumps(data).encode(),self.cmd,task_scopes=['claude-user'])
+        for spelling in ["'claude-task-hook'", "'claude-'task-hook", 'claude-task\\-hook']:
+            data=deepcopy(original);hook=data['hooks']['UserPromptSubmit'][0]['hooks'][0]
+            hook['command']=hook['command'].replace('claude-task-hook',spelling)
+            with self.subTest(spelling=spelling):
+                with self.assertRaisesRegex(config.ConfigError,'existing_task_hook_conflict'):
+                    config.patch('claude-task-hooks',json.dumps(data).encode(),self.cmd,task_scopes=['claude-user'])
+    def test_actual_conflict_does_not_write_or_create_backups(self):
+        self.profile.write_text(json.dumps(profiles.make_profile(self.args())))
+        previous=list(self.cmd);previous[-1]=str(self.base/'old-profile.json')
+        old=config.patch('claude-task-hooks',None,previous,task_scopes=['claude-user']);self.target.write_bytes(old)
+        before={p.name:p.read_bytes() for p in self.base.iterdir() if p.is_file()}
+        argv=['--client','claude-task-hooks','--target',str(self.target),'--profile',str(self.profile),'--cli',str(self.cli)]
+        for extra in [[],['--apply','--expected-sha',config.digest(old)]]:
+            with contextlib.redirect_stdout(io.StringIO()) as output: code=config.main(argv+extra)
+            self.assertEqual(code,1);self.assertEqual(json.loads(output.getvalue())['error'],'existing_task_hook_conflict')
+            self.assertEqual({p.name:p.read_bytes() for p in self.base.iterdir() if p.is_file()},before)
+    def test_other_hooks_preserved_without_new_task_duplicate(self):
+        other={'type':'command','command':'echo unrelated','timeout':5}
+        data={'permissions':{'allow':['Read']},'hooks':{'Stop':[{'hooks':[other]}]}}
+        old=json.dumps(data).encode();new=config.patch('claude-task-hooks',old,self.cmd,task_scopes=['claude-user'])
+        self.assertEqual(json.loads(new)['hooks']['Stop'],data['hooks']['Stop'])
+        self.assertEqual(config.patch('claude-task-hooks',new,self.cmd,task_scopes=['claude-user']),new)
+    def test_explicit_rollback_then_new_profile_is_supported(self):
+        old=b'{ "permissions": {} }\r\n';self.target.write_bytes(old)
+        initial=config.patch('claude-task-hooks',old,self.cmd,task_scopes=['claude-user'])
+        receipt=config.apply(self.target,old,initial,config.digest(old))
+        config.rollback(self.target,receipt['rollback_receipt'])
+        changed=list(self.cmd);changed[-1]=str(self.base/'rotated-profile.json')
+        replacement=config.patch('claude-task-hooks',self.target.read_bytes(),changed,task_scopes=['claude-user'])
+        self.assertIn('rotated-profile.json',replacement.decode());self.assertNotEqual(replacement,initial)
 if __name__=='__main__':unittest.main()
