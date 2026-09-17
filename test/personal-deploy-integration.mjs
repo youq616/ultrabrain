@@ -15,7 +15,7 @@ if(process.env.GITHUB_ACTIONS!=='true'||process.env.ULTRABRAIN_TEST_ALLOW_WRITE!
 const units=['ultrabrain-personal.target','ultrabrain-personal-console.service','ultrabrain-personal-worker.service'];
 const [target,consoleUnit,worker]=units,db='ultrabrain-postgres.service';
 const privateDir=mkdtempSync(join(homedir(),'.ub-deploy-verification-')),unitDir=join(homedir(),'.config/systemd/user');
-let engine,dbLink,dbBytes,dbIdentity,originalUnits,current=null,owned=new Map(),checks=0,complete=false,primaryError;
+let engine,dbLink,dbBytes,dbIdentity,originalUnits,cachePin,current=null,owned=new Map(),checks=0,complete=false,primaryError;
 const fragmentPathForms=new Set();
 const pass=()=>checks++,sha=value=>createHash('sha256').update(value).digest('hex');
 async function run(command,args,{ok=true,timeout=120000}={}){
@@ -46,6 +46,34 @@ async function failureObservation(){
   const at=line.indexOf('=');return [line.slice(0,at),line.slice(at+1)];
  }).filter(([key,value])=>keys.includes(key)&&value.length<=2048&&!/[\x00-\x1f\x7f]/.test(value))));
  console.log(JSON.stringify({deployment_failure_after_checks:checks,manager_observation:rows}));
+}
+async function pinConsoleCache(){
+ assert.equal(cachePin,undefined);
+ const child=spawn('/usr/bin/python3',['-I','-B',ROOT+'/test/personal-deploy-cache-pin.py','--home',HOME],
+  {cwd:ROOT,env:process.env,stdio:['pipe','pipe','pipe']});
+ child.stdin.on('error',()=>{});let size=0;
+ child.stderr.on('data',b=>{size+=b.length;if(size>4096)child.kill('SIGKILL');});
+ const closed=new Promise(resolve=>{child.once('error',()=>resolve(null));child.once('close',resolve);});
+ const pin={child,closed,output:'',ready:false,exited:false};cachePin=pin;closed.then(()=>{pin.exited=true;});
+ await new Promise((resolve,reject)=>{
+  const timer=setTimeout(()=>{child.kill('SIGKILL');reject(Error('Unit reference acknowledgement timed out'));},15000);
+  const finish=error=>{clearTimeout(timer);error?reject(error):resolve();};
+  child.once('error',()=>finish(Error('Unit reference fixture unavailable')));
+  child.once('close',()=>finish(Error('Unit reference fixture exited before release')));
+  child.stdout.on('data',b=>{pin.output+=b.toString();
+   if(pin.output.length>256){child.kill('SIGKILL');finish(Error('Unit reference output exceeded its bound'));}
+   else if(!pin.ready&&pin.output==='ULTRABRAIN_CACHE_PIN_READY\n'){pin.ready=true;finish();}
+   else if(!pin.ready&&pin.output.includes('\n')){child.kill('SIGKILL');finish(Error('Invalid unit reference acknowledgement'));}
+  });
+ });
+}
+async function releaseConsoleCache(){
+ if(!cachePin)return;const pin=cachePin,{child,closed}=pin;cachePin=undefined;
+ assert.equal(pin.exited,false,'Unit reference fixture must remain connected until explicit release');
+ const timer=setTimeout(()=>child.kill('SIGKILL'),5000);
+ try{child.stdin.end('release\n');assert.equal(await closed,0,'Unit reference fixture must release successfully');
+  assert.equal(pin.output,'ULTRABRAIN_CACHE_PIN_READY\nULTRABRAIN_CACHE_PIN_RELEASED\n');}
+ finally{clearTimeout(timer);}
 }
 function recordOwned(paths){assert.deepEqual(Object.keys(paths).sort(),[...units].sort());
  owned=new Map(units.filter(n=>{if(paths[n]===null){assert.equal(existsSync(join(unitDir,n)),false);return false;}return true;}).map(n=>{
@@ -145,6 +173,9 @@ try{
  await verifyStopped(a);await verifyHTTP(a);await stop();pass();
  // A second crash during recovery must not leave the newer parsed config in
  // systemd merely because the restored link pathname is unchanged.
+ // Acquire the read-only reference while A is clean. It survives daemon-reload
+ // and prevents garbage collection of the newer cache during recovery.
+ await pinConsoleCache();
  const cachedPlan=await reviewed(b);
  const afterReload=await run('python3',['-I','-B',ROOT+'/test/personal-deploy-crash.py','apply',
   '--checkpoint','after_reload','--expected-deployment',cachedPlan.deployment_sha256,...b.args],{ok:false});
@@ -159,6 +190,7 @@ try{
  assert.equal(recoveredAgain.current_sha256,aid);assert.equal(recoveredAgain.pending_sha256,null);
  assert.equal(recoveredAgain.configuration_changed,false);recordOwned(recoveredAgain.unit_paths);
  assert.ok((await property(consoleUnit,'ExecStart')).includes(a.source),'Recovery must replace the actual cached source even when no links changed');
+ await releaseConsoleCache();
  await verifyStopped(a);await verifyHTTP(a);await stop();pass();
  const bid=await apply(b);assert.notEqual(bid,aid);await verifyStopped(b);await verifyHTTP(b);await stop();pass();
  const cid=await apply(c);assert.notEqual(cid,bid);await verifyStopped(c);pass();
@@ -175,6 +207,7 @@ try{
   if(!ownsLinks())throw Error('Fixture unit identity changed; preserve deployment evidence');
   if(owned.size){await stop();for(let i=0;i<4&&current;i++)await rollback();assert.equal(current,null);}
  });
+ await attempt(releaseConsoleCache);
  await attempt(async()=>{if(engine)await engine.disconnect();});
  await attempt(async()=>{if(dbIdentity){assert.equal(ownsDatabase(),true,'Database fixture identity changed');
   await ctl('stop',db);assert.equal(ownsDatabase(),true);unlinkSync(join(unitDir,db));}});
@@ -185,5 +218,5 @@ try{
 }
 if(primaryError)throw primaryError;
 console.log(JSON.stringify({ok:true,checks,systemd:'actual-user-manager',postgresql:'actual',http:'authenticated-local-console',
- interruption:'actual-process-exit-and-cli-recovery',repeated_recovery:'actual-stale-manager-cache-reloaded',
+ interruption:'actual-process-exit-and-cli-recovery',repeated_recovery:'actual-referenced-stale-manager-cache-reloaded',
  fragment_path_forms:[...fragmentPathForms].sort(),model_calls:0,user_host_deployed:false}));
