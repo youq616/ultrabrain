@@ -2,6 +2,10 @@
 
 Linux-first agent memory, built around GBrain's PostgreSQL-native business engine and OpenViking-inspired hierarchical context retrieval.
 
+## 当前接手状态（2026-09-17）
+
+任务上下文阶段已通过 [PR #10](https://github.com/youq616/ultrabrain/pull/10) 合入 `6c1c6becb1ae898d37d6bdcd2782c750481b27de`。增加显式 `task-context` 与单独授权的 Claude 主会话任务 Hook，复用既有个人召回排序。两个新的独立审核代理均通过精确候选 `5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c`；该候选六组 CI 共 23 个 jobs 全部成功。接手记录、本地测试限制、尚未完成的工作及下一阶段见 [项目状态](docs/PROJECT-STATUS.md)。个人 V1 仍未整体完成。
+
 ## 架构与状态
 
 以锁定的 GBrain 业务引擎为基础，保留页面、事实、版本、纠正、检索、图谱、技能与任务，新增 Ultrabrain 产品层，不复制第二套记忆数据库。OpenViking 是按功能逐项吸收的参考上游，**尚未完成双方全部功能等价**。
@@ -81,15 +85,19 @@ PostgreSQL 随项目在本机安装和管理，不要求外部数据库，不是
 
 使用 [客户端安装与边界](docs/CLIENT-KIT.md)，查看 [分阶段独立复核与修复报告](docs/reviews/PERSONAL-0.12-REVIEW.md)。本轮还修复内部 HTTP 身份回退、不完整 Unicode 输入和只读凭据预检；既有迁移、上游 pins 与企业白名单不变。整体个人 V1 仍以完成检查表为准，不以连接配置代替最终验收。
 
-## 开发候选：个人文本文件导入（development/personal-documents）
+## 历史候选记录：个人文本文件导入（已通过 PR #3 合入）
+
+以下保留该候选阶段的范围和当时的合并门槛；当前已合入状态见 [PR #3](https://github.com/youq616/ultrabrain/pull/3)，不需要重新导入历史交接包。
 
 新增单文件显式导入（首批 UTF-8 的 TXT/MD/JSON/CSV/LOG，≤128 KiB 整体拒绝不截断）、原始字节与 SHA-256 追溯、明确排队整理片段（复用既有队列与事件重放）与归档围档（保留原文、失效派生、阻止旧任务写回）。个人管理台与受限 MCP 工具同步接入，恢复校验为字节级。**不包含 PDF、图片、OCR 或任何多模态格式；本候选未获独立子代理审核批准前不合入 main。**详见 [个人文档](docs/PERSONAL-DOCUMENTS.md) 与 [审核任务书](docs/REVIEW-PERSONAL-DOCUMENTS.md)。
 
-## 开发候选：个人召回排序修正（development/personal-ranking）
+## 历史候选记录：个人召回排序修正（已通过 PR #5 合入）
+
+最终候选 `aa5a5828f1dbfd5024ae376f5f6cca00ab4e1cf5` 已经独立审核及 CI 验证，通过 [PR #5](https://github.com/youq616/ultrabrain/pull/5) 合入。以下为该阶段的历史范围，待审核措辞不代表当前仍未合并。
 
 context/profile 改为先排名后取前 100（修复旧 high 偏好被时间窗口截断）、统一 SQL/JS 排名（importance 3/2/1 + 不同任务词命中加分、仅折叠 ASCII A–Z、Unicode 空白分词去重上限 32）、平局按毫秒时间降序 + 完整 UUID 升序（修复 String(Date).localeCompare 按星期名排序）、只读事务 + 事务级 5 秒超时；search 保持时间序分页。450 条 × 20 组查询的 SQL/JavaScript 一致性校验已接入 Linux CI，通过与否以 CI 运行为准。**未获独立审核批准且 CI 未在最终提交跑绿前不合入 main**；详见 [召回排序](docs/PERSONAL-RANKING.md) 与 [自审记录](docs/SELF-REVIEW-PERSONAL-RANKING.md)。
 
-## 当前增量：0.13.0-alpha.1
+## 历史增量：0.13.0-alpha.1
 
 增加 OpenCode 原生工作前/压缩前只读 Hook、Hermes 主 CLI 外部 MemoryProvider 和 OpenClaw 精确 Agent/session/workspace 限定的附加插件；复用现有客户端与 PostgreSQL，不自动上传聊天或替换原生 memory slot。安装与测试层次见 [原生 Agent 接入](docs/NATIVE-AGENT-ADAPTERS.md)。Hermes/OpenClaw 全引擎、所有自动采集和完整个人 V1 尚未全部验收。
 

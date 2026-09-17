@@ -1,0 +1,50 @@
+Independent task-context configuration review
+
+**Verdict: PASS for the assigned configuration, profile generation, documentation, packaging and workflow boundary.** I found no blocking defect in that boundary at the exact reviewed commit. This is a separate reviewer-agent assessment, not the implementation assistant's self-review and not a statement that all project behavior has been independently certified.
+
+**Reviewed commit:** `5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c`
+**Comparison base:** `a5e76f7ab2af4dddb1f72d8a95ab02d2f32593f6`
+**Actual reviewer identity:** `/root/task_config_review`
+**Checkout:** `/workspace/scratch/be43dca0ab34/ultrabrain-task-context`
+**Review date:** 2026-09-17
+**Local test runtime:** Python 3.12.14; Node v24.19.0; Linux container. No installed Agent, real user configuration, production database, credentials or service was used in my tests.
+
+I read `AGENTS.md` and inspected the complete base-to-candidate diff, the full configuration/profile scripts, the affected task input/runtime contract, configuration regression tests, task integration harness, package construction and the affected CI workflows. I made no implementation edits. At the end of my review, `git rev-parse HEAD` still returned the full reviewed commit; `git status --short --untracked-files=all` was empty and `git diff --exit-code` returned 0.
+
+Concrete review observations
+
+| Location | Result and evidence |
+| --- | --- |
+| `scripts/client-config.py:84-109`, `:126-137` | PASS: recognizable pre-existing task commands are inspected before appending or writing. Only one identical canonical group on `UserPromptSubmit` survives. Different profile/CLI/interpreter, duplicate groups, event/matcher/options changes and mixed groups are refused. Recognition covers ordinary POSIX shell re-quoting without executing existing command text. The conservative rule is consistent with the documented scope. |
+| `scripts/client-config.py:189-204` | PASS: installation of the automatic task Hook requires an explicit boolean opt-in, exactly the `claude-user` automatic scope, absolute workspace and syntactically valid identity pins. Scope or conflict failures precede the lock/backup/receipt/apply branch. I independently exercised 19 malformed scope/pin/workspace cases through `main(... --apply ...)`; every case failed without changing any pre-existing file or creating a backup/receipt/lock, and no synthetic secret was printed. |
+| `scripts/client-config.py:130`, `:147-174` | PASS: generated commands quote profile and CLI paths as shell data, configuration merging preserves unrelated permissions/env/hooks, semantic no-op preserves original bytes, and existing hash-bound apply/rollback behavior is retained. An actual Bash execution of a generated command with apostrophes and literal command-substitution text in both pathnames delivered the exact intended argv and created no injection marker. |
+| `scripts/client-profile.py:34-60`, `:63-80` | PASS: task permission and automatic scope are separate from capture/documents. Missing identity/workspace pins and invalid automatic scope combinations are refused. An actual generator subprocess produced a task profile accepted by the JavaScript `clientProfile` parser with capture/documents still false. A second create attempt failed and preserved the first profile's exact bytes. Existing SSH host-key validation and new-file-only creation remain intact. |
+| `src/client-kit.mjs:13-28`, `src/client-task-context.mjs:9-34`, `docs/TASK-CONTEXT.md:7-20`, `:40-60` | PASS: documentation describes the implemented opt-in boundary accurately. It expressly limits the new permission to the helper/Hook and does not claim that the pre-existing raw MCP context tool is globally restricted. It describes the primary prompt event, child-event rejection, transcript/file non-reading, duplicate legacy-hook risk, single selected settings file and unknown-wrapper/settings-layer limitations. |
+| `scripts/package-client.sh:14-17`, `scripts/build-client.mjs:6-21`, `.github/workflows/task-context.yml:36-46` | PASS by inspection: package construction copies the actual reviewed Python tools and bundles the new CLI import; the new workflow builds and installs the local tgz before invoking the task integration through that installed package path. This review did not repeat the package build, PostgreSQL integration or npm installation. |
+| `.github/workflows/client-portability.yml:15-32`, `.github/workflows/ci.yml:19-21`, `test/test_task_context_config.py:27-120` | PASS by inspection plus focused Linux execution: task contracts/config tests are wired into Ubuntu and Windows portability jobs, and the existing complete unit/Python discovery also includes the new files. The new regression methods cover opt-in separation, preservation, exact rollback, rotation refusal, duplicates, modified groups, shell re-quoting and absence of writes on conflict. |
+
+Executed test evidence
+
+All commands below ran from the reviewed checkout. These are this reviewer's executed results, not results copied from an earlier review record.
+
+| Command | Result |
+| --- | --- |
+| `PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s test -p 'test_task_context_config.py' -v` | PASS: 16 methods, 0 failures/errors/skips. |
+| `PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s test -p 'test_client_config.py' -v` | PASS: 19 methods, 0 failures/errors/skips. Includes original config preservation, concurrency/stale hash, rollback, locking and SSH-profile cases. |
+| `PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s test -p 'test_automatic_capture_config.py' -v` | PASS: 7 methods, 0 failures/errors/skips. |
+| `PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s test -p 'test_native_adapter_config.py' -v` | PASS: 6 methods, 0 failures/errors/skips. Expected plan/apply and refused-rollback fixture output was emitted. |
+| `PYTHONDONTWRITEBYTECODE=1 python - <<'PY' ... PY` (independent temporary-file adversarial harness) | PASS: 19 malformed automatic task profiles refused without writes; actual Bash path-quoting check; preservation of unrelated prompt hook/permissions/env; task-hook idempotence; actual Python profile generator to JS parser check; existing profile recreation refusal. No network/service calls. |
+
+Total repository Python methods personally executed: **48**, all passed. The extra adversarial harness was executed separately and is not inflated into that method count.
+
+For reproducibility, the independent harness used temporary private files and the existing `config.main` entrypoint with `--client claude-task-hooks --apply --expected-sha <original-hash>`. It replaced one field at a time in an otherwise valid profile: `allow_task_context` with false, 1, a string and null; `automatic_task_context` with an empty list, wrong scope, duplicate scope, string and null; workspace with a relative path, empty string, null and a number; instance and actor pins with a malformed sentinel, null and an array. Before and after each call it compared the names and full bytes of every file in the temporary directory. All calls returned 1 and omitted the sentinel from output. The shell fixture used the reviewed `command_spec`/`patch` output, `subprocess.run(['bash','-c',generated_command], ...)`, and a synthetic Node CLI that printed only `process.argv.slice(2)`; pathnames contained the literal text `$(touch SHELL_INJECTION)` and an apostrophe. Output matched `['claude-task-hook','--profile',exact_profile_path]`; no marker file appeared. The actual profile generator was then invoked with an `https://example.invalid/mcp` profile URL, a bearer environment-variable name, real temporary workspace, synthetic valid pins and the two new task flags; no connection was attempted. Its JSON was passed over stdin to `clientProfile` imported from this checkout and accepted with write flags false.
+
+Scope limits and remaining acceptance evidence
+
+The documented conflict protection intentionally covers one explicitly selected settings file and recognizable command text. It cannot discover opaque wrapper scripts, shell-variable expansions, other settings layers or plugin copies. The old and new prompt readers can still coexist if the operator installs both; the documentation requires inspecting the enabled Hook list and warns about duplicate recall. I do not treat those expressly disclosed limits as a regression introduced by this correction. Hash-bound rollback also deliberately refuses subsequent user edits instead of overwriting them; rotation in that situation requires inspecting the current configuration.
+
+I checked the current official [Claude Hook reference](https://code.claude.com/docs/en/hooks) and [Hook guide](https://code.claude.com/docs/en/hooks-guide). The documented prompt input and JSON additional-context mechanism support the generated Hook contract. Current official documentation also states that matching handlers may run in parallel and distinguishes settings-file deduplication from plugin/skill copies. This supports the repository's instruction to inspect actual enabled hooks. I did not run Claude itself or certify actual model consumption of returned memory.
+
+Full Node/Python suites, real PostgreSQL/MCP integrations and remote exact-commit CI remain the parent review's responsibility. The parent reports that broader local suites encounter existing ordinary-user-only service/preflight guards under this container's root UID and that six current-commit workflows are green. I did not independently reproduce or reclassify those broader runs, and my 48 passing focused methods do not erase the reported local failures. No guard was weakened for this review. Acceptance still requires the parent to retain the exact-SHA remote evidence and the companion independent runtime review.
+
+**Final verdict for the specified boundary: PASS at `5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c`; no blocking findings.** Any subsequent implementation change requires review of the new commit rather than inheriting this verdict.

@@ -1,0 +1,340 @@
+{
+  "acceptance": {
+    "application_changes_during_takeover": 0,
+    "merge_commit": "6c1c6becb1ae898d37d6bdcd2782c750481b27de",
+    "merge_tree": "74e4222eaa3ec9281ea3aca572e543e3da9298a1",
+    "merged": true,
+    "pr": 10,
+    "verified_remote_main_after_merge": "6c1c6becb1ae898d37d6bdcd2782c750481b27de"
+  },
+  "base_commit": "a5e76f7ab2af4dddb1f72d8a95ab02d2f32593f6",
+  "candidate_commit": "5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c",
+  "candidate_tree": "74e4222eaa3ec9281ea3aca572e543e3da9298a1",
+  "ci": [
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c",
+      "id": 35199054104,
+      "jobs": [
+        {
+          "conclusion": "success",
+          "id": 105129133278,
+          "name": "unit"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133457,
+          "name": "native-integration (31f43aa1ff1343bb649e39cf44ca57203ce0ebac)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133506,
+          "name": "native-integration (a81374c1bc626623616a47358f7105c91a49dea5)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133539,
+          "name": "native-integration (d7be484b445a893112d3a132c30f42282865a41a)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133560,
+          "name": "native-integration (c0c85d85284779599d1e5722cc9345373c945b62)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133563,
+          "name": "native-integration (52aff84feb4bf77b32554dcbfa902625e3008c4c)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133586,
+          "name": "native-integration (b46c067f0ef110900af7fe8bb2334b4a9c509c3c)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133619,
+          "name": "native-integration (f8cc5b980c260cd61e66e032ebce94a5cdc065e3)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133662,
+          "name": "native-integration (38e0e6657561e17ba85c71d0783d604242a054e8)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133682,
+          "name": "native-integration (09a4c8fe95242d5939e28cc3957d4605a6823a81)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133706,
+          "name": "native-integration (115978df6069ad11d376f848d214654ba6adde16)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133721,
+          "name": "native-integration (a3f1790b0e837e3c4788c19de531332e55b7a908)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133726,
+          "name": "native-integration (32f97e8d45b312980ce6ab1784cf316feddd698e)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133748,
+          "name": "native-integration (fb397f0f3a8ba12253f9e993bba93c387e6de57a)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133755,
+          "name": "native-integration (57852fed3d1839bab105c5b56632af1f65bb4b15)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129133761,
+          "name": "native-integration (225fef02de4c3aa33d655c4b2dfde9f246571329)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105130348159,
+          "name": "n8n-engine"
+        }
+      ],
+      "name": "Validate ultrabrain",
+      "status": "completed",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35199054104"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c",
+      "id": 35199054071,
+      "jobs": [
+        {
+          "conclusion": "success",
+          "id": 105129132532,
+          "name": "recovery"
+        }
+      ],
+      "name": "Personal recovery set",
+      "status": "completed",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35199054071"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c",
+      "id": 35199054005,
+      "jobs": [
+        {
+          "conclusion": "success",
+          "id": 105129132270,
+          "name": "opencode-and-hermes"
+        }
+      ],
+      "name": "Native personal integrations",
+      "status": "completed",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35199054005"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c",
+      "id": 35199054077,
+      "jobs": [
+        {
+          "conclusion": "success",
+          "id": 105129132657,
+          "name": "task-context"
+        }
+      ],
+      "name": "Task-aware personal recall",
+      "status": "completed",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35199054077"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c",
+      "id": 35199054044,
+      "jobs": [
+        {
+          "conclusion": "success",
+          "id": 105129132450,
+          "name": "user-systemd"
+        }
+      ],
+      "name": "Personal user services",
+      "status": "completed",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35199054044"
+    },
+    {
+      "conclusion": "success",
+      "event": "pull_request",
+      "head_sha": "5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c",
+      "id": 35199054021,
+      "jobs": [
+        {
+          "conclusion": "success",
+          "id": 105129132239,
+          "name": "client-contracts (ubuntu-24.04)"
+        },
+        {
+          "conclusion": "success",
+          "id": 105129132362,
+          "name": "client-contracts (windows-2025)"
+        }
+      ],
+      "name": "Personal client portability",
+      "status": "completed",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35199054021"
+    }
+  ],
+  "ci_excerpts": [
+    [
+      "2026-09-17T08:23:27.6614500Z HEAD is now at 8fc7a28 Merge 5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c into a5e76f7ab2af4dddb1f72d8a95ab02d2f32593f6",
+      "2026-09-17T08:23:32.8607759Z # tests 520",
+      "2026-09-17T08:23:32.8608450Z # pass 520",
+      "2026-09-17T08:23:32.8608797Z # fail 0",
+      "2026-09-17T08:23:32.8617292Z # skipped 0",
+      "2026-09-17T08:23:39.7607037Z Ran 280 tests in 6.606s",
+      "2026-09-17T08:23:39.7607417Z OK"
+    ],
+    [
+      "2026-09-17T08:19:39.2217960Z HEAD is now at 8fc7a28 Merge 5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c into a5e76f7ab2af4dddb1f72d8a95ab02d2f32593f6",
+      "2026-09-17T08:20:14.4240316Z \u001b[36;1mnpm install --prefix \"$RUNNER_TEMP/task-host\" --ignore-scripts --no-audit --no-fund \"$RUNNER_TEMP/task-client/ultrabrain-client-$VERSION.tgz\"\u001b[0m",
+      "2026-09-17T08:20:30.5363567Z PASS 21 task recall integrations: packaged Node CLI/Claude event fixtures, stdio+read-only HTTP, real PostgreSQL ranking and identity, no memory writes"
+    ]
+  ],
+  "ci_merge_commit": "8fc7a2825a92774196cfce5bbe472a042f7b25c0",
+  "ci_merge_tree": "74e4222eaa3ec9281ea3aca572e543e3da9298a1",
+  "format": 1,
+  "github_prior_review": {
+    "outcome": "No major issues reported",
+    "reviewed_abbreviated_commit": "5359c113b2",
+    "url": "https://github.com/youq616/ultrabrain/pull/10#issuecomment-5711294136"
+  },
+  "independent_reviews": [
+    {
+      "identity": "/root/task_context_review",
+      "node_tests_passed": 71,
+      "python_methods_passed": 16,
+      "report": "TASK-CONTEXT-TAKEOVER-CODE-REVIEW.md",
+      "reviewed_commit": "5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c",
+      "scope": "task query/runtime consent, identity, revocation, response validation",
+      "verdict": "PASS"
+    },
+    {
+      "identity": "/root/task_config_review",
+      "python_methods_passed": 48,
+      "report": "TASK-CONTEXT-TAKEOVER-CONFIG-REVIEW.md",
+      "reviewed_commit": "5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c",
+      "scope": "configuration, profiles, rotation, packaging/workflow inspection",
+      "verdict": "PASS"
+    }
+  ],
+  "local": {
+    "diff_check": "git diff --check a5e76f7 HEAD passed; no migrations, upstream lock or vendor changes",
+    "native_integration": "Not rerun locally: no Bun/native dependency installation. Exact candidate GitHub CI supplies ordinary-user and native acceptance.",
+    "node": {
+      "exit_code": 1,
+      "failed": 5,
+      "log_sha256": "3cde609ba3761929025fff084d9d1a57e51740b8916c75f34744e10475f5a2b3",
+      "passed": 515,
+      "runtime": "24.19.0",
+      "skipped": 0,
+      "total": 520
+    },
+    "ordinary_user_retry": {
+      "exit_code": 127,
+      "log_sha256": "69a94f21fe3e9c94ba16f3556a260952b7935f0d2aeee8d70adfe8777f197004",
+      "result": "setpriv: setresuid failed: Invalid argument"
+    },
+    "python": {
+      "errors": 26,
+      "exit_code": 1,
+      "failures": 18,
+      "log_sha256": "4673616bdc946ce805bbd5b30f6c5ac67883947a5ba707f9be5e13c3afcf9929",
+      "methods_run": 280,
+      "runtime": "3.12.14"
+    },
+    "reason": "Current checkout tests ran as UID 0. Unchanged personal-services and preflight ordinary-user guards reject this identity. Runtime probes returned ordinary_linux_account_required / use_ordinary_service_account. These local full suites did not pass."
+  },
+  "next_review": {
+    "failed_runs": [
+      35134546985,
+      35134507860
+    ],
+    "head_commit": "1d02a629c8093cfdc50a09ea9cb2720d9d02fea6",
+    "note": "Compare unique requirements with main service plans/status before porting. Historical enable-linger review is not evidence that main lacks linger; disposable CI currently uses it.",
+    "pr": 8,
+    "state_at_takeover": "draft, conflicting with main; not included in accepted PR #10",
+    "unresolved_review_urls": [
+      "https://github.com/youq616/ultrabrain/pull/8#discussion_r4029463995",
+      "https://github.com/youq616/ultrabrain/pull/8#discussion_r4029464009"
+    ]
+  },
+  "phase": "task-context-takeover",
+  "post_merge_ci": [
+    {
+      "conclusion": "success",
+      "head_sha": "6c1c6becb1ae898d37d6bdcd2782c750481b27de",
+      "id": 35226757965,
+      "name": "Source snapshot",
+      "status": "completed",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35226757965"
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "6c1c6becb1ae898d37d6bdcd2782c750481b27de",
+      "id": 35226757656,
+      "name": "Personal recovery set",
+      "status": "completed",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35226757656"
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "6c1c6becb1ae898d37d6bdcd2782c750481b27de",
+      "id": 35226757679,
+      "name": "Personal client portability",
+      "status": "completed",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35226757679"
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "6c1c6becb1ae898d37d6bdcd2782c750481b27de",
+      "id": 35226757664,
+      "name": "Personal user services",
+      "status": "completed",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35226757664"
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "6c1c6becb1ae898d37d6bdcd2782c750481b27de",
+      "id": 35226757813,
+      "name": "Native personal integrations",
+      "status": "completed",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35226757813"
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "6c1c6becb1ae898d37d6bdcd2782c750481b27de",
+      "id": 35226757833,
+      "name": "Validate ultrabrain",
+      "status": "completed",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35226757833"
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "6c1c6becb1ae898d37d6bdcd2782c750481b27de",
+      "id": 35226757850,
+      "name": "Task-aware personal recall",
+      "status": "completed",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35226757850"
+    }
+  ],
+  "project": "youq616/ultrabrain"
+}
