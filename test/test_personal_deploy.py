@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -352,6 +353,61 @@ class DeploymentFixtureTests(unittest.TestCase):
         self.manager.unit_paths = (self.units, extra)
         (extra / s.CONSOLE).write_text('[Service]\nExecStart=/bin/true\n')
         self.assert_refused_without_changes(lambda: self.review(pair))
+
+    def test_standard_distro_unit_path_alias_is_readable_without_plan_mutation(self):
+        alias = Path('/etc/xdg/systemd/user')
+        if not alias.is_symlink():
+            self.skipTest('this distribution does not use the supported unit-path alias')
+        before_alias = alias.lstat()
+        self.assertEqual(before_alias.st_uid, 0)
+        self.assertIn(os.readlink(alias), ('../../systemd/user', '/etc/systemd/user'))
+        self.assertEqual(m.FS.manager_scan_path(alias), Path('/etc/systemd/user'))
+        pair = self.export()
+        self.manager.unit_paths = (self.units, alias)
+        before = tree_snapshot(self.root)
+        reviewed = self.review(pair)
+        self.assertEqual(len(reviewed['deployment_sha256']), 64)
+        self.assertEqual(tree_snapshot(self.root), before)
+        self.assertEqual(self.manager.reloads, 0)
+        after_alias = alias.lstat()
+        self.assertEqual((after_alias.st_dev, after_alias.st_ino, after_alias.st_mode,
+                          after_alias.st_uid, after_alias.st_mtime_ns, after_alias.st_ctime_ns),
+                         (before_alias.st_dev, before_alias.st_ino, before_alias.st_mode,
+                          before_alias.st_uid, before_alias.st_mtime_ns, before_alias.st_ctime_ns))
+
+    def test_user_controlled_unit_path_alias_remains_refused(self):
+        pair = self.export()
+        canonical = self.root / 'canonical-extra-unit-directory'
+        canonical.mkdir(mode=0o700)
+        alias = self.root / 'user-controlled-unit-path'
+        for target in (canonical, Path('/etc/systemd/user')):
+            with self.subTest(target=str(target)):
+                alias.symlink_to(target, target_is_directory=True)
+                self.manager.unit_paths = (self.units, alias)
+                self.assertEqual(m.FS.manager_scan_path(alias), alias)
+                self.assert_refused_without_changes(lambda: self.review(pair))
+                alias.unlink()
+
+    def test_standard_distro_alias_still_checks_canonical_override_inventory(self):
+        alias = Path('/etc/xdg/systemd/user')
+        if not alias.is_symlink():
+            self.skipTest('this distribution does not use the supported unit-path alias')
+        pair = self.export()
+        self.manager.unit_paths = (self.units, alias)
+        original_absent = self.context.store.absent
+        override = Path('/etc/systemd/user') / (s.CONSOLE + '.upholds')
+        checked = []
+
+        def synthetic_override(path):
+            if path == override:
+                checked.append(path)
+                return False
+            return original_absent(path)
+
+        # Report a synthetic canonical dependency directory; never write /etc.
+        with patch.object(self.context.store, 'absent', side_effect=synthetic_override):
+            self.assert_refused_without_changes(lambda: self.review(pair))
+        self.assertEqual(checked, [override])
 
     def test_upholds_dependencies_in_every_unit_path_are_refused_before_mutation(self):
         pair = self.export()
@@ -905,6 +961,130 @@ class DeploymentFixtureTests(unittest.TestCase):
                 self.assertIn('ordinary_linux_account_required', output.getvalue())
                 construct.assert_not_called()
                 self.assertEqual(tree_snapshot(self.root), before)
+
+
+class TrustedSystemUnitPathTests(unittest.TestCase):
+    """Synthetic ownership metadata for the one read-only distro alias policy.
+
+    Temporary descriptors supply source/target contents; only this fixture
+    substitutes root-owned metadata. It grants no production path exception.
+    """
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix='ub-system-unit-path-')
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.source = self.root / 'etc/xdg/systemd'
+        self.target = self.root / 'etc/systemd/user'
+        self.source.mkdir(parents=True, mode=0o700)
+        self.target.mkdir(parents=True, mode=0o700)
+        self.link = self.source / 'user'
+        self.link.symlink_to('../../systemd/user', target_is_directory=True)
+        self.official = Path('/etc/xdg/systemd/user')
+
+    @staticmethod
+    def metadata(value, **changes):
+        fields = {name: getattr(value, name) for name in dir(value) if name.startswith('st_')}
+        fields.update(changes)
+        return SimpleNamespace(**fields)
+
+    @contextlib.contextmanager
+    def synthetic_alias(self, **link_metadata):
+        original_stat = os.stat
+        alias = self.link.lstat()
+        self.opened = []
+
+        def trusted_descriptor(path):
+            path = Path(path)
+            self.opened.append(path)
+            mapped = {Path('/etc/xdg/systemd'): self.source,
+                      Path('/etc/systemd/user'): self.target}[path]
+            return os.open(mapped, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+
+        def synthetic_stat(path, *args, **kwargs):
+            observed = original_stat(path, *args, **kwargs)
+            if (observed.st_dev, observed.st_ino) == (alias.st_dev, alias.st_ino):
+                values = {'st_uid': 0, **link_metadata}
+                return self.metadata(observed, **values)
+            return observed
+
+        with patch.object(m.FS, 'open_trusted_system_directory', side_effect=trusted_descriptor), \
+                patch.object(m.FS.os, 'stat', side_effect=synthetic_stat):
+            yield
+
+    def test_supported_relative_and_absolute_aliases_preserve_source_files(self):
+        for raw_target in ('../../systemd/user', '/etc/systemd/user'):
+            with self.subTest(raw_target=raw_target):
+                self.link.unlink()
+                self.link.symlink_to(raw_target, target_is_directory=True)
+                before = tree_snapshot(self.root)
+                with self.synthetic_alias():
+                    resolved = m.FS.manager_scan_path(self.official)
+                self.assertEqual(resolved, Path('/etc/systemd/user'))
+                self.assertIn(Path('/etc/systemd/user'), self.opened)
+                self.assertEqual(tree_snapshot(self.root), before)
+
+    def test_forged_alias_owner_or_link_count_refuses_before_opening_target(self):
+        for forged in ({'st_uid': 12345}, {'st_nlink': 2}):
+            with self.subTest(forged=forged):
+                before = tree_snapshot(self.root)
+                with self.synthetic_alias(**forged), \
+                        self.assertRaisesRegex(m.DeployError, 'untrusted_system_unit_alias'):
+                    m.FS.manager_scan_path(self.official)
+                self.assertNotIn(Path('/etc/systemd/user'), self.opened)
+                self.assertEqual(tree_snapshot(self.root), before)
+
+    def test_unapproved_alias_target_is_refused_without_resolving_it(self):
+        for raw_target in ('/tmp/untrusted-user-units', '/etc/xdg/systemd/user',
+                           '../../../home/untrusted/.config/systemd/user'):
+            with self.subTest(raw_target=raw_target):
+                self.link.unlink()
+                self.link.symlink_to(raw_target, target_is_directory=True)
+                before = tree_snapshot(self.root)
+                with self.synthetic_alias(), \
+                        self.assertRaisesRegex(m.DeployError, 'untrusted_system_unit_alias'):
+                    m.FS.manager_scan_path(self.official)
+                self.assertNotIn(Path('/etc/systemd/user'), self.opened)
+                self.assertEqual(tree_snapshot(self.root), before)
+
+    def test_source_and_destination_walks_refuse_untrusted_intermediate_parents(self):
+        original_fstat = os.fstat
+        for path in (self.source, self.target):
+            parent = path.parent.stat()
+            for forged in ({'st_uid': 12345}, {'writable': 0o020}, {'writable': 0o002}):
+                with self.subTest(path=str(path.relative_to(self.root)), forged=forged):
+                    def synthetic_fstat(fd):
+                        observed = original_fstat(fd)
+                        values = {'st_uid': 0, 'st_mode': observed.st_mode & ~0o022}
+                        if (observed.st_dev, observed.st_ino) == (parent.st_dev, parent.st_ino):
+                            if 'st_uid' in forged:
+                                values['st_uid'] = forged['st_uid']
+                            else:
+                                values['st_mode'] |= forged['writable']
+                        return self.metadata(observed, **values)
+
+                    before = tree_snapshot(self.root)
+                    with patch.object(m.FS.os, 'fstat', side_effect=synthetic_fstat), \
+                            self.assertRaisesRegex(m.DeployError, 'untrusted_system_unit_path'):
+                        m.FS.open_trusted_system_directory(path)
+                    self.assertEqual(tree_snapshot(self.root), before)
+
+    def test_alias_replacement_during_read_is_refused(self):
+        original_readlink = os.readlink
+        replaced = []
+
+        def replace_during_read(path, *args, **kwargs):
+            result = original_readlink(path, *args, **kwargs)
+            if path == 'user' and not replaced:
+                self.link.rename(self.source / 'preserved-original-user-link')
+                self.link.symlink_to('../../systemd/user', target_is_directory=True)
+                replaced.append(True)
+            return result
+
+        with self.synthetic_alias(), patch.object(m.FS.os, 'readlink', side_effect=replace_during_read), \
+                self.assertRaisesRegex(m.DeployError, 'system_unit_alias_changed'):
+            m.FS.manager_scan_path(self.official)
+        self.assertEqual(replaced, [True])
 
 
 class ProductionManagerBoundaryTests(unittest.TestCase):

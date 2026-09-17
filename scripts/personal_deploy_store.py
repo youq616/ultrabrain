@@ -54,6 +54,65 @@ def metadata(st):
     return identity(st)+[st.st_size, st.st_mtime_ns, st.st_ctime_ns]
 
 
+def open_trusted_system_directory(path):
+    """Read-only walk for the one supported distro compatibility alias."""
+    fd = os.open('/', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        for part in ('', *str(absolute(path)).split('/')[1:]):
+            if part:
+                child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                                dir_fd=fd)
+                os.close(fd)
+                fd = child
+            value = os.fstat(fd)
+            need(value.st_uid == 0 and not value.st_mode & 0o022,
+                 'untrusted_system_unit_path')
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def manager_scan_path(path):
+    """Resolve only Ubuntu/Debian's root-controlled user-unit search alias.
+
+    This never changes managed, state, export, or arbitrary load-path walks.
+    Unit overrides are still inspected at the verified canonical directory.
+    """
+    path = absolute(path)
+    if str(path) != '/etc/xdg/systemd/user':
+        return path
+    try:
+        parent = open_trusted_system_directory('/etc/xdg/systemd')
+    except FileNotFoundError:
+        return path
+    try:
+        try:
+            before = os.stat('user', dir_fd=parent, follow_symlinks=False)
+        except FileNotFoundError:
+            return path
+        if not stat.S_ISLNK(before.st_mode):
+            return path
+        need(before.st_uid == 0 and before.st_nlink == 1, 'untrusted_system_unit_alias')
+        target = os.readlink('user', dir_fd=parent)
+        need(target in ('../../systemd/user', '/etc/systemd/user'), 'untrusted_system_unit_alias')
+        destination = open_trusted_system_directory('/etc/systemd/user')
+        try:
+            need(metadata(os.stat('user', dir_fd=parent, follow_symlinks=False)) == metadata(before),
+                 'system_unit_alias_changed')
+            visible = open_trusted_system_directory('/etc/xdg/systemd')
+            try:
+                need(identity(os.fstat(visible)) == identity(os.fstat(parent)),
+                     'system_unit_alias_changed')
+            finally:
+                os.close(visible)
+        finally:
+            os.close(destination)
+        return Path('/etc/systemd/user')
+    finally:
+        os.close(parent)
+
+
 class Store:
     def __init__(self, uid):
         self.uid = uid

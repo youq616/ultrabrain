@@ -297,6 +297,7 @@ class Context:
         for name in PERSONAL_UNITS:
             extra.update((name+'.d', name+'.wants', name+'.requires', name+'.upholds'))
         for directory in paths:
+            directory = FS.manager_scan_path(directory)
             for name in extra:
                 need(self.store.absent(directory/name), 'personal_unit_override_refused')
             if directory != self.unit_dir:
