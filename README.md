@@ -4,9 +4,9 @@ Linux-first agent memory, built around GBrain's PostgreSQL-native business engin
 
 ## 当前接手状态（2026-09-17）
 
-任务上下文阶段已通过 [PR #10](https://github.com/youq616/ultrabrain/pull/10) 合入 `6c1c6becb1ae898d37d6bdcd2782c750481b27de`。增加显式 `task-context` 与单独授权的 Claude 主会话任务 Hook，复用既有个人召回排序。两个新的独立审核代理均通过精确候选 `5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c`；该候选六组 CI 共 23 个 jobs 全部成功。接手记录、本地测试限制、尚未完成的工作及下一阶段见 [项目状态](docs/PROJECT-STATUS.md)。个人 V1 仍未整体完成。
+停止状态下的个人服务部署已通过 [PR #11](https://github.com/youq616/ultrabrain/pull/11) 合入 `50718455448b90c1eb70e3df70c96700b67bc867`。新增 `personal-deploy plan|apply|status|rollback|recover`，绑定审核后的导出与当前安装状态，提供独立配置副本、停止后更新、持久化中断恢复和逐代回滚。最终候选 `8c519f23a359691a24e9780766c5baed54c58c40` 获两个独立代理 PASS；六组 PR CI 的 23 个 jobs 全部成功，含 524 Node / 367 Python 测试及 15 项真实部署集成。用法见 [个人服务部署](docs/PERSONAL-DEPLOY.md)，精确验收与首次失败记录见 [项目状态](docs/PROJECT-STATUS.md)。
 
-本阶段新增 `personal-deploy plan|apply|status|rollback|recover`：绑定已审核导出和当前安装状态，把个人服务配置保存为独立副本，支持停止状态下更新、持久化失败恢复和逐代回滚。启动及自动启用仍由操作者明确执行。用法与边界见 [个人服务部署](docs/PERSONAL-DEPLOY.md)；本阶段须有自己的最终提交 CI 与独立审核，不能沿用上述任务召回验收。
+此前任务上下文阶段已通过 [PR #10](https://github.com/youq616/ultrabrain/pull/10) 合入 `6c1c6becb1ae898d37d6bdcd2782c750481b27de`，提供显式 `task-context` 与单独授权的 Claude 主会话任务 Hook。个人 V1 仍未整体完成；自动激活切换、真实用户主机部署和完整客户端/模型验收仍待完成。部署命令只重载配置，启动与自动启用由操作者明确执行。
 
 ## 架构与状态
 

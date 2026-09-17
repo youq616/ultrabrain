@@ -2,11 +2,28 @@
 
 记录日期：2026-09-17。本记录以 GitHub 实际提交、已执行 CI 和独立代理审核为依据。历史会话、候选 README、接收报告中的 pending/frozen 字样描述的是当时状态；继续开发前应复查远程 main 和开放 PR。
 
-## 当前开发阶段：停止状态下的个人服务部署
+## 已完成阶段：停止状态下的个人服务部署
 
-从接手后的文档主线 `6f2c60fd2d27e4bcbb9046fe298fa6bebc6278d6` 继续新增 `personal-deploy`：审核计划绑定、独立单元副本、同账号跨安装串行化、持久化事务回执、停止后更新、逐代回滚和中断恢复。调用只重载用户管理器；自动启停、启用和应用激活失败回滚留在后续范围。实现与命令见 [个人服务部署](PERSONAL-DEPLOY.md)。
+从文档主线 `6f2c60fd2d27e4bcbb9046fe298fa6bebc6278d6` 新增 `personal-deploy`，已通过 [PR #11](https://github.com/youq616/ultrabrain/pull/11) 合并：审核计划绑定、独立单元副本、同账号跨安装串行化、持久化事务回执、停止后更新、逐代回滚和中断恢复。调用只重载用户管理器；自动启停、启用和应用激活失败回滚留在后续范围。实现与命令见 [个人服务部署](PERSONAL-DEPLOY.md)。
 
-本阶段的纯事务测试、公开 CLI 测试及真实用户 systemd 安装/HTTP/崩溃恢复集成需要在最终提交验收；下面任务召回的旧 PASS 不覆盖新代码。每次修改后的最终应用提交仍须由独立代理明确批准，CI 和实现代理自审均不能代替该门槛。
+| 验收对象 | 精确值 |
+|---|---|
+| 最终审核候选 | `8c519f23a359691a24e9780766c5baed54c58c40` |
+| 候选代码树 | `9fa4b6574c7b1e9278eeb11dc5de9b3b6ec76789` |
+| PR CI 实际 merge | `fdaee37934db8d449598a57f8cc13e0b7ae13fb7`，代码树与候选相同 |
+| 实际 main 合并提交 | `50718455448b90c1eb70e3df70c96700b67bc867`，代码树与候选相同 |
+| 六组 PR CI | 全部成功，共 23 个 jobs；普通用户下 524 Node / 367 Python 全通过、无跳过 |
+| 新部署真实集成 | push 与 PR 均通过 15 项；实际 user-systemd、PostgreSQL、认证 HTTP、进程中断和重复恢复缓存重载 |
+
+两个未参与实现的独立 reviewer 分别检查完整阶段并复审每次修正后的精确提交，最终均明确 PASS：[/root/deploy_transaction_review](reviews/PERSONAL-DEPLOY-TRANSACTION-REVIEW.md) 审查事务、持久化和恢复；[/root/deploy_boundary_review](reviews/PERSONAL-DEPLOY-BOUNDARY-REVIEW.md) 审查服务边界、系统路径、公开 CLI 和测试子进程。最终提交新增夹具分别有 16 个独立绑定/总线场景，以及 7 个助手和 9 个父进程协议场景通过。应用源码最后一次变更为 `ed65c0f073b334075e4f2482b140fd8dd0a769df`；其 87 项部署 Python 测试、4 项公开 CLI 测试及 43 个独立事务/协调/恢复场景在报告中保留原提交归属，未假称在后续仅测试/文档提交重复运行。
+
+本阶段 CI：[全量验证](https://github.com/youq616/ultrabrain/actions/runs/35242391344)、[真实用户服务](https://github.com/youq616/ultrabrain/actions/runs/35242391510)、[恢复](https://github.com/youq616/ultrabrain/actions/runs/35242391295)、[客户端跨平台](https://github.com/youq616/ultrabrain/actions/runs/35242391422)、[任务召回](https://github.com/youq616/ultrabrain/actions/runs/35242391401)、[原生接入](https://github.com/youq616/ultrabrain/actions/runs/35242391258)。全量包括 15 条历史升级路径和 n8n 引擎。服务工作流还通过原有 18 项检查，使用 2 次本地合成供应商响应；新的部署夹具不调用模型。实际部署测试只观察到安装链接形式的 FragmentPath，代际目标形式另有单元测试。
+
+首次审核曾阻断共享 pending 发布顺序、额外 `.upholds` 依赖与别名三个问题；修复后重新审核。真实 CI 又依次暴露系统目录兼容、托管镜像可写权限、安装链接 FragmentPath、停止任务时序和无引用缓存假设。独立审核还在未提交的兼容草案上复现了恢复再次中断后跳过重载的漏洞，最终代码改为每次有效 pending 恢复都成功重载后才清除记录。原始 BLOCK 报告保存在 [首次审核档案](reviews/PERSONAL-DEPLOY-INITIAL-REVIEWS.md)；每个失败候选的完整 SHA、运行链接、日志哈希及修正原因见 [机器验收记录](reviews/PERSONAL-DEPLOY-EVIDENCE.json)。初次未提交实现的 54 项本地测试曾出现 2 failures / 33 errors，同样保留为失败，不计入通过结果。
+
+本地环境是 UID 0；部署事务/CLI 和隔离代理探测在此完成，普通用户活 systemd、实际数据库与 HTTP 的验收来自上述真实 CI。没有放宽生产普通账号限制，没有部署用户主机，也没有把配置回滚说成源码/Bun/数据库回滚。当前文档及审核归档属于合并后的文档提交；上表 CI 针对精确候选/相同应用代码树，不能表述为在后续文档提交重新执行。
+
+合并后再次核对 main 应用提交 `50718455448b90c1eb70e3df70c96700b67bc867` 的自动 CI：[全量](https://github.com/youq616/ultrabrain/actions/runs/35243374174)、[用户服务](https://github.com/youq616/ultrabrain/actions/runs/35243374021)、[恢复](https://github.com/youq616/ultrabrain/actions/runs/35243374096)、[跨平台](https://github.com/youq616/ultrabrain/actions/runs/35243374041)、[任务召回](https://github.com/youq616/ultrabrain/actions/runs/35243374348)、[原生接入](https://github.com/youq616/ultrabrain/actions/runs/35243374015) 和 [源码快照](https://github.com/youq616/ultrabrain/actions/runs/35243374044) 七组均成功，共 24 个 jobs。合并后日志再次确认 524 Node / 367 Python，以及 15 项新部署和 18 项既有服务检查全部通过。完整运行记录保存在机器验收文件，仅归属于上述合并提交。
 
 ## 已完成的任务召回接手
 
@@ -25,7 +42,7 @@
 
 先前发现的旧任务 Hook 仍留在配置中、可能把新提示词发送到旧目标的问题，已在候选中修复；配置冲突在写入前拒绝。查询响应丢失后也不再声称正文肯定未发送，而是报告交付不确定。相关复审见 [原始 P1](https://github.com/youq616/ultrabrain/pull/10#discussion_r4033742038) 和 [GitHub 独立复审](https://github.com/youq616/ultrabrain/pull/10#issuecomment-5711294136)。
 
-## 独立审核与验证
+## 任务召回接手的独立审核与验证
 
 以下是实际不同 reviewer agent 的书面结果，均针对上述完整应用提交；不是实现代理自审，也不是以 CI 代替审查。
 
@@ -63,7 +80,7 @@
 
 PR #8 的基本导出/校验与周期处理能力已由主线覆盖；剩余差异主要是 oneshot + timer、可选批次/服务名、自动预检和 manifest 设置。其单元类型/名称与现有 personal-status 也不直接兼容。独立的代码比较、旧分支问题和实施建议见 [服务分支分析](reviews/SERVICE-BUNDLES-TAKEOVER-TRIAGE.md)。旧分支的 `enable-linger` 审核意见不等于 main 已消除该行为；当前一次性 CI 仍使用它。
 
-## 本次部署阶段的任务定义与边界
+## 已完成部署阶段的范围与后续边界
 
 本阶段在已接受的固定个人服务合同上实现**绑定审核计划的部署与回滚流程**。此前个人服务工具只生成/校验待安装文件，使用者仍需手工链接和启动；旧 `install-service.py --enable` 只管理数据库/MCP。
 
@@ -73,7 +90,7 @@ PR #8 的基本导出/校验与周期处理能力已由主线覆盖；剩余差�
 4. 在一次性真实 user-systemd CI 中验证安装、故障恢复和回滚，并与 personal-status 区分管理器活动、安装绑定及应用实际就绪。
 5. 完成后对最终应用提交开展新的独立子代理审核；本轮对任务召回的 PASS 不覆盖新的部署实现。
 
-本次实现按上述停止状态范围推进，验收以本阶段最终提交记录为准。Timer 可在后续设计，现有 Worker 已具备周期处理，不需要为此恢复整个旧分支。能在仓库/Linux/CI 执行的工作继续在仓库侧完成。
+本阶段已按上述停止状态范围验收并合入 PR #11；自动激活切换与激活失败回滚可作为后续独立阶段。Timer 可在后续设计，现有 Worker 已具备周期处理，不需要为此恢复整个旧分支。能在仓库/Linux/CI 执行的工作继续在仓库侧完成。
 
 ## 持续约束与未完成边界
 

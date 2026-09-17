@@ -1,0 +1,1049 @@
+{
+  "base_commit": "6f2c60fd2d27e4bcbb9046fe298fa6bebc6278d6",
+  "candidate_commit": "8c519f23a359691a24e9780766c5baed54c58c40",
+  "candidate_tree": "9fa4b6574c7b1e9278eeb11dc5de9b3b6ec76789",
+  "ci_failure_history": [
+    {
+      "candidate": "d6919fa66ba3e94fc8bf57210a6565472f722e7c",
+      "pr_run": 35236196329,
+      "push_run": 35236148695,
+      "result": "Generic deployment CLI failure; not accepted.",
+      "followup_commit": "dc1b6064a1adef6a92eb326b3fcc00c0bc83cfb7",
+      "push_url": "https://github.com/youq616/ultrabrain/actions/runs/35236148695",
+      "pr_url": "https://github.com/youq616/ultrabrain/actions/runs/35236196329"
+    },
+    {
+      "candidate": "dc1b6064a1adef6a92eb326b3fcc00c0bc83cfb7",
+      "pr_run": 35236947954,
+      "push_run": 35236942269,
+      "result": "Plan stopped after check 1: unsafe_or_changed_filesystem.",
+      "followup_commit": "10072b8e96aa7e0e095517f4961a679a7417898f",
+      "push_url": "https://github.com/youq616/ultrabrain/actions/runs/35236942269",
+      "pr_url": "https://github.com/youq616/ultrabrain/actions/runs/35236947954",
+      "followup_correction": "Narrow root-controlled read-only handling for Ubuntu /etc/xdg/systemd/user compatibility link."
+    },
+    {
+      "candidate": "10072b8e96aa7e0e095517f4961a679a7417898f",
+      "pr_run": 35238327780,
+      "push_run": 35238321941,
+      "result": "Plan stopped after check 1: unsafe_directory_permissions.",
+      "followup_commit": "1d62692dc094885f5f07599885cee3af002f9ef8",
+      "push_url": "https://github.com/youq616/ultrabrain/actions/runs/35238321941",
+      "pr_url": "https://github.com/youq616/ultrabrain/actions/runs/35238327780",
+      "followup_correction": "Official hosted image had /usr/share 0777; restore only fixed root-owned directory ancestry permissions in disposable CI."
+    },
+    {
+      "candidate": "1d62692dc094885f5f07599885cee3af002f9ef8",
+      "pr_run": 35239241392,
+      "push_run": 35239235701,
+      "result": "Plan passed; apply stopped after check 1: deployment_recovery_required.",
+      "followup_commit": "ed65c0f073b334075e4f2482b140fd8dd0a769df",
+      "push_url": "https://github.com/youq616/ultrabrain/actions/runs/35239235701",
+      "pr_url": "https://github.com/youq616/ultrabrain/actions/runs/35239241392",
+      "followup_correction": "Offline systemd by-name verification exposed installed-link FragmentPath representation; admit only exact verified installed path and require recovery reload."
+    },
+    {
+      "candidate": "ed65c0f073b334075e4f2482b140fd8dd0a769df",
+      "pr_run": 35240814958,
+      "push_run": 35240809914,
+      "result": "5 checks passed, then immediate console stop-state assertion saw deactivating.",
+      "followup_commit": "868625f4c30bd52f241753483e6e5bef34efdae6",
+      "push_url": "https://github.com/youq616/ultrabrain/actions/runs/35240809914",
+      "pr_url": "https://github.com/youq616/ultrabrain/actions/runs/35240814958",
+      "followup_correction": "Wait for inactive state and empty Job; no production guard relaxation."
+    },
+    {
+      "candidate": "868625f4c30bd52f241753483e6e5bef34efdae6",
+      "pr_run": 35241328036,
+      "push_run": 35241322978,
+      "result": "7 checks passed, then unreferenced newer-cache assumption failed during repeated recovery.",
+      "followup_commit": "8c519f23a359691a24e9780766c5baed54c58c40",
+      "push_url": "https://github.com/youq616/ultrabrain/actions/runs/35241322978",
+      "pr_url": "https://github.com/youq616/ultrabrain/actions/runs/35241328036",
+      "followup_correction": "Retain a fixed read-only D-Bus RefUnit during the deterministic stale-cache scenario. Failed log does not establish a garbage-collection trace; primary documentation explains why retention is necessary."
+    }
+  ],
+  "ci_log_evidence": [
+    {
+      "file": "fifth-services-ci.log",
+      "sha256": "9b7ee1accb7ae4b33251005a57a558c504bd0eb06a99e1b30d45b4418bbaaf06",
+      "selected_lines": [
+        "2026-09-17T15:33:28.9097104Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+        "2026-09-17T15:33:32.3136715Z {\"deployment_failure_after_checks\":5,\"manager_observation\":[{\"Id\":\"ultrabrain-personal.target\",\"Names\":\"ultrabrain-personal.target\",\"LoadState\":\"loaded\",\"ActiveState\":\"inactive\",\"SubState\":\"dead\",\"FragmentPath\":\"/home/runner/.config/systemd/user/ultrabrain-personal.target\",\"DropInPaths\":\"\",\"Job\":\"\",\"NeedDaemonReload\":\"no\"},{\"Id\":\"ultrabrain-personal-console.service\",\"Names\":\"ultrabrain-personal-console.service\",\"LoadState\":\"loaded\",\"ActiveState\":\"inactive\",\"SubState\":\"dead\",\"FragmentPath\":\"/home/runner/.config/systemd/user/ultrabrain-personal-console.service\",\"DropInPaths\":\"\",\"Job\":\"\",\"NeedDaemonReload\":\"no\"},{\"Id\":\"ultrabrain-personal-worker.service\",\"Names\":\"ultrabrain-personal-worker.service\",\"LoadState\":\"not-found\",\"ActiveState\":\"inactive\",\"SubState\":\"dead\",\"FragmentPath\":\"\",\"DropInPaths\":\"\",\"Job\":\"\",\"NeedDaemonReload\":\"no\"}]}",
+        "2026-09-17T15:33:33.4354555Z AssertionError: Expected values to be strictly equal:"
+      ]
+    },
+    {
+      "file": "fifth-services-pr-ci.log",
+      "sha256": "d4a546bed982e700280c5c5de2bc0128ff00ed1fc6f1f23dfe2b8b8dd2cdaf01",
+      "selected_lines": [
+        "2026-09-17T15:35:07.5653020Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+        "2026-09-17T15:35:10.8776653Z {\"deployment_failure_after_checks\":5,\"manager_observation\":[{\"Id\":\"ultrabrain-personal.target\",\"Names\":\"ultrabrain-personal.target\",\"LoadState\":\"loaded\",\"ActiveState\":\"inactive\",\"SubState\":\"dead\",\"FragmentPath\":\"/home/runner/.config/systemd/user/ultrabrain-personal.target\",\"DropInPaths\":\"\",\"Job\":\"\",\"NeedDaemonReload\":\"no\"},{\"Id\":\"ultrabrain-personal-console.service\",\"Names\":\"ultrabrain-personal-console.service\",\"LoadState\":\"loaded\",\"ActiveState\":\"inactive\",\"SubState\":\"dead\",\"FragmentPath\":\"/home/runner/.config/systemd/user/ultrabrain-personal-console.service\",\"DropInPaths\":\"\",\"Job\":\"\",\"NeedDaemonReload\":\"no\"},{\"Id\":\"ultrabrain-personal-worker.service\",\"Names\":\"ultrabrain-personal-worker.service\",\"LoadState\":\"not-found\",\"ActiveState\":\"inactive\",\"SubState\":\"dead\",\"FragmentPath\":\"\",\"DropInPaths\":\"\",\"Job\":\"\",\"NeedDaemonReload\":\"no\"}]}",
+        "2026-09-17T15:35:11.9653410Z AssertionError: Expected values to be strictly equal:"
+      ]
+    },
+    {
+      "file": "fifth-unit-ci.log",
+      "sha256": "c23d877702199ed38b480d179d4d6ea9418ec748afb45f70d0bd163d7296701c",
+      "selected_lines": [
+        "2026-09-17T15:32:25.0098002Z # tests 524",
+        "2026-09-17T15:32:25.0098543Z # pass 524",
+        "2026-09-17T15:32:25.0098774Z # fail 0",
+        "2026-09-17T15:32:25.0099316Z # skipped 0",
+        "2026-09-17T15:32:38.1804350Z Ran 367 tests in 12.841s"
+      ]
+    },
+    {
+      "file": "first-services-ci.log",
+      "sha256": "69d71b790fdfa1ab8c9ba8edd4c81882fa716a86529c788a01da4c415ccf2430",
+      "selected_lines": [
+        "2026-09-17T14:51:06.3560540Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+        "2026-09-17T14:51:07.8627883Z 26 |   assert.equal(overflow,false,'Bounded subprocess output exceeded');if(ok)assert.equal(code,0,'CI subprocess failed: '+command+' '+args[0]);return {code,text};}",
+        "2026-09-17T14:51:07.8629352Z AssertionError: CI subprocess failed: /home/runner/.bun/bin/bun /home/runner/work/ultrabrain/ultrabrain//src/cli.mjs"
+      ]
+    },
+    {
+      "file": "first-unit-ci.log",
+      "sha256": "0175959836133f415219ccacbd72637171c7fe8c5aa39a77b250c851a820815f",
+      "selected_lines": [
+        "2026-09-17T14:49:33.6214025Z # tests 524",
+        "2026-09-17T14:49:33.6214731Z # pass 524",
+        "2026-09-17T14:49:33.6215067Z # fail 0",
+        "2026-09-17T14:49:33.6215815Z # skipped 0",
+        "2026-09-17T14:49:46.7672021Z Ran 348 tests in 12.836s"
+      ]
+    },
+    {
+      "file": "fourth-services-ci.log",
+      "sha256": "e1d5c270530bf559842c3dcf3ed5edafe51111feb120ecf6f72b78417446eced",
+      "selected_lines": [
+        "2026-09-17T15:18:56.2724052Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+        "2026-09-17T15:18:58.2338054Z AssertionError: Deployment apply failed after 1 checks: deployment_recovery_required",
+        "2026-09-17T15:18:58.2346019Z 136 |   if(!ownsLinks())throw Error('Fixture unit identity changed; preserve deployment evidence');",
+        "2026-09-17T15:18:58.2347013Z error: Fixture unit identity changed; preserve deployment evidence"
+      ]
+    },
+    {
+      "file": "fourth-services-pr-ci.log",
+      "sha256": "d6581c9b8d41ad0248bbd9f30009da6268cdf6f1549a56b9bf27f168985346be",
+      "selected_lines": [
+        "2026-09-17T15:18:59.9928509Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+        "2026-09-17T15:19:01.7957738Z AssertionError: Deployment apply failed after 1 checks: deployment_recovery_required",
+        "2026-09-17T15:19:01.7965787Z 136 |   if(!ownsLinks())throw Error('Fixture unit identity changed; preserve deployment evidence');",
+        "2026-09-17T15:19:01.7967125Z error: Fixture unit identity changed; preserve deployment evidence"
+      ]
+    },
+    {
+      "file": "second-services-ci.log",
+      "sha256": "d6c2917272ebe9dc812ef6c445e0d09c160b1057a034cf97a6b042e3e930a4b0",
+      "selected_lines": [
+        "2026-09-17T15:01:11.1675592Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+        "2026-09-17T15:01:12.7619042Z AssertionError: Deployment plan failed after 1 checks: unsafe_or_changed_filesystem"
+      ]
+    },
+    {
+      "file": "second-services-pr-ci.log",
+      "sha256": "da4956d996d0951bc357df6c1a1dd65190e710ca575fa16c10905243351e9d39",
+      "selected_lines": [
+        "2026-09-17T15:04:42.0431605Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+        "2026-09-17T15:04:43.8671753Z AssertionError: Deployment plan failed after 1 checks: unsafe_or_changed_filesystem"
+      ]
+    },
+    {
+      "file": "seventh-services-ci.log",
+      "sha256": "0d95ac71d845d195f4bf62a5b37944eeb43bd9e8222698dd3e7bafe989076f9a",
+      "selected_lines": [
+        "2026-09-17T15:47:58.4924536Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+        "2026-09-17T15:48:12.8155899Z {\"ok\":true,\"checks\":15,\"systemd\":\"actual-user-manager\",\"postgresql\":\"actual\",\"http\":\"authenticated-local-console\",\"interruption\":\"actual-process-exit-and-cli-recovery\",\"repeated_recovery\":\"actual-referenced-stale-manager-cache-reloaded\",\"fragment_path_forms\":[\"installed-link\"],\"model_calls\":0,\"user_host_deployed\":false}"
+      ]
+    },
+    {
+      "file": "seventh-services-pr-ci.log",
+      "sha256": "6eaa0288e8b80700b9d0fea0487cbecb82a72b11f19d84b0f6eada9fb1ec32de",
+      "selected_lines": [
+        "2026-09-17T15:49:34.2508251Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+        "2026-09-17T15:49:48.8480096Z {\"ok\":true,\"checks\":15,\"systemd\":\"actual-user-manager\",\"postgresql\":\"actual\",\"http\":\"authenticated-local-console\",\"interruption\":\"actual-process-exit-and-cli-recovery\",\"repeated_recovery\":\"actual-referenced-stale-manager-cache-reloaded\",\"fragment_path_forms\":[\"installed-link\"],\"model_calls\":0,\"user_host_deployed\":false}"
+      ]
+    },
+    {
+      "file": "seventh-unit-ci.log",
+      "sha256": "9a5a1a960b874c1e434f707487f2571dfe3263746269465cd475fb27de4cace7",
+      "selected_lines": [
+        "2026-09-17T15:48:10.5583743Z # tests 524",
+        "2026-09-17T15:48:10.5584393Z # pass 524",
+        "2026-09-17T15:48:10.5584715Z # fail 0",
+        "2026-09-17T15:48:10.5585368Z # skipped 0",
+        "2026-09-17T15:48:25.8803759Z Ran 367 tests in 14.971s"
+      ]
+    },
+    {
+      "file": "sixth-services-ci.log",
+      "sha256": "d0edd1e1a95859b9366bc71d54b9beb0e359103eca26e00165105dbceb2090fb",
+      "selected_lines": [
+        "2026-09-17T15:37:56.6802525Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+        "2026-09-17T15:38:03.5163042Z {\"deployment_failure_after_checks\":7,\"manager_observation\":[{\"Id\":\"ultrabrain-personal.target\",\"Names\":\"ultrabrain-personal.target\",\"LoadState\":\"loaded\",\"ActiveState\":\"inactive\",\"SubState\":\"dead\",\"FragmentPath\":\"/home/runner/.config/systemd/user/ultrabrain-personal.target\",\"DropInPaths\":\"\",\"Job\":\"\",\"NeedDaemonReload\":\"no\"},{\"Id\":\"ultrabrain-personal-console.service\",\"Names\":\"ultrabrain-personal-console.service\",\"LoadState\":\"loaded\",\"ActiveState\":\"inactive\",\"SubState\":\"dead\",\"FragmentPath\":\"/home/runner/.config/systemd/user/ultrabrain-personal-console.service\",\"DropInPaths\":\"\",\"Job\":\"\",\"NeedDaemonReload\":\"no\"},{\"Id\":\"ultrabrain-personal-worker.service\",\"Names\":\"ultrabrain-personal-worker.service\",\"LoadState\":\"not-found\",\"ActiveState\":\"inactive\",\"SubState\":\"dead\",\"FragmentPath\":\"\",\"DropInPaths\":\"\",\"Job\":\"\",\"NeedDaemonReload\":\"no\"}]}",
+        "2026-09-17T15:38:03.8166043Z AssertionError: The actual manager still caches the newer source before recovery reload",
+        "2026-09-17T15:38:03.8174827Z 175 |   if(!ownsLinks())throw Error('Fixture unit identity changed; preserve deployment evidence');",
+        "2026-09-17T15:38:03.8176175Z error: Fixture unit identity changed; preserve deployment evidence"
+      ]
+    },
+    {
+      "file": "sixth-services-pr-ci.log",
+      "sha256": "428bfcf2667e1053dd7a91138f2295da2d01e42324d635e0869c21c35f509175",
+      "selected_lines": [
+        "2026-09-17T15:38:01.8037290Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+        "2026-09-17T15:38:08.6360583Z {\"deployment_failure_after_checks\":7,\"manager_observation\":[{\"Id\":\"ultrabrain-personal.target\",\"Names\":\"ultrabrain-personal.target\",\"LoadState\":\"loaded\",\"ActiveState\":\"inactive\",\"SubState\":\"dead\",\"FragmentPath\":\"/home/runner/.config/systemd/user/ultrabrain-personal.target\",\"DropInPaths\":\"\",\"Job\":\"\",\"NeedDaemonReload\":\"no\"},{\"Id\":\"ultrabrain-personal-console.service\",\"Names\":\"ultrabrain-personal-console.service\",\"LoadState\":\"loaded\",\"ActiveState\":\"inactive\",\"SubState\":\"dead\",\"FragmentPath\":\"/home/runner/.config/systemd/user/ultrabrain-personal-console.service\",\"DropInPaths\":\"\",\"Job\":\"\",\"NeedDaemonReload\":\"no\"},{\"Id\":\"ultrabrain-personal-worker.service\",\"Names\":\"ultrabrain-personal-worker.service\",\"LoadState\":\"not-found\",\"ActiveState\":\"inactive\",\"SubState\":\"dead\",\"FragmentPath\":\"\",\"DropInPaths\":\"\",\"Job\":\"\",\"NeedDaemonReload\":\"no\"}]}",
+        "2026-09-17T15:38:08.9304880Z AssertionError: The actual manager still caches the newer source before recovery reload",
+        "2026-09-17T15:38:08.9311853Z 175 |   if(!ownsLinks())throw Error('Fixture unit identity changed; preserve deployment evidence');",
+        "2026-09-17T15:38:08.9312719Z error: Fixture unit identity changed; preserve deployment evidence"
+      ]
+    },
+    {
+      "file": "third-services-ci.log",
+      "sha256": "34931ddb5294ac748e88e156d44785631aabb291b4726167c24d7dd8fdee8551",
+      "selected_lines": [
+        "2026-09-17T15:11:20.4995507Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+        "2026-09-17T15:11:22.2374507Z AssertionError: Deployment plan failed after 1 checks: unsafe_directory_permissions"
+      ]
+    },
+    {
+      "file": "third-services-pr-ci.log",
+      "sha256": "8675d6b3cde7c333a30b2c079a882017b9e712cd5a600e533cb294703d1dc886",
+      "selected_lines": [
+        "2026-09-17T15:11:44.4203799Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+        "2026-09-17T15:11:45.9208553Z AssertionError: Deployment plan failed after 1 checks: unsafe_directory_permissions"
+      ]
+    }
+  ],
+  "ci_merge": {
+    "parents": [
+      "6f2c60fd2d27e4bcbb9046fe298fa6bebc6278d6",
+      "8c519f23a359691a24e9780766c5baed54c58c40"
+    ],
+    "sha": "fdaee37934db8d449598a57f8cc13e0b7ae13fb7",
+    "tree": "9fa4b6574c7b1e9278eeb11dc5de9b3b6ec76789"
+  },
+  "ci_pending": false,
+  "format": 1,
+  "implementation_boundary": {
+    "automatic_start_stop_enable": false,
+    "configuration_rollback_only": true,
+    "cooperative_lock_not_same_uid_isolation": true,
+    "database_and_model_config_managed_elsewhere": true,
+    "physical_power_loss_tested": false,
+    "user_host_deployed": false
+  },
+  "local": {
+    "earlier_related_services_python_tests": 36,
+    "earlier_related_status_python_tests": 52,
+    "first_test_failure": {
+      "errors": 33,
+      "failures": 2,
+      "log_sha256": "5cced49405d1d1493bce72520d88bb6fd28a23584e0e1552486624bbac300a9b",
+      "resolution": "Corrected manifest and deterministic serialization handling before first committed candidate.",
+      "stage": "uncommitted initial implementation",
+      "tests": 54
+    },
+    "live_systemd_ran": false,
+    "new_deployment_python_tests": 87,
+    "node_cli_and_related_harness_tests": 15,
+    "root_runtime": true
+  },
+  "phase": "stopped-personal-deployment",
+  "project": "youq616/ultrabrain",
+  "review_history": [
+    {
+      "commit": "d6919fa66ba3e94fc8bf57210a6565472f722e7c",
+      "findings": [
+        "Shared journal publication after local journal allowed another home to acquire fixed unit names after interruption.",
+        "Additional upholds dependency directories and alias names were not refused."
+      ],
+      "verdict": "BLOCK"
+    },
+    {
+      "commit": "dc1b6064a1adef6a92eb326b3fcc00c0bc83cfb7",
+      "corrections": [
+        "Publish shared coordinator before local mirror.",
+        "Refuse upholds directories and noncanonical Names."
+      ],
+      "verdict": "PASS for independent source review; actual service CI still failed"
+    },
+    {
+      "commit": "ed65c0f073b334075e4f2482b140fd8dd0a769df",
+      "corrections": [
+        "Allow the exact verified installed link as FragmentPath.",
+        "Always acknowledge daemon-reload before clearing a pending recovery."
+      ],
+      "proposal_only_finding": "Independent reviewer reproduced stale cached B after a second recovery on a temporary naive FragmentPath-compatibility proposal. The committed ed65c0f contains the mandatory-reload fix; the naive proposal was not merged.",
+      "verdict": "PASS for independent source review; actual service CI still failed"
+    },
+    {
+      "commit": "868625f4c30bd52f241753483e6e5bef34efdae6",
+      "corrections": [
+        "Wait for target and console to be inactive with empty jobs in the disposable fixture."
+      ],
+      "verdict": "PASS for independent source review; actual service CI still failed"
+    }
+  ],
+  "reviews_pending": false,
+  "acceptance": {
+    "merged": true,
+    "pr": 11,
+    "merge": {
+      "parents": [
+        "6f2c60fd2d27e4bcbb9046fe298fa6bebc6278d6",
+        "8c519f23a359691a24e9780766c5baed54c58c40"
+      ],
+      "sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+      "tree": "9fa4b6574c7b1e9278eeb11dc5de9b3b6ec76789"
+    }
+  },
+  "independent_reviews": [
+    {
+      "identity": "/root/deploy_transaction_review",
+      "reviewed_commit": "8c519f23a359691a24e9780766c5baed54c58c40",
+      "verdict": "PASS",
+      "report": "PERSONAL-DEPLOY-TRANSACTION-REVIEW.md",
+      "report_sha256": "7c34ba2a3e8db631cdb70cdd398e8f11120033b0c5955fd5fe6bdf6a8b1adc4e",
+      "current_candidate_independent_fixture_cases": 16,
+      "earlier_evidence": {
+        "commit": "ed65c0f073b334075e4f2482b140fd8dd0a769df",
+        "python_tests": 87,
+        "independent_transaction_and_recovery_cases": 43
+      }
+    },
+    {
+      "identity": "/root/deploy_boundary_review",
+      "reviewed_commit": "8c519f23a359691a24e9780766c5baed54c58c40",
+      "verdict": "PASS",
+      "report": "PERSONAL-DEPLOY-BOUNDARY-REVIEW.md",
+      "report_sha256": "a816a881bfc5103d868cea3062ff314f38265fcc1bc67b914519137302a4ceb4",
+      "current_candidate_helper_cases": 7,
+      "current_candidate_parent_protocol_cases": 9,
+      "earlier_evidence": {
+        "commit": "ed65c0f073b334075e4f2482b140fd8dd0a769df",
+        "python_tests": 87,
+        "node_cli_tests": 4
+      },
+      "nonblocking_documentation_correction": "Acceptance docs clarify reference release occurs after cache-A verification and before HTTP."
+    }
+  ],
+  "post_merge_ci_pending": false,
+  "documentation_note": "This evidence and report archive are subsequent documentation-only changes. CI runs are attributed to their exact candidate or merge SHA, never to the later documentation commit.",
+  "candidate_ci": {
+    "candidate": "8c519f23a359691a24e9780766c5baed54c58c40",
+    "tree": "9fa4b6574c7b1e9278eeb11dc5de9b3b6ec76789",
+    "observed_at": "2026-09-17 15:54:52 UTC",
+    "scope": "Read-only GitHub final workflow snapshot; all requested candidate CI passed. Repository merge and user deployment are separate actions.",
+    "ci_merge": {
+      "sha": "fdaee37934db8d449598a57f8cc13e0b7ae13fb7",
+      "tree": "9fa4b6574c7b1e9278eeb11dc5de9b3b6ec76789",
+      "parents": [
+        "6f2c60fd2d27e4bcbb9046fe298fa6bebc6278d6",
+        "8c519f23a359691a24e9780766c5baed54c58c40"
+      ],
+      "identical_tree": true
+    },
+    "unit_log_evidence": {
+      "job_id": 105273850357,
+      "node_tests": 524,
+      "node_pass": 524,
+      "node_fail": 0,
+      "node_skip": 0,
+      "python_tests": 367,
+      "python_status": "OK",
+      "log": "seventh-unit-ci.log",
+      "log_sha256": "9a5a1a960b874c1e434f707487f2571dfe3263746269465cd475fb27de4cace7"
+    },
+    "pr_workflows": [
+      {
+        "id": 35242391401,
+        "name": "Task-aware personal recall",
+        "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391401",
+        "jobs": [
+          {
+            "id": 105273850181,
+            "name": "task-context",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391401/job/105273850181"
+          }
+        ]
+      },
+      {
+        "id": 35242391295,
+        "name": "Personal recovery set",
+        "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391295",
+        "jobs": [
+          {
+            "id": 105273849626,
+            "name": "recovery",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391295/job/105273849626"
+          }
+        ]
+      },
+      {
+        "id": 35242391422,
+        "name": "Personal client portability",
+        "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391422",
+        "jobs": [
+          {
+            "id": 105273850311,
+            "name": "client-contracts (ubuntu-24.04)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391422/job/105273850311"
+          },
+          {
+            "id": 105273850515,
+            "name": "client-contracts (windows-2025)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391422/job/105273850515"
+          }
+        ]
+      },
+      {
+        "id": 35242391258,
+        "name": "Native personal integrations",
+        "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391258",
+        "jobs": [
+          {
+            "id": 105273849647,
+            "name": "opencode-and-hermes",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391258/job/105273849647"
+          }
+        ]
+      },
+      {
+        "id": 35242391510,
+        "name": "Personal user services",
+        "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391510",
+        "jobs": [
+          {
+            "id": 105273851168,
+            "name": "user-systemd",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391510/job/105273851168"
+          }
+        ]
+      },
+      {
+        "id": 35242391344,
+        "name": "Validate ultrabrain",
+        "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344",
+        "jobs": [
+          {
+            "id": 105273850357,
+            "name": "unit",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273850357"
+          },
+          {
+            "id": 105273850814,
+            "name": "native-integration (c0c85d85284779599d1e5722cc9345373c945b62)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273850814"
+          },
+          {
+            "id": 105273850846,
+            "name": "native-integration (32f97e8d45b312980ce6ab1784cf316feddd698e)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273850846"
+          },
+          {
+            "id": 105273850862,
+            "name": "native-integration (a3f1790b0e837e3c4788c19de531332e55b7a908)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273850862"
+          },
+          {
+            "id": 105273850873,
+            "name": "native-integration (d7be484b445a893112d3a132c30f42282865a41a)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273850873"
+          },
+          {
+            "id": 105273850925,
+            "name": "native-integration (57852fed3d1839bab105c5b56632af1f65bb4b15)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273850925"
+          },
+          {
+            "id": 105273850965,
+            "name": "native-integration (09a4c8fe95242d5939e28cc3957d4605a6823a81)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273850965"
+          },
+          {
+            "id": 105273850995,
+            "name": "native-integration (115978df6069ad11d376f848d214654ba6adde16)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273850995"
+          },
+          {
+            "id": 105273851006,
+            "name": "native-integration (31f43aa1ff1343bb649e39cf44ca57203ce0ebac)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273851006"
+          },
+          {
+            "id": 105273851032,
+            "name": "native-integration (52aff84feb4bf77b32554dcbfa902625e3008c4c)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273851032"
+          },
+          {
+            "id": 105273851089,
+            "name": "native-integration (fb397f0f3a8ba12253f9e993bba93c387e6de57a)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273851089"
+          },
+          {
+            "id": 105273851116,
+            "name": "native-integration (225fef02de4c3aa33d655c4b2dfde9f246571329)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273851116"
+          },
+          {
+            "id": 105273851128,
+            "name": "native-integration (38e0e6657561e17ba85c71d0783d604242a054e8)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273851128"
+          },
+          {
+            "id": 105273851159,
+            "name": "native-integration (f8cc5b980c260cd61e66e032ebce94a5cdc065e3)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273851159"
+          },
+          {
+            "id": 105273851171,
+            "name": "native-integration (b46c067f0ef110900af7fe8bb2334b4a9c509c3c)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273851171"
+          },
+          {
+            "id": 105273851199,
+            "name": "native-integration (a81374c1bc626623616a47358f7105c91a49dea5)",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105273851199"
+          },
+          {
+            "id": 105274646706,
+            "name": "n8n-engine",
+            "head_sha": "8c519f23a359691a24e9780766c5baed54c58c40",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391344/job/105274646706"
+          }
+        ]
+      }
+    ],
+    "push_services": {
+      "run_id": 35242386893,
+      "job_id": 105273834778,
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35242386893",
+      "log": "seventh-services-ci.log",
+      "log_sha256": "0d95ac71d845d195f4bf62a5b37944eeb43bd9e8222698dd3e7bafe989076f9a"
+    },
+    "pr_services": {
+      "run_id": 35242391510,
+      "job_id": 105273851168,
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/youq616/ultrabrain/actions/runs/35242391510",
+      "log": "seventh-services-pr-ci.log",
+      "log_sha256": "6eaa0288e8b80700b9d0fea0487cbecb82a72b11f19d84b0f6eada9fb1ec32de"
+    },
+    "identical_actual_deployment_receipt_in_push_and_pr": {
+      "ok": true,
+      "checks": 15,
+      "systemd": "actual-user-manager",
+      "postgresql": "actual",
+      "http": "authenticated-local-console",
+      "interruption": "actual-process-exit-and-cli-recovery",
+      "repeated_recovery": "actual-referenced-stale-manager-cache-reloaded",
+      "fragment_path_forms": [
+        "installed-link"
+      ],
+      "model_calls": 0,
+      "user_host_deployed": false
+    },
+    "prior_service_receipt_in_both": {
+      "passed": true,
+      "checks": 18,
+      "scope": "actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment",
+      "model_calls_to_local_fixture": 2
+    },
+    "runner_permission_receipt_in_both": [
+      {
+        "runner_directory": "/usr/share",
+        "mode_before": "0o777",
+        "mode_after": "0o755"
+      },
+      {
+        "runner_directory": "/usr/share/systemd",
+        "mode_before": "0o777",
+        "mode_after": "0o755"
+      },
+      {
+        "runner_directory": "/usr/share/systemd/user",
+        "absent": true
+      }
+    ],
+    "limits": [
+      "Unit and fixture counts refer to this exact candidate/CI merge tree.",
+      "Only installed-link FragmentPath form was observed in these actual live CI runs.",
+      "No user host deployment or actual paid model quality is certified.",
+      "Historical failed candidate logs remain preserved separately."
+    ],
+    "total_pr_jobs": 23,
+    "all_six_pr_workflows_success": true,
+    "all_23_pr_jobs_success": true
+  },
+  "post_merge_ci": {
+    "tested_main_commit": "50718455448b90c1eb70e3df70c96700b67bc867",
+    "tested_tree": "9fa4b6574c7b1e9278eeb11dc5de9b3b6ec76789",
+    "repository": "youq616/ultrabrain",
+    "observed_at": "2026-09-17 16:03:18 UTC",
+    "scope": "Final read-only audit of all seven automatic push workflows triggered by the exact PR11 main merge. These workflows do not test or certify any later documentation-only commit.",
+    "parents": [
+      "6f2c60fd2d27e4bcbb9046fe298fa6bebc6278d6",
+      "8c519f23a359691a24e9780766c5baed54c58c40"
+    ],
+    "reviewed_candidate": "8c519f23a359691a24e9780766c5baed54c58c40",
+    "candidate_ci_merge": "fdaee37934db8d449598a57f8cc13e0b7ae13fb7",
+    "identical_candidate_ci_and_main_tree": true,
+    "workflows": [
+      {
+        "id": 35243374348,
+        "name": "Task-aware personal recall",
+        "event": "push",
+        "head_branch": "main",
+        "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374348",
+        "created_at": "2026-09-17T15:55:36Z",
+        "updated_at": "2026-09-17T15:56:32Z",
+        "jobs": [
+          {
+            "id": 105277213183,
+            "name": "task-context",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374348/job/105277213183"
+          }
+        ]
+      },
+      {
+        "id": 35243374021,
+        "name": "Personal user services",
+        "event": "push",
+        "head_branch": "main",
+        "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374021",
+        "created_at": "2026-09-17T15:55:36Z",
+        "updated_at": "2026-09-17T15:57:33Z",
+        "jobs": [
+          {
+            "id": 105277211932,
+            "name": "user-systemd",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374021/job/105277211932"
+          }
+        ]
+      },
+      {
+        "id": 35243374041,
+        "name": "Personal client portability",
+        "event": "push",
+        "head_branch": "main",
+        "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374041",
+        "created_at": "2026-09-17T15:55:36Z",
+        "updated_at": "2026-09-17T15:56:16Z",
+        "jobs": [
+          {
+            "id": 105277211970,
+            "name": "client-contracts (ubuntu-24.04)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374041/job/105277211970"
+          },
+          {
+            "id": 105277212149,
+            "name": "client-contracts (windows-2025)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374041/job/105277212149"
+          }
+        ]
+      },
+      {
+        "id": 35243374096,
+        "name": "Personal recovery set",
+        "event": "push",
+        "head_branch": "main",
+        "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374096",
+        "created_at": "2026-09-17T15:55:36Z",
+        "updated_at": "2026-09-17T15:56:16Z",
+        "jobs": [
+          {
+            "id": 105277212839,
+            "name": "recovery",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374096/job/105277212839"
+          }
+        ]
+      },
+      {
+        "id": 35243374044,
+        "name": "Source snapshot",
+        "event": "push",
+        "head_branch": "main",
+        "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374044",
+        "created_at": "2026-09-17T15:55:36Z",
+        "updated_at": "2026-09-17T15:55:46Z",
+        "jobs": [
+          {
+            "id": 105277211963,
+            "name": "snapshot",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374044/job/105277211963"
+          }
+        ]
+      },
+      {
+        "id": 35243374015,
+        "name": "Native personal integrations",
+        "event": "push",
+        "head_branch": "main",
+        "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374015",
+        "created_at": "2026-09-17T15:55:36Z",
+        "updated_at": "2026-09-17T15:56:49Z",
+        "jobs": [
+          {
+            "id": 105277212191,
+            "name": "opencode-and-hermes",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374015/job/105277212191"
+          }
+        ]
+      },
+      {
+        "id": 35243374174,
+        "name": "Validate ultrabrain",
+        "event": "push",
+        "head_branch": "main",
+        "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174",
+        "created_at": "2026-09-17T15:55:36Z",
+        "updated_at": "2026-09-17T16:01:14Z",
+        "jobs": [
+          {
+            "id": 105277213834,
+            "name": "unit",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277213834"
+          },
+          {
+            "id": 105277213918,
+            "name": "native-integration (09a4c8fe95242d5939e28cc3957d4605a6823a81)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277213918"
+          },
+          {
+            "id": 105277213982,
+            "name": "native-integration (52aff84feb4bf77b32554dcbfa902625e3008c4c)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277213982"
+          },
+          {
+            "id": 105277214007,
+            "name": "native-integration (a3f1790b0e837e3c4788c19de531332e55b7a908)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277214007"
+          },
+          {
+            "id": 105277214020,
+            "name": "native-integration (57852fed3d1839bab105c5b56632af1f65bb4b15)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277214020"
+          },
+          {
+            "id": 105277214051,
+            "name": "native-integration (a81374c1bc626623616a47358f7105c91a49dea5)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277214051"
+          },
+          {
+            "id": 105277214054,
+            "name": "native-integration (c0c85d85284779599d1e5722cc9345373c945b62)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277214054"
+          },
+          {
+            "id": 105277214095,
+            "name": "native-integration (f8cc5b980c260cd61e66e032ebce94a5cdc065e3)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277214095"
+          },
+          {
+            "id": 105277214136,
+            "name": "native-integration (31f43aa1ff1343bb649e39cf44ca57203ce0ebac)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277214136"
+          },
+          {
+            "id": 105277214392,
+            "name": "native-integration (225fef02de4c3aa33d655c4b2dfde9f246571329)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277214392"
+          },
+          {
+            "id": 105277214396,
+            "name": "native-integration (32f97e8d45b312980ce6ab1784cf316feddd698e)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277214396"
+          },
+          {
+            "id": 105277214434,
+            "name": "native-integration (d7be484b445a893112d3a132c30f42282865a41a)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277214434"
+          },
+          {
+            "id": 105277214450,
+            "name": "native-integration (b46c067f0ef110900af7fe8bb2334b4a9c509c3c)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277214450"
+          },
+          {
+            "id": 105277214463,
+            "name": "native-integration (38e0e6657561e17ba85c71d0783d604242a054e8)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277214463"
+          },
+          {
+            "id": 105277214563,
+            "name": "native-integration (fb397f0f3a8ba12253f9e993bba93c387e6de57a)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277214563"
+          },
+          {
+            "id": 105277214624,
+            "name": "native-integration (115978df6069ad11d376f848d214654ba6adde16)",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277214624"
+          },
+          {
+            "id": 105277664038,
+            "name": "n8n-engine",
+            "head_sha": "50718455448b90c1eb70e3df70c96700b67bc867",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/youq616/ultrabrain/actions/runs/35243374174/job/105277664038"
+          }
+        ]
+      }
+    ],
+    "actual_service_evidence": {
+      "run_id": 35243374021,
+      "job_id": 105277211932,
+      "log": "post-merge-services-ci.log",
+      "log_sha256": "7375e21edec07bec8fc78a701d3085971f81537a525619203859b37b6a128e26",
+      "actual_deployment_receipt": {
+        "ok": true,
+        "checks": 15,
+        "systemd": "actual-user-manager",
+        "postgresql": "actual",
+        "http": "authenticated-local-console",
+        "interruption": "actual-process-exit-and-cli-recovery",
+        "repeated_recovery": "actual-referenced-stale-manager-cache-reloaded",
+        "fragment_path_forms": [
+          "installed-link"
+        ],
+        "model_calls": 0,
+        "user_host_deployed": false
+      },
+      "prior_service_receipt": {
+        "passed": true,
+        "checks": 18,
+        "model_calls_to_local_fixture": 2,
+        "scope": "actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment"
+      },
+      "runner_permission_receipts": [
+        {
+          "runner_directory": "/usr/share",
+          "mode_before": "0o777",
+          "mode_after": "0o755"
+        },
+        {
+          "runner_directory": "/usr/share/systemd",
+          "mode_before": "0o777",
+          "mode_after": "0o755"
+        },
+        {
+          "runner_directory": "/usr/share/systemd/user",
+          "absent": true
+        }
+      ]
+    },
+    "actual_unit_evidence": {
+      "run_id": 35243374174,
+      "job_id": 105277213834,
+      "log": "post-merge-unit-ci.log",
+      "log_sha256": "63678865b86cc233e6fb7ae59949032ef9a6b5da93da42df7375947b46c956e8",
+      "node": {
+        "tests": 524,
+        "pass": 524,
+        "fail": 0,
+        "skipped": 0
+      },
+      "python": {
+        "tests": 367,
+        "status": "OK",
+        "elapsed_seconds": 45.59
+      }
+    },
+    "limits": [
+      "No later documentation commit is labeled tested by these runs.",
+      "Only installed-link FragmentPath form was observed in these actual service runs.",
+      "No real user host was deployed, and the deployment fixture made zero model calls.",
+      "The preceding service fixture used two local synthetic-provider calls; that is distinct from the deployment fixture."
+    ],
+    "total_jobs": 24,
+    "all_seven_workflows_success": true,
+    "all_24_jobs_success": true
+  }
+}
