@@ -41,6 +41,8 @@ jobs:
           echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
       - name: Actual generated user services, restart, consent and periodic model fixture
         run: bun test/personal-services-integration.mjs
+      - name: Transactional personal install, stopped update and rollback with real user systemd
+        run: bun test/personal-deploy-integration.mjs
       - name: Stop only synthetic service names and database
         if: always()
         run: |

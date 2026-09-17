@@ -52,6 +52,8 @@
     "test:preflight": "python3 -B -m unittest discover -s test -p 'test_preflight*.py' -v",
     "test:personal-services": "bun test/personal-services-integration.mjs",
     "personal:status": "python3 -I -B scripts/personal-status.py",
-    "test:personal-status": "python3 -B -m unittest discover -s test -p 'test_personal_status*.py' -v"
+    "test:personal-status": "python3 -B -m unittest discover -s test -p 'test_personal_status*.py' -v",
+    "personal:deploy": "python3 -I -B scripts/personal-deploy.py",
+    "test:personal-deploy": "bun test/personal-deploy-integration.mjs"
   }
 }

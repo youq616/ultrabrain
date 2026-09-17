@@ -6,6 +6,8 @@ Linux-first agent memory, built around GBrain's PostgreSQL-native business engin
 
 任务上下文阶段已通过 [PR #10](https://github.com/youq616/ultrabrain/pull/10) 合入 `6c1c6becb1ae898d37d6bdcd2782c750481b27de`。增加显式 `task-context` 与单独授权的 Claude 主会话任务 Hook，复用既有个人召回排序。两个新的独立审核代理均通过精确候选 `5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c`；该候选六组 CI 共 23 个 jobs 全部成功。接手记录、本地测试限制、尚未完成的工作及下一阶段见 [项目状态](docs/PROJECT-STATUS.md)。个人 V1 仍未整体完成。
 
+本阶段新增 `personal-deploy plan|apply|status|rollback|recover`：绑定已审核导出和当前安装状态，把个人服务配置保存为独立副本，支持停止状态下更新、持久化失败恢复和逐代回滚。启动及自动启用仍由操作者明确执行。用法与边界见 [个人服务部署](docs/PERSONAL-DEPLOY.md)；本阶段须有自己的最终提交 CI 与独立审核，不能沿用上述任务召回验收。
+
 ## 架构与状态
 
 以锁定的 GBrain 业务引擎为基础，保留页面、事实、版本、纠正、检索、图谱、技能与任务，新增 Ultrabrain 产品层，不复制第二套记忆数据库。OpenViking 是按功能逐项吸收的参考上游，**尚未完成双方全部功能等价**。
