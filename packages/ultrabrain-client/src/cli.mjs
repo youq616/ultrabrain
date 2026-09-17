@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {taskContextRequest,claudeTaskRequest,requireTaskProfile} from '../../../src/client-task-context.mjs';
 import {readLocalDocument,documentImportRequest} from '../../../src/client-document.mjs';
 import {objectFields,personalId} from '../../../src/personal-memory.mjs';
 /** Read-only hooks remain separate from explicitly authorized capture hooks. No event file paths are read. */
@@ -13,17 +14,29 @@ import {claudeContext,captureRequest} from '../../../src/client-kit.mjs';
 import {requireThat,UltraError} from '../../../src/core.mjs';
 export async function readBounded(stream,limit=65536){const chunks=[];let size=0;for await(const c of stream){const b=Buffer.from(c);size+=b.length;requireThat(size<=limit,'input_too_large','Input too large');chunks.push(b);}try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));}catch{throw new UltraError('invalid_params','Invalid input JSON');}}
 export async function main(args=process.argv.slice(2)) {
-  let connection,autoWriter,hook=args[0]==='claude-hook'||args[0]==='claude-capture-hook',writing=false;
+  let connection,autoWriter,hook=args[0]==='claude-hook'||args[0]==='claude-capture-hook'||args[0]==='claude-task-hook',writing=false;
   const controller=new AbortController(),deadline=setTimeout(()=>{controller.abort();process.stdin.destroy();},25000);deadline.unref();
   try{
     const command=args[0];
-    const regular=['document-import','probe','context','bound-context','capture','claude-hook','claude-capture-hook','mcp','queue-capture','queue-status','queue-flush'];
+    const regular=['task-context','claude-task-hook','document-import','probe','context','bound-context','capture','claude-hook','claude-capture-hook','mcp','queue-capture','queue-status','queue-flush'];
     const valid=regular.includes(command)&&(args.length===3||command==='queue-flush'&&args.length===4&&args[3]==='--retry-blocked')||
       command==='queue-lock'&&args.length===5&&args[3]==='--kind'||
       command==='queue-recover-lock'&&args.length===8&&args[3]==='--kind'&&args[5]==='--expected-sha'&&args[7]==='--confirm-writer-stopped';
     requireThat(valid&&args[1]==='--profile','invalid_params','Use a supported client command and --profile PATH');
     const {input,profile}=readClientProfile(resolve(args[2]));let event,payload;
     const assertProfile=()=>requireThat(JSON.stringify(readClientProfile(resolve(args[2])).input)===JSON.stringify(input),'capture_disabled','Profile changed; reload before capture');
+    if(command==='task-context'||command==='claude-task-hook') {
+      // Permission and destination are frozen BEFORE stdin/connection waits, not reloaded into new authority.
+      requireTaskProfile(profile,command==='claude-task-hook');
+      event=await readBounded(process.stdin);
+      payload=command==='claude-task-hook'?claudeTaskRequest(event,profile):event;
+      taskContextRequest(payload,profile);
+      const authorize=()=>requireThat(JSON.stringify(readClientProfile(resolve(args[2])).input)===JSON.stringify(input),
+        'task_context_disabled','Profile changed; reload before task recall');
+      authorize();connection=await connectClient(input,{signal:controller.signal});authorize();
+      const result=await connection.taskContext(payload,{authorize});authorize();
+      process.stdout.write(JSON.stringify(command==='claude-task-hook'?claudeContext('UserPromptSubmit',result):result)+'\n');return;
+    }
     if(command==='document-import') {
       const chosen=await readBounded(process.stdin);
       objectFields(chosen,['path','agent_id','event_id','consent']);
@@ -72,7 +85,7 @@ export async function main(args=process.argv.slice(2)) {
       requireThat(r?.source_id===connection.profile.source&&r.event_id===p.event_id&&r.storage==='journaled'&&typeof r.job_id==='string','mcp_contract_changed','Unconfirmed capture receipt');output={ok:true,result:r};}
     process.stdout.write(JSON.stringify(output)+'\n');
   }catch(e){const code=e instanceof UltraError&&/^[a-z0-9_]{1,64}$/.test(e.code)?e.code:'client_failed';
-    if(hook)process.stdout.write(JSON.stringify({systemMessage:args[0]==='claude-capture-hook'?'Ultrabrain automatic capture not confirmed ('+code+'). Check the client queue; do not assume the observation was saved.':'Ultrabrain personal memory unavailable ('+code+'). Continue without recalled memory; no text was captured.'})+'\n');
+    if(hook)process.stdout.write(JSON.stringify({systemMessage:args[0]==='claude-task-hook'?'Ultrabrain task recall unavailable ('+code+'). Continue without task-ranked recall; this hook requested no memory writes.':args[0]==='claude-capture-hook'?'Ultrabrain automatic capture not confirmed ('+code+'). Check the client queue; do not assume the observation was saved.':'Ultrabrain personal memory unavailable ('+code+'). Continue without recalled memory; no text was captured.'})+'\n');
     else{const out=args[0]==='mcp'?process.stderr:process.stdout;out.write(JSON.stringify({ok:false,error:code,delivery:writing?'unconfirmed':'not_submitted'})+'\n');process.exitCode=1;}
   }finally{autoWriter?.close();clearTimeout(deadline);if(connection)try{await connection.close();}catch{}}
 }

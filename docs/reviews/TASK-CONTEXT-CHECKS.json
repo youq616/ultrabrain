@@ -1,0 +1,57 @@
+{
+  "format": 1,
+  "phase": "task-context",
+  "base_commit": "a5e76f7ab2af4dddb1f72d8a95ab02d2f32593f6",
+  "scope": "historical implementation-side checks before candidate publication; final CI and independent review live in PR",
+  "node_full": {
+    "passed": 520,
+    "failed": 0,
+    "skipped": 0
+  },
+  "python_full": {
+    "passed": 273,
+    "failed": 0,
+    "skipped": 0
+  },
+  "new_contract_tests": 23,
+  "new_config_tests": 9,
+  "real_integrations": {
+    "installed_task_context": 19,
+    "client_proxy": 19,
+    "capture_outbox": 20,
+    "document_client": 12,
+    "ranking": 20
+  },
+  "local_install_method": "verified tgz unpacked into isolated installed-package layout; existing pinned MCP SDK; not npm installation",
+  "preserved_nonpassing_attempts": [
+    "outer all-Python command timed out before completion",
+    "outer combined integration wrapper timed out without completion marker"
+  ],
+  "self_review": "implementation assistant, separate pass; not independent Agent",
+  "independent_agent_review": "required for final commit before merge; no prior-stage approval applies",
+  "limits": [
+    "Claude stdin events are synthetic, not actual Claude host or model run",
+    "task query flags gate only new helper/Hook, not existing raw MCP context tool",
+    "operator full-parameter logs may retain query; no unconditional no-retention claim",
+    "no semantic retrieval or complete Personal V1 certification"
+  ],
+  "unchanged": [
+    "historical migrations",
+    "four upstream locks/gitlinks",
+    "server ranking and ownership boundaries",
+    "existing service/console/worker implementations",
+    "raw MCP catalog and tool permissions"
+  ],
+  "evidence_sha256": {
+    "node-full-first.log": "966a615940b46f9acb7d3d3a5a7e1279a7611f94e705665752f03a1224d16b81",
+    "python-full-first.log": "bb8bb0a034e368f7293ab9a0632a10590935e89b3caea60dd77fa98d2bc64181",
+    "python-full-rerun.log": "365a17b196c2db53b003a3f58f543e420befac583b1082777ff26e882233e461",
+    "package.log": "24bf96d092a4f58f155bd0bcecc23515795b421364f1c82f15495ff191e425b9",
+    "task-integration-first.log": "c28cedb1ca106d5a095827c5a5b2d619a3acdf657f9048c08e6a71fff369f2ec",
+    "task-context-integration-complete.log": "c28cedb1ca106d5a095827c5a5b2d619a3acdf657f9048c08e6a71fff369f2ec",
+    "client-kit-integration-complete.log": "31bd10c8466112cb97fc5a29498255ea253992f9e07c279c2f7332464e848ea5",
+    "capture-integration-complete.log": "ef8c14c7de367e3d9d8b836dd2479bb801c39e20bb2658fe17b1463d42383c6e",
+    "document-client-integration-complete.log": "5de99bbffb338fe0909e38b97f12dfde9d2137ea06df4cbc61f8b9d33c51326a",
+    "personal-ranking-integration-complete.log": "2f1e1ff9dffb87409ebe053a12f5d03b0932f0a96dee9a7268afe1ba537a926e"
+  }
+}
