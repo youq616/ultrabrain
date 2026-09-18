@@ -148,9 +148,10 @@ export async function verifyPersonalActivation({engine,spec,current,run,unrelate
    assert.ok(Array.isArray(value.exception_chain)&&value.exception_chain.length<=6);
    let count=0;
    for(const entry of value.exception_chain){
-    assert.deepEqual(Object.keys(entry).sort(),['errno','frames','safe_code','type']);
+    assert.deepEqual(Object.keys(entry).sort(),['dbus_error','errno','frames','safe_code','type']);
     assert.ok(typeof entry.type==='string'&&/^[A-Za-z_]{1,64}$/.test(entry.type));
     assert.ok(entry.safe_code===null||typeof entry.safe_code==='string'&&/^[a-z_]{1,80}$/.test(entry.safe_code));
+    assert.ok(entry.dbus_error===null||['NameHasNoOwner','ServiceUnknown','NoReply','Disconnected','AccessDenied'].includes(entry.dbus_error));
     assert.ok(entry.errno===null||Number.isInteger(entry.errno)&&entry.errno>=0&&entry.errno<=4095);
     assert.ok(Array.isArray(entry.frames));count+=entry.frames.length;assert.ok(count<=8);
     for(const frame of entry.frames){

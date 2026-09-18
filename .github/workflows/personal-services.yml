@@ -138,17 +138,32 @@ jobs:
           echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
           echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> "$GITHUB_ENV"
           /usr/bin/python3 -I -B - <<'PY'
-          import json, os, subprocess
-          result = subprocess.run(['/usr/bin/python3', '-I', '-B', 'test/personal-activate-crash.py',
-                                   'diagnose-manager', '--home', os.environ['ULTRABRAIN_HOME']],
-                                  capture_output=True, text=True, timeout=35)
-          assert result.returncode in (0, 1) and len(result.stdout) <= 16384
-          value = json.loads(result.stdout)
-          assert type(value) is dict and set(value) == {'diagnostic', 'ok', 'exception_chain', 'proc_checks'}
-          assert value['diagnostic'] == 'personal_activation_manager'
-          print(json.dumps(value, ensure_ascii=True), flush=True)
-          assert result.returncode == 0 and value['ok'] is True
-          assert value['proc_checks']['manager_capprm_nonzero'] is False
+          import json, os, subprocess, time
+          deadline = time.monotonic() + 35
+          for attempt in range(1, 21):
+              remaining = deadline - time.monotonic()
+              assert remaining > 0, 'Disposable manager registration deadline exceeded'
+              result = subprocess.run(['/usr/bin/python3', '-I', '-B', 'test/personal-activate-crash.py',
+                                       'diagnose-manager', '--home', os.environ['ULTRABRAIN_HOME']],
+                                      capture_output=True, text=True, timeout=remaining)
+              assert result.returncode in (0, 1) and len(result.stdout) <= 16384
+              value = json.loads(result.stdout)
+              assert type(value) is dict and set(value) == {'diagnostic', 'ok', 'exception_chain', 'proc_checks'}
+              assert value['diagnostic'] == 'personal_activation_manager'
+              print(json.dumps({'fixture_setup_attempt': attempt, **value}, ensure_ascii=True), flush=True)
+              if result.returncode == 0:
+                  assert value['ok'] is True and value['proc_checks']['manager_capprm_nonzero'] is False
+                  break
+              chain, proc = value['exception_chain'], value['proc_checks']
+              assert value['ok'] is False and len(chain) == 2 \
+                  and chain[0]['type'] == 'ActivateManagerError' and chain[0]['safe_code'] == 'manager_unavailable' \
+                  and chain[1]['type'] == 'DBusException' and chain[1]['dbus_error'] == 'NameHasNoOwner' \
+                  and proc['manager_proc_available'] is False and proc['manager_proc_errno'] is None \
+                  and proc['manager_capprm_nonzero'] is None and proc['manager_process_stable'] is None, \
+                  'Disposable manager identity failure is not a registration wait'
+              remaining = deadline - time.monotonic()
+              assert attempt < 20 and remaining > 0, 'Disposable manager registration deadline exceeded'
+              time.sleep(min(0.5, remaining))
           PY
       - name: Actual generated user services, restart, consent and periodic model fixture
         run: bun test/personal-services-integration.mjs

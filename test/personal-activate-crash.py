@@ -54,6 +54,18 @@ DIAGNOSTIC_CODES = frozenset((
     "process_namespace_changed", "unsafe_process_executable", "process_executable_changed",
     "process_executable_mismatch", "directory_changed", "untrusted_system_unit_path",
 ))
+DIAGNOSTIC_DBUS_ERRORS = {"org.freedesktop.DBus.Error." + name: name for name in (
+    "NameHasNoOwner", "ServiceUnknown", "NoReply", "Disconnected", "AccessDenied",
+)}
+
+
+def diagnostic_dbus_error(error):
+    try:
+        method = getattr(error, "get_dbus_name", None)
+        value = method() if callable(method) else None
+    except Exception:
+        return None
+    return DIAGNOSTIC_DBUS_ERRORS.get(value) if type(value) is str else None
 
 
 def safe_diagnostic(error):
@@ -66,6 +78,7 @@ def safe_diagnostic(error):
         layers.append((error, {"type": name if name in DIAGNOSTIC_TYPES else "OtherError",
             "safe_code": args[0] if len(args) == 1 and type(args[0]) is str
                 and args[0] in DIAGNOSTIC_CODES else None,
+            "dbus_error": diagnostic_dbus_error(error),
             "errno": error.errno if isinstance(error, OSError) and type(error.errno) is int
                 and 0 <= error.errno <= 4095 else None, "frames": []}))
         error = error.__context__
