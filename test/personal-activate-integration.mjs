@@ -136,6 +136,35 @@ export async function verifyPersonalActivation({engine,spec,current,run,unrelate
   assert.deepEqual(value.starts,[consoleUnit]);assert.equal(value.target_started,false);assert.equal(value.worker_authorized,false);
   unchanged(value);return value.activation_plan_sha256;
  }
+ async function diagnoseManager(){
+  try{
+   const response=await run('/usr/bin/python3',['-I','-B',ROOT+'/test/personal-activate-crash.py',
+    'diagnose-manager','--home',HOME],{ok:false,timeout:35000});
+   assert.ok([0,1].includes(response.code)&&response.text.length<=16384);
+   assert.equal([...secrets].some(secret=>response.text.includes(secret)),false);
+   const value=JSON.parse(response.text);
+   assert.deepEqual(Object.keys(value).sort(),['diagnostic','exception_chain','ok']);
+   assert.equal(value.diagnostic,'personal_activation_manager');assert.equal(typeof value.ok,'boolean');
+   assert.ok(Array.isArray(value.exception_chain)&&value.exception_chain.length<=6);
+   let count=0;
+   for(const entry of value.exception_chain){
+    assert.deepEqual(Object.keys(entry).sort(),['errno','frames','safe_code','type']);
+    assert.ok(typeof entry.type==='string'&&/^[A-Za-z_]{1,64}$/.test(entry.type));
+    assert.ok(entry.safe_code===null||typeof entry.safe_code==='string'&&/^[a-z_]{1,80}$/.test(entry.safe_code));
+    assert.ok(entry.errno===null||Number.isInteger(entry.errno)&&entry.errno>=0&&entry.errno<=4095);
+    assert.ok(Array.isArray(entry.frames));count+=entry.frames.length;assert.ok(count<=8);
+    for(const frame of entry.frames){
+     assert.deepEqual(Object.keys(frame).sort(),['file','function','line']);
+     assert.ok(typeof frame.file==='string'&&/^[a-z_.-]{1,64}$/.test(frame.file));
+     assert.ok(typeof frame.function==='string'&&/^[a-z_]{1,64}$/.test(frame.function));
+     assert.ok(Number.isInteger(frame.line)&&frame.line>=0&&frame.line<=1000000);
+    }
+   }
+   // The guarded helper emits only its fixed allowlists. Never print captured
+   // stdout unless the complete bounded, value-free schema is satisfied.
+   console.log(JSON.stringify(value));
+  }catch{console.log(JSON.stringify({diagnostic:'personal_activation_manager',available:false}));}
+ }
  async function pending(){const value=await status();assert.match(value.pending_sha256,/^[a-f0-9]{64}$/);return value.pending_sha256;}
  async function recover(hash,ready){
   const value=await success('recover',['recover','--home',HOME,'--expected-pending',hash]);
@@ -217,7 +246,9 @@ export async function verifyPersonalActivation({engine,spec,current,run,unrelate
   activeCase='initial_stopped';await stopped();
   activeCase='initial_start_counter_reset';await ctl('reset-failed',consoleUnit);
   activeCase='initial_snapshot';baseline=await snapshot();const beforePlan=coordination();
-  assert.equal((await status()).pending_sha256,null);const initial=await plan();await stopped();
+  assert.equal((await status()).pending_sha256,null);let initial;
+  try{initial=await plan();}catch(error){await diagnoseManager();throw error;}
+  await stopped();
   assert.deepEqual(coordination(),beforePlan,'Plan and status must not write deployment or coordination files');pass();
   await refused('wrong_plan',['apply',...base,'--expected-plan',(initial[0]==='0'?'1':'0')+initial.slice(1)]);
   assert.equal((await status()).pending_sha256,null);await stopped();pass();

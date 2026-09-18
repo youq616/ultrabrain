@@ -8,6 +8,7 @@ files, all other manager calls and recovery use the production implementation.
 """
 import argparse
 import importlib.util
+import json
 import os
 from pathlib import Path
 import pwd
@@ -19,6 +20,87 @@ CHECKPOINTS = (
     "after_journal", "after_attempt", "after_send_before_reply", "after_start_before_ack", "after_ack",
     "after_receipt", "before_clear_pending",
 )
+DIAGNOSTIC_FILES = frozenset((
+    "personal-activate-crash.py", "personal_activate_manager.py", "personal_ready_process.py",
+    "personal_deploy_store.py", "personal-activate.py", "personal-ready.py", "personal-deploy.py",
+    "preflight.py", "personal-services.py", "contextlib.py",
+))
+DIAGNOSTIC_FUNCTIONS = frozenset((
+    "main", "diagnose_manager", "manager_process", "connection_identity", "verify_identity",
+    "_connect", "_call", "_raw_call", "_bus", "_property", "_timeout", "plain", "need",
+    "absolute", "open_dir", "directory", "visible", "_process_snapshot", "_proc_directory",
+    "_self_namespaces", "_namespaces", "_read", "_number", "_metadata", "_parse_stat",
+    "_parse_status", "_executable", "_process_executable", "__enter__", "__exit__",
+))
+DIAGNOSTIC_TYPES = frozenset((
+    "ActivateManagerError", "ReadyError", "DeployError", "PreflightError", "ServicePlanError",
+    "OSError", "PermissionError", "FileNotFoundError", "NotADirectoryError", "IsADirectoryError",
+    "TypeError", "AttributeError", "KeyError", "ValueError", "RuntimeError", "ImportError",
+    "ModuleNotFoundError", "DBusException", "SystemExit", "AssertionError",
+))
+# Values are matched exactly; no exception message or arbitrary argument is
+# rendered. Unknown errors retain only an allowlisted type and bounded frames.
+DIAGNOSTIC_CODES = frozenset((
+    "manager_process_unverified", "invalid_manager_pid", "unexpected_manager_executable",
+    "manager_identity_changed", "manager_process_changed", "manager_owner_uid_mismatch",
+    "invalid_bus_identity", "manager_connection_closed", "manager_timeout", "manager_unavailable",
+    "ordinary_linux_account_required", "invalid_manager_reply", "manager_value_limit",
+    "invalid_manager_value", "invalid_absolute_path", "unsafe_directory_owner",
+    "unsafe_directory_permissions", "process_uid_mismatch", "managed_process_not_readable",
+    "invalid_process_id", "invalid_process_uid", "process_not_live", "invalid_proc_stat",
+    "invalid_proc_status", "process_identity_changed", "unsafe_proc_entry", "proc_file_too_large",
+    "proc_file_changed", "invalid_process_namespace", "process_namespace_mismatch",
+    "process_namespace_changed", "unsafe_process_executable", "process_executable_changed",
+    "process_executable_mismatch", "directory_changed", "untrusted_system_unit_path",
+))
+
+
+def safe_diagnostic(error):
+    """At most six exceptions/eight total frames; never stringify an exception."""
+    layers, seen = [], set()
+    while error is not None and len(layers) < 6 and id(error) not in seen:
+        seen.add(id(error))
+        name = type(error).__name__
+        args = error.args
+        layers.append((error, {"type": name if name in DIAGNOSTIC_TYPES else "OtherError",
+            "safe_code": args[0] if len(args) == 1 and type(args[0]) is str
+                and args[0] in DIAGNOSTIC_CODES else None,
+            "errno": error.errno if isinstance(error, OSError) and type(error.errno) is int
+                and 0 <= error.errno <= 4095 else None, "frames": []}))
+        error = error.__context__
+    remaining = 8
+    # Keep the innermost failure's final frames first; wrapper traceback frames
+    # must not consume the budget and hide the actual failing guard.
+    for error, result in reversed(layers):
+        frames, current = [], error.__traceback__
+        while current is not None:
+            code = current.tb_frame.f_code
+            basename = Path(code.co_filename).name
+            frames.append({"file": basename if basename in DIAGNOSTIC_FILES else "other",
+                "function": code.co_name if code.co_name in DIAGNOSTIC_FUNCTIONS else "other",
+                "line": min(max(current.tb_lineno, 0), 1000000)})
+            if len(frames) > 8:
+                frames.pop(0)
+            current = current.tb_next
+        result["frames"] = frames[-remaining:] if remaining else []
+        remaining -= len(result["frames"])
+    return {"diagnostic": "personal_activation_manager", "ok": False,
+            "exception_chain": [value for _, value in layers]}
+
+
+def diagnose_manager(activate):
+    manager = activate.MANAGER.LocalManager()
+    try:
+        manager.connection_identity()  # Read-only identity verification only.
+    except Exception as error:
+        print(json.dumps(safe_diagnostic(error), ensure_ascii=True))
+        return 1
+    else:
+        print(json.dumps({"diagnostic": "personal_activation_manager", "ok": True,
+                          "exception_chain": []}))
+        return 0
+    finally:
+        manager.close()
 
 
 def load(path):
@@ -45,11 +127,15 @@ def main():
     apply.add_argument("--checkpoint", choices=CHECKPOINTS, required=True)
     hold = actions.add_parser("hold-lock", allow_abbrev=False)
     hold.add_argument("--home", required=True)
+    diagnose = actions.add_parser("diagnose-manager", allow_abbrev=False)
+    diagnose.add_argument("--home", required=True)
     args = parser.parse_args()
     if Path(args.home) != expected:
         raise SystemExit("Wrong fixture installation")
     root = Path(__file__).resolve().parent.parent
     activate = load(root / "scripts/personal-activate.py")
+    if args.action == "diagnose-manager":
+        raise SystemExit(diagnose_manager(activate))
 
     def crash(label):
         if label == args.checkpoint:
