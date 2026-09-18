@@ -11,6 +11,7 @@
 已有安装必须满足以下条件：
 
 - `personal-deploy status` 给出已经接受的 `current_sha256`，没有待恢复部署或激活；安装内容与重新生成的 console-only 计划一致。
+- 调用账号能够通过 `/proc` 核验用户管理器的当前可执行文件、UID、PID、启动时间及 PID/net namespace。内核还会检查组凭据、能力和访问策略；相同 UID 本身不足以保证这些读取权限。读取被拒时，激活与恢复保留身份验证失败的结果。
 - console、target 与 Worker 都停止；Worker 不在已安装代际中；不存在需要认领的手工单元、别名或 drop-in。
 - `ultrabrain-postgres.service` 已处于 `active/exited`，实际 postmaster 通过既有私有状态、可执行文件、目录、PID 和启动时间核验。
 - 私有 `personal-console-token` 已存在且有效。缺失时拒绝，不通过首次启动创建令牌。
@@ -72,3 +73,5 @@ bun src/cli.mjs personal-activate recover --home "$ULTRABRAIN_HOME" \
 `dispatch_state` 区分 `not_attempted`、`outcome_unknown`、`acknowledged`；它不声称“本工具确定启动了这个进程”。`activation_outcome` 表示本次操作的已记录结果，`application_ready` 只在本次新鲜检查通过时为 true。status 的 `last_completed` 是历史记录，status 本身不接触 D-Bus 或执行 HTTP readiness。错误输出仅含固定错误码，不打印令牌、数据库 URI 或原始服务日志。
 
 本地 Python 测试覆盖缓存依赖、真实私有文件事务与故障注入，进程/HTTP/manager 是受控夹具。`test/personal-activate-integration.mjs` 由既有 `Personal user services` 工作流调用，在明确授权的一次性普通 Linux 账号中检查实际 systemd、PostgreSQL、认证 HTTP、flock 和真实 coordinator 进程退出。只有 CI 夹具在各场景之间停止并清除自己控制台的启动限流计数；产品命令没有这些动作。夹具复用已有的单元引用助手，在 180 秒上限内保留控制台缓存，避免 inactive 单元被回收后无法执行 ResetFailedUnit；引用结束必须确认释放。新增激活集成不调用模型，既有服务集成的模型响应仍为合成夹具。用户主机部署、Windows 客户端和真实模型质量不属于这些检查的证明范围。
+
+该一次性 CI 在运行合成服务之前，为测试账号的 `user@UID.service` 设置临时的空 `CapabilityBoundingSet` 和 `AmbientCapabilities`，并重新启动测试管理器；执行前检查 CI 进程位于该服务的 cgroup 之外。这样测试管理器以不附带额外 Linux 能力的配置运行，激活命令仍执行原有的完整 `/proc` 验证。此配置仅属于 CI 环境准备，不是产品命令的管理器权限调整或用户主机部署步骤。
