@@ -143,7 +143,7 @@ export async function verifyPersonalActivation({engine,spec,current,run,unrelate
    assert.ok([0,1].includes(response.code)&&response.text.length<=16384);
    assert.equal([...secrets].some(secret=>response.text.includes(secret)),false);
    const value=JSON.parse(response.text);
-   assert.deepEqual(Object.keys(value).sort(),['diagnostic','exception_chain','ok']);
+   assert.deepEqual(Object.keys(value).sort(),['diagnostic','exception_chain','ok','proc_checks']);
    assert.equal(value.diagnostic,'personal_activation_manager');assert.equal(typeof value.ok,'boolean');
    assert.ok(Array.isArray(value.exception_chain)&&value.exception_chain.length<=6);
    let count=0;
@@ -159,6 +159,21 @@ export async function verifyPersonalActivation({engine,spec,current,run,unrelate
      assert.ok(typeof frame.function==='string'&&/^[a-z_]{1,64}$/.test(frame.function));
      assert.ok(Number.isInteger(frame.line)&&frame.line>=0&&frame.line<=1000000);
     }
+   }
+   const procBooleans=new Set(['self_proc_available','manager_proc_available','self_process_stable','manager_process_stable',
+    'self_capprm_nonzero','manager_capprm_nonzero','self_capeff_nonzero','self_fsuid_matches_euid','self_fsgid_matches_egid',
+    'manager_directory_owner_matches_self_fsuid','manager_uids_three_match_self_fsuid','manager_uids_four_match_self_fsuid',
+    'manager_gids_three_match_self_fsgid','manager_gids_four_match_self_fsgid','manager_capprm_subset_self_capprm',
+    'manager_capprm_subset_self_capeff','pid_namespace_equal','net_namespace_equal','security_label_equal',
+    ...['self','manager'].flatMap(who=>['pid_namespace','net_namespace','security_label'].map(name=>who+'_'+name+'_readable'))]);
+   const procErrnos=new Set(['self','manager'].flatMap(who=>['proc','pid_namespace','net_namespace','security_label'].map(name=>who+'_'+name+'_errno')));
+   const procLabels=new Set(['self_security_label_kind','manager_security_label_kind']);
+   assert.ok(value.proc_checks&&typeof value.proc_checks==='object'&&!Array.isArray(value.proc_checks));
+   assert.deepEqual(Object.keys(value.proc_checks).sort(),[...procBooleans,...procErrnos,...procLabels].sort());
+   for(const [key,field] of Object.entries(value.proc_checks)){
+    if(procBooleans.has(key))assert.ok(field===null||typeof field==='boolean');
+    else if(procErrnos.has(key))assert.ok(field===null||Number.isInteger(field)&&field>=0&&field<=4095);
+    else assert.ok(field===null||['unconfined','systemd','other'].includes(field));
    }
    // The guarded helper emits only its fixed allowlists. Never print captured
    // stdout unless the complete bounded, value-free schema is satisfied.
