@@ -4,6 +4,8 @@
 
 新增的 `personal-deploy` 可将这份导出安装为独立副本，并在个人服务停止时更新、回滚和恢复中断事务，详见 [个人服务部署](PERSONAL-DEPLOY.md)。下文手工 link 流程保留作为旧安装说明；新工具拒绝自动认领已有手工链接，不能把两种流程混用为同一受管安装。
 
+受管 console-only 安装另有 [personal-ready](PERSONAL-READY.md) 只读认证就绪检查，要求预期部署回执和逻辑实例 UUID，并核对实际控制台与托管数据库进程。它不适用于下文未经受管部署认领的手工链接，也不会自动激活服务。
+
 ## 生成内容与身份
 
 默认只生成 `ultrabrain-personal.target` 和 `ultrabrain-personal-console.service`。管理台使用原有 `personal-ui`，只能监听 127.0.0.1，仍需私有令牌；该令牌不写入单元文件。它代表当前 Linux 服务账号的本机所有者，不会接管独立 HTTP 主体的私有记忆。
