@@ -11,12 +11,14 @@
 | 自动采集和类型化整理 | 已有授权会话采集/提取管线；0.11 已增加明确原文队列、周期 Worker 和带引用候选；不会自动扫描全部聊天，客户端自动采集与语义冲突核对仍待完成。 |
 | 客户端接入 | 0.12 增加 Node 客户端/受限 MCP 转发、Codex/Claude/OpenCode/ZCode 配置工具和 Claude 只读 Hook；真实协议已测，用户安装的 Agent/模型验收未全部完成。0.13 增加 OpenCode 原生 Hook、Hermes 主 CLI provider 和 OpenClaw 限域 Hook；具体宿主完整验收分层说明见 NATIVE-AGENT-ADAPTERS.md。Grok CLI 和所有客户端自动采集仍待完成。 |
 | 多模态、文件和完整恢复 | 原文来源和摘要引用已有基础；文件/PDF/图片等完整摄取、附件与数据库协调备份、恢复演练仍待完成。PR #3 已在 8d7cb953 合入首批 UTF-8 文本文件导入、原文追溯、片段排队与字节级恢复。恢复套件本阶段增加数据库 + 本地原生状态的完整性校验、隔离展开和新数据库恢复；不包含外部对象、环境专属密钥和自动业务切换。PDF/图片/OCR 仍未支持。 |
-| 个人日常可用性 | 已有离线 install/runtime 预检、个人服务计划/导出/校验、获准 Worker 周期循环及只读 personal-status。PR #7/#9 已合入服务计划与状态；PR #11 已合入停止状态下的受管安装、更新、回滚与中断恢复，最终候选获两个独立代理 PASS，23 个 PR CI jobs 全部成功，含 15 项真实部署集成。范围见 PERSONAL-DEPLOY.md，记录见 PROJECT-STATUS.md。自动激活切换与用户主机实际部署仍待完成。预检或单元活动状态通过不代表应用就绪。 |
+| 个人日常可用性 | 已有离线 install/runtime 预检、个人服务计划/导出/校验、获准 Worker 周期循环及只读 personal-status。PR #7/#9 已合入服务计划与状态；PR #11 已合入停止状态下的受管安装、更新、回滚与中断恢复。PR #12 已合入只读 personal-ready，将 console-only 安装回执、实际控制台运行实例和认证托管数据库查询绑定，最终候选获两个独立代理 PASS，23 个 PR CI jobs 全部成功，含 12 项真实就绪检查。范围见 [个人服务部署](PERSONAL-DEPLOY.md) 与 [个人管理台就绪检查](PERSONAL-READY.md)，证据见 [项目状态](PROJECT-STATUS.md)。自动激活切换、激活失败恢复与用户主机实际部署仍待完成。预检或单元活动状态通过不代表应用就绪，就绪检查成功也不等于个人 V1 已全部验收。 |
 
 个人 V1 的发布必须同时给出固定提交、接口与实际客户端验收、数据恢复结果和明确限制。现阶段不扩大企业功能；只有确实依赖用户环境的安装/凭据/桌面客户端工作才交给用户，按 AGENTS.md 使用一个连续段落提示词。
 
 0.14 自动采集与客户端交付队列已通过 PR #1，文本文件阶段已通过 PR #3。其他客户端自动采集、PDF/图片、多主机与外部存储协调恢复及真实用户部署仍未完成。本阶段恢复范围见 RECOVERY-SETS.md，不能用单项校验成功代替完整个人 V1 发布验收。
 
 个人服务计划已通过 PR #7 合入；`personal-status` 已通过 PR #9 合入 `a5e76f7ab2af4dddb1f72d8a95ab02d2f32593f6`，仅观察固定用户单元。已有真实 CI 用户 systemd 验证，仍不据此标记用户主机个人部署全部完成。详情见 PERSONAL-STATUS.md。
+
+2026-09-18 的只读就绪阶段接受精确候选 `715314236183ff75f97bc96fcfef57bd6b421192`，应用合并提交为 `d72ee27cafe9b309253ebd382fd752932fbe9e38`。六组 PR CI 共 23 个 jobs 成功，557 Node / 438 Python 全通过、无跳过；真实服务 CI 中新增 12 项就绪、原有 15 项部署和 18 项服务检查分别通过。执行环境是一次性普通 Linux 账号，新就绪检查调用模型 0 次，既有服务检查使用 2 次本地合成响应。逐轮独立审核和首次失败见 [本阶段验收](reviews/personal-ready/README.md)；这些结果不代表用户主机、完整客户端/模型或 Worker 就绪已验收。
 
 按当前任务召回已通过 PR #10 合入 `6c1c6becb1ae898d37d6bdcd2782c750481b27de`：显式 `task-context` 与独立 `claude-task-hook` 复用既有个人排序；仅在 profile/身份/workspace 和任务授权都满足时查询。精确候选 `5359c113b28b8a3e54ca67f0c6d3a1d1d28aad4c` 已获两个新的独立代理 PASS，六组 CI 成功；其中任务集成执行 21 项真实打包 Node/PostgreSQL/MCP 检查，Claude 输入仍为合成事件。见 TASK-CONTEXT.md 与 [当前项目状态](PROJECT-STATUS.md)。这不代表真实 Claude 客户端/模型或个人 V1 已全部验收。

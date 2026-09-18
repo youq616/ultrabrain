@@ -1,6 +1,31 @@
 # Ultrabrain 当前项目状态与接手记录
 
-记录日期：2026-09-17。本记录以 GitHub 实际提交、已执行 CI 和独立代理审核为依据。历史会话、候选 README、接收报告中的 pending/frozen 字样描述的是当时状态；继续开发前应复查远程 main 和开放 PR。
+记录日期：2026-09-18。本记录以 GitHub 实际提交、已执行 CI 和独立代理审核为依据。历史会话、候选 README、接收报告中的 pending/frozen 字样描述的是当时状态；继续开发前应复查远程 main 和开放 PR。
+
+## 已完成阶段：个人管理台的只读认证就绪检查
+
+从文档主线 `d2d8c30b939000b26fe41fc0e5bcab618232ca28` 新增 `personal-ready`，已通过 [PR #12](https://github.com/youq616/ultrabrain/pull/12) 合并。该命令要求调用方给出预期安装回执和数据库实例 UUID，将 console-only 安装代际、管理器元数据、实际 Bun 运行实例、新鲜认证 HTTP 响应和托管 PostgreSQL 后端进程绑定起来。它不启动、停止、重载或启用服务，不读取记忆正文、不创建令牌、不迁移或调用模型。命令和证明范围见 [个人管理台就绪检查](PERSONAL-READY.md)。
+
+| 验收对象 | 精确值 |
+|---|---|
+| 最终审核候选 | `715314236183ff75f97bc96fcfef57bd6b421192` |
+| 候选代码树 | `38dece61288c8f7e9eb2b3726e6343b5595b1ef5` |
+| PR CI 实际 merge | `8e053f13e7b2374f26ef79a202a43bb41dcb2936`，代码树与候选相同 |
+| 实际 main 合并提交 | `d72ee27cafe9b309253ebd382fd752932fbe9e38`，代码树与候选相同 |
+| 六组 PR CI | 全部成功，共 23 个 jobs；普通用户下 557 Node / 438 Python 全通过、无跳过 |
+| 真实用户服务集成 | push 与 PR 均通过 12 项新就绪检查、15 项原有部署检查及 18 项既有服务检查；三组分别计数 |
+
+两个未参与实现的独立 reviewer 对最终完整提交明确 PASS：[/root/ready_protocol_review](reviews/personal-ready/protocol-final.md) 审查认证协议、HTTP 帧与超时、真实 SQL 和并发边界；[/root/ready_binding_review](reviews/personal-ready/binding-final.md) 审查回执、路径、用户管理器、进程/数据库绑定与检查前后变化。两者均自行执行 71 个 Python 与 53 个 Node 测试，并运行各自报告中的额外反例。完整逐轮报告、实际执行归属和 verdict 见 [审核档案](reviews/personal-ready/README.md)。
+
+本阶段 PR CI：[全量验证](https://github.com/youq616/ultrabrain/actions/runs/35292739710)、[真实用户服务](https://github.com/youq616/ultrabrain/actions/runs/35292739684)、[恢复](https://github.com/youq616/ultrabrain/actions/runs/35292739669)、[任务召回](https://github.com/youq616/ultrabrain/actions/runs/35292739703)、[原生接入](https://github.com/youq616/ultrabrain/actions/runs/35292739690)、[客户端跨平台](https://github.com/youq616/ultrabrain/actions/runs/35292739720)。全量包含 15 条历史升级路径和 n8n 引擎。新就绪检查在一次性 runner 的普通 Linux 账号下使用真实 user-systemd、PostgreSQL 和认证 HTTP，覆盖错误预期、令牌轮换、运行中源记录缺失、源表独占锁阻塞及释放后同一 console 运行实例恢复；这些检查调用模型 0 次。既有 18 项服务检查另使用 2 次本地合成供应商响应，不能作为真实模型质量证据。
+
+首次候选在真实服务 CI 的第一项就绪检查出现 `readiness_timeout`：客户端已收到完整 Content-Length 响应，仍等待对端 EOF。修复后第二候选暴露 `readiness_unverified`，原因是 PostgreSQL `inet::text` 保留 `/32`，与预期纯地址不符；最终改用 `host(inet_server_addr())` 并增加真实数据库断言。第二轮独立审核还发现最大头部边界上的分片分隔符问题，最终提交一并修复。首次 BLOCK、第二轮协议 reviewer 已撤回的早期 PASS、所有失败候选及其 CI 日志哈希均保留在 [审核档案](reviews/personal-ready/README.md) 和 [机器验收记录](reviews/personal-ready/evidence.json)，旧提交的意见不替代最终提交批准。
+
+本地容器为 UID 0，协议、CLI、文件锁与进程夹具在本地完成；普通用户 systemd、活数据库和 HTTP 的全量验收来自上述 CI，未放宽生产普通账号门槛，也未改动用户主机服务。本检查不认证 Worker、全部 systemd 缓存设置、直接接收连接的内核 socket 归属或未来可用性。自动激活、运行中切换和激活失败恢复仍为后续独立阶段。
+
+本文件及同批 README、检查表和审核档案属于后续文档提交。上述应用 CI 对应精确候选及相同应用代码树，不是对后续文档提交重新执行的应用 CI；应用代码再次改变时必须重新审核和验证。
+
+合并后对实际 main 应用提交 `d72ee27cafe9b309253ebd382fd752932fbe9e38` 再次核对自动 CI：[全量](https://github.com/youq616/ultrabrain/actions/runs/35293471243)、[用户服务](https://github.com/youq616/ultrabrain/actions/runs/35293471223)、[恢复](https://github.com/youq616/ultrabrain/actions/runs/35293471219)、[客户端跨平台](https://github.com/youq616/ultrabrain/actions/runs/35293471229)、[任务召回](https://github.com/youq616/ultrabrain/actions/runs/35293471211)、[原生接入](https://github.com/youq616/ultrabrain/actions/runs/35293471217) 和 [源码快照](https://github.com/youq616/ultrabrain/actions/runs/35293471234) 七组全部成功，共 24 个作业。unit 与 services 的实际 checkout 均为该合并 SHA；日志再次确认 557 Node / 438 Python，以及 12 项就绪、15 项部署和 18 项既有服务检查通过。合并后 CI 审计、日志哈希与摘要保存在机器验收记录中，结果仅归属于该应用合并提交。
 
 ## 已完成阶段：停止状态下的个人服务部署
 

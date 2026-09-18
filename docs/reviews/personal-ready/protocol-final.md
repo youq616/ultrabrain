@@ -1,0 +1,36 @@
+Independent review verdict: **PASS** for full commit **`715314236183ff75f97bc96fcfef57bd6b421192`**, tree **`38dece61288c8f7e9eb2b3726e6343b5595b1ef5`**, against phase base **`d2d8c30b939000b26fe41fc0e5bcab618232ca28`**.
+
+Actual reviewer session identity: **`/root/ready_protocol_review`**. I did not implement this phase, modify repository source, start services, commit, or merge. I independently inspected the phase’s protocol, server HTTP handling, SQL transaction, CLI routing, deployment observation and process/database binding boundaries during the initial review and independently reviewed every subsequent correction, including the complete five-file delta from `7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3` to this exact commit.
+
+The original BLOCK for `fde82fa97843d22b3f1a92fb83926cc99d53dcaa` remains preserved in `protocol-initial.md`. The authoritative BLOCK for `7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3`, together with the explicitly withdrawn assessment that preceded discovery of the SQL defect, remains preserved in `protocol-round2.md`. This PASS applies only to the corrected full SHA above and does not retroactively approve either earlier commit.
+
+Both blocking findings are resolved on this commit:
+
+- **Complete HTTP responses no longer require peer EOF.** At `scripts/personal-ready.py:127–160`, partial parsing recognizes a bounded complete response while retaining strict status, content type, exact Content-Length, unique-header and no-compression/no-transfer-encoding checks. At `scripts/personal-ready.py:189–207`, the transport returns once that frame is complete and closes its socket through the context manager. It rejects already-buffered excess data and never reuses the connection. My independent socket fixtures again verified that a peer retaining its connection receives the client’s close while the checker returns the complete response.
+- **PostgreSQL’s returned address now matches the strict identity comparison.** At `src/personal-readiness.mjs:53`, the query uses `pg_catalog.host(pg_catalog.inet_server_addr())`. The exact `127.0.0.1` comparison at line 76 is unchanged. This extracts the address without weakening the loopback identity requirement. The pinned PostgreSQL implementation distinguishes `network_show` for the explicit text cast from `network_host`, which removes the netmask. The official PostgreSQL 18 documentation confirms these semantics. [Pinned PostgreSQL implementation](https://github.com/postgres/postgres/blob/724edf9bde9d356724ad384a2e196edc3c9f80f7/src/backend/utils/adt/network.c), [PostgreSQL 18 network functions](https://www.postgresql.org/docs/18/functions-net.html)
+
+The additional delimiter correction at `scripts/personal-ready.py:131–139` permits only up to three bytes of a pending CRLF-CRLF delimiter beyond the 4096-byte header limit. Once the delimiter is complete, the actual header must still be at most 4096 bytes. The transport retains its 8192-byte overall response limit and the body remains limited to 4096 bytes. This avoids falsely rejecting a maximum-length valid header solely because the delimiter spans packets.
+
+I independently tested header sizes from 4092 through 4100 bytes with every incomplete delimiter prefix and complete framing. Sizes above 4096 were rejected; accepted prefixes remained incomplete until the delimiter and body arrived. Real loopback socket checks accepted an exactly 8192-byte response and rejected an 8193-byte response. Additional socket checks accepted a complete maximum-header frame while its peer remained open, rejected one already-buffered excess byte, and rejected concatenated responses. **All 50 independent framing checks passed.**
+
+I also independently instrumented the readiness query boundary and verified the qualified `host(inet_server_addr())` expression and the source parameter. The expected host address was accepted, while `127.0.0.1/32`, `127.0.0.2`, `::1`, `0.0.0.0`, a trailing-space form and null were rejected with `readiness_unavailable`. **All 7 address cases passed.** These are application-boundary fixtures, not locally executed PostgreSQL queries.
+
+The real integration helper at `test/personal-ready-integration.mjs:52–56` now queries both the explicit inet text cast and `host(inet)` on its actual managed database connection, asserting the different real results before running the end-to-end readiness cases. It retains the source-removal, table-lock, same-console-instance recovery and unchanged-state checks. I inspected those assertions but did not execute that real service fixture in this root-only review environment.
+
+The surrounding protocol and SQL boundaries remain sound within the documented scope: exact request fields and the short timestamp window are checked before the query; request and response HMAC domains are distinct; bearer credentials are not transmitted; successful response fields are authenticated before local expected-value comparisons; source and database facts come from the actual console transaction; read-only transaction and local statement/lock timeouts remain in place; unresolved database work retains its shared concurrency slot. The checker continues to compare deployment, manager, process, token and database observations around the authenticated request and returns safe failure codes when proof cannot be completed. It introduces no activation, service-management, migration or model operation.
+
+The result and documentation explicitly limit the observation to the installed unit bytes, fixed-unit metadata, actual console invocation/arguments and live managed database. They do not claim to attest every cached systemd setting, direct kernel socket ownership, a frozen source tree, worker/model quality or future availability. The ordinary Linux service-account gate remains mandatory.
+
+Executed verification on `715314236183ff75f97bc96fcfef57bd6b421192`:
+
+| Command or check | Actual result |
+|---|---|
+| `python3 -B -m unittest discover -s test -p 'test_personal_ready*.py' -v` | **71 passed, 0 failed, 0 skipped** |
+| `node --test test/personal-readiness.test.mjs test/personal-ready-cli.test.mjs test/personal-console.test.mjs` | **53 passed, 0 failed, 0 skipped** |
+| Independent `python3 -I -B` header, delimiter, overall-byte-limit and loopback-socket checks | **50 checks passed** |
+| Independent `node --input-type=module` SQL-expression and strict address-boundary fixture | **7 address cases passed** |
+| `git rev-parse HEAD`, `git rev-parse HEAD^{tree}`, `git status --short` | Exact SHA/tree matched; worktree clean |
+
+No new test failure occurred in this final review round. Earlier product failures, the withdrawn second-round PASS and reviewer-fixture errors remain recorded in the two preserved earlier reports.
+
+No unresolved blocking finding remains in the reviewed protocol, HTTP framing, SQL boundary or CLI integration on this exact commit. **This is an explicit independent code-review PASS for `715314236183ff75f97bc96fcfef57bd6b421192` only.** Actual ordinary-user systemd, managed PostgreSQL and authenticated HTTP CI remains a separate mandatory acceptance gate. I checked the GitHub run metadata during this review: real-services runs `35292739684` and `35292736874` were still in progress, so this report does not claim they passed. Any later application change requires review of its own final full SHA.

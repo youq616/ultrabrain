@@ -2,11 +2,13 @@
 
 Linux-first agent memory, built around GBrain's PostgreSQL-native business engine and OpenViking-inspired hierarchical context retrieval.
 
-## 当前接手状态（2026-09-17）
+## 当前接手状态（2026-09-18）
+
+只读 `personal-ready` 已通过 [PR #12](https://github.com/youq616/ultrabrain/pull/12) 合入 `d72ee27cafe9b309253ebd382fd752932fbe9e38`。它将已安装的 console-only 回执、实际管理台进程和新鲜认证的托管 PostgreSQL 查询绑定起来，不启停服务。最终候选 `715314236183ff75f97bc96fcfef57bd6b421192` 获两个独立代理 PASS；六组 PR CI 的 23 个 jobs 全部成功，557 Node / 438 Python 全通过，新增 12 项真实就绪检查通过。用法见 [个人管理台就绪检查](docs/PERSONAL-READY.md)，精确提交、逐轮审核和首次失败记录见 [本阶段验收](docs/reviews/personal-ready/README.md)。
 
 停止状态下的个人服务部署已通过 [PR #11](https://github.com/youq616/ultrabrain/pull/11) 合入 `50718455448b90c1eb70e3df70c96700b67bc867`。新增 `personal-deploy plan|apply|status|rollback|recover`，绑定审核后的导出与当前安装状态，提供独立配置副本、停止后更新、持久化中断恢复和逐代回滚。最终候选 `8c519f23a359691a24e9780766c5baed54c58c40` 获两个独立代理 PASS；六组 PR CI 的 23 个 jobs 全部成功，含 524 Node / 367 Python 测试及 15 项真实部署集成。用法见 [个人服务部署](docs/PERSONAL-DEPLOY.md)，精确验收与首次失败记录见 [项目状态](docs/PROJECT-STATUS.md)。
 
-此前任务上下文阶段已通过 [PR #10](https://github.com/youq616/ultrabrain/pull/10) 合入 `6c1c6becb1ae898d37d6bdcd2782c750481b27de`，提供显式 `task-context` 与单独授权的 Claude 主会话任务 Hook。个人 V1 仍未整体完成；自动激活切换、真实用户主机部署和完整客户端/模型验收仍待完成。部署命令只重载配置，启动与自动启用由操作者明确执行。
+此前任务上下文阶段已通过 [PR #10](https://github.com/youq616/ultrabrain/pull/10) 合入 `6c1c6becb1ae898d37d6bdcd2782c750481b27de`，提供显式 `task-context` 与单独授权的 Claude 主会话任务 Hook。个人 V1 仍未整体完成；自动激活切换与激活失败恢复是后续独立阶段，真实用户主机部署和完整客户端/模型验收仍待完成。上述就绪与部署集成在一次性 CI 的普通 Linux 账号下执行；新的就绪检查不调用模型，既有服务检查使用两次本地合成响应。部署命令只重载配置，启动与自动启用由操作者明确执行。
 
 ## 架构与状态
 

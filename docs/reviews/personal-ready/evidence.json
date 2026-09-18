@@ -1,0 +1,1552 @@
+{
+  "format": 1,
+  "phase": "personal-ready",
+  "accepted_application_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+  "application_tree": "38dece61288c8f7e9eb2b3726e6343b5595b1ef5",
+  "phase_base_sha": "d2d8c30b939000b26fe41fc0e5bcab618232ca28",
+  "pull_request": "https://github.com/youq616/ultrabrain/pull/12",
+  "assembled_by": "/root",
+  "assembly_date": "2026-09-18",
+  "provenance": {
+    "independent_code_review": "Actual non-implementation reviewer sessions, preserved verbatim below. CI audit is a separate evidence check.",
+    "audit_snapshots": "Embedded unchanged from the named source snapshots; earlier in-progress/open/draft states describe their recorded observation time.",
+    "source_log_names": "Raw logs are not included in this repository. Log filenames name the originally audited byte streams, not relative links to committed files. Exact safe excerpts, sizes, SHA-256 and GitHub job URLs are preserved here. GitHub retention applies to complete logs.",
+    "historical_source_names": "CI-FIRST-AUDIT.json, CI-SECOND-AUDIT.json, CI-FINAL-AUDIT.json and CI-MERGE-AUDIT.json inside snapshot references name the original audit inputs; their complete JSON objects are embedded in ci_audits.",
+    "documentation_ci_scope": "CI below belongs to the candidate/PR merge/application merge explicitly named, not a later documentation-only acceptance commit."
+  },
+  "independent_reviews": [
+    {
+      "reviewer": "/root/ready_protocol_review",
+      "round": "initial",
+      "reviewed_sha": "fde82fa97843d22b3f1a92fb83926cc99d53dcaa",
+      "verdict": "BLOCK",
+      "report": "protocol-initial.md",
+      "preserved_verbatim": true,
+      "bytes": 5907,
+      "sha256": "3d976621bc56bda484b9af224c18ec9965f8ffad4fa213101ca667659327b7bb"
+    },
+    {
+      "reviewer": "/root/ready_protocol_review",
+      "round": "round2",
+      "reviewed_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+      "verdict": "BLOCK",
+      "report": "protocol-round2.md",
+      "preserved_verbatim": true,
+      "bytes": 8504,
+      "sha256": "c553461a857d3d382d5a0155b39f3ad3b79539516c0f4875a7b302537fb19f60"
+    },
+    {
+      "reviewer": "/root/ready_protocol_review",
+      "round": "final",
+      "reviewed_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+      "verdict": "PASS",
+      "report": "protocol-final.md",
+      "preserved_verbatim": true,
+      "bytes": 7359,
+      "sha256": "76f2d8234acd57bdb17cbc781f189c23e37e9d0acce0fd6e136245dc1c81aa9b"
+    },
+    {
+      "reviewer": "/root/ready_binding_review",
+      "round": "initial",
+      "reviewed_sha": "fde82fa97843d22b3f1a92fb83926cc99d53dcaa",
+      "verdict": "BLOCK",
+      "report": "binding-initial.md",
+      "preserved_verbatim": true,
+      "bytes": 7479,
+      "sha256": "2ba9d3e426e634043a4cca14e8b0c9d9a24d57ce6ca4d74bba8efa713ea897c8"
+    },
+    {
+      "reviewer": "/root/ready_binding_review",
+      "round": "round2",
+      "reviewed_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+      "verdict": "BLOCK",
+      "report": "binding-round2.md",
+      "preserved_verbatim": true,
+      "bytes": 5337,
+      "sha256": "5fc84594abc741bef5737c8da4b12daad176669914e78b5633436577a1c3895d"
+    },
+    {
+      "reviewer": "/root/ready_binding_review",
+      "round": "final",
+      "reviewed_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+      "verdict": "PASS",
+      "report": "binding-final.md",
+      "preserved_verbatim": true,
+      "bytes": 8175,
+      "sha256": "7e266f6eac9d386b0c37f2d2593b4f10c8268b60d80bb8ebec96abeefe1377a7"
+    }
+  ],
+  "ci_audits": {
+    "initial": {
+      "auditor": "/root/ready_ci_audit",
+      "audit_type": "read-only CI evidence snapshot, not code-review approval",
+      "observed_at": "2026-09-18T00:40:03Z",
+      "pull_request": "https://github.com/youq616/ultrabrain/pull/12",
+      "candidate_sha": "fde82fa97843d22b3f1a92fb83926cc99d53dcaa",
+      "candidate_tree": "23553b76ec2fab50268c7217fa6ba3c8aa64cd59",
+      "tested_pull_request_merge_sha": "e3c6d1b6055d0381f3056486887e07d66aa7db7f",
+      "merge_tree": "23553b76ec2fab50268c7217fa6ba3c8aa64cd59",
+      "merge_parents": [
+        "d2d8c30b939000b26fe41fc0e5bcab618232ca28",
+        "fde82fa97843d22b3f1a92fb83926cc99d53dcaa"
+      ],
+      "unit": {
+        "job_id": 105436203699,
+        "checked_out_sha": "e3c6d1b6055d0381f3056486887e07d66aa7db7f",
+        "node": {
+          "tests": 557,
+          "passed": 557,
+          "failed": 0,
+          "skipped": 0
+        },
+        "python": {
+          "tests": 436,
+          "verdict": "OK"
+        }
+      },
+      "workflows": [
+        {
+          "id": 35291857404,
+          "name": "Validate ultrabrain",
+          "status": "in_progress",
+          "conclusion": null,
+          "event": "pull_request",
+          "head_sha": "fde82fa97843d22b3f1a92fb83926cc99d53dcaa",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35291857404"
+        },
+        {
+          "id": 35291857487,
+          "name": "Personal user services",
+          "status": "completed",
+          "conclusion": "failure",
+          "event": "pull_request",
+          "head_sha": "fde82fa97843d22b3f1a92fb83926cc99d53dcaa",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35291857487"
+        },
+        {
+          "id": 35291857422,
+          "name": "Personal recovery set",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "fde82fa97843d22b3f1a92fb83926cc99d53dcaa",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35291857422"
+        },
+        {
+          "id": 35291857403,
+          "name": "Personal client portability",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "fde82fa97843d22b3f1a92fb83926cc99d53dcaa",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35291857403"
+        },
+        {
+          "id": 35291857415,
+          "name": "Task-aware personal recall",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "fde82fa97843d22b3f1a92fb83926cc99d53dcaa",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35291857415"
+        },
+        {
+          "id": 35291857567,
+          "name": "Native personal integrations",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "fde82fa97843d22b3f1a92fb83926cc99d53dcaa",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35291857567"
+        }
+      ],
+      "failures": [
+        {
+          "run_id": 35291835217,
+          "job_id": 105436136607,
+          "event": "push",
+          "checked_out_sha": "fde82fa97843d22b3f1a92fb83926cc99d53dcaa",
+          "case": "owned_live_console",
+          "error_code": "readiness_timeout",
+          "readiness_checks_completed": 0
+        },
+        {
+          "run_id": 35291857487,
+          "job_id": 105436203942,
+          "event": "pull_request",
+          "checked_out_sha": "e3c6d1b6055d0381f3056486887e07d66aa7db7f",
+          "case": "owned_live_console",
+          "error_code": "readiness_timeout",
+          "readiness_checks_completed": 0
+        }
+      ],
+      "preceding_services_acceptance": {
+        "checks": 18,
+        "scope": "actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment",
+        "model_calls_to_local_fixture": 2
+      },
+      "logs": [
+        {
+          "path": "job-105436136607.log",
+          "bytes": 41562,
+          "sha256": "b311ea24a3873ff04419a091c18293b9b84bfa1c6da0625e0f84b359d7ddc55d"
+        },
+        {
+          "path": "job-105436203699.log",
+          "bytes": 309890,
+          "sha256": "83f633ab54a5d392d4812fa0ddd6824bd44eb70bbaf69e00c302877aa452209a"
+        },
+        {
+          "path": "job-105436203942.log",
+          "bytes": 42420,
+          "sha256": "e3edf15089ca5db06d7b2c475cb8c2a57e76d395df0172cc288bccef7f4938da"
+        }
+      ],
+      "limitations": [
+        "Validate workflow was still in progress at snapshot time.",
+        "Both services runs failed before any readiness case passed.",
+        "No acceptance or code-review approval is inferred from this audit."
+      ]
+    },
+    "round2": {
+      "auditor": "/root/ready_ci_audit",
+      "audit_type": "read-only CI evidence audit, not code-review approval",
+      "observed_at": "2026-09-18T00:51:14Z",
+      "candidate_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+      "candidate_tree": "fba254ad0a0ba6719520222475ec06526a984ac5",
+      "tested_pull_request_merge_sha": "2ae92c8afc38c5d33110473fac2a117740ea79ce",
+      "merge_tree": "fba254ad0a0ba6719520222475ec06526a984ac5",
+      "merge_parents": [
+        "d2d8c30b939000b26fe41fc0e5bcab618232ca28",
+        "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3"
+      ],
+      "verdict": "FAILED_SERVICES",
+      "unit": {
+        "run_id": 35292327125,
+        "job_id": 105437633164,
+        "conclusion": "success",
+        "checked_out_sha": "2ae92c8afc38c5d33110473fac2a117740ea79ce",
+        "node": {
+          "tests": 557,
+          "passed": 557,
+          "failed": 0,
+          "skipped": 0
+        },
+        "python": {
+          "tests": 437,
+          "verdict": "OK"
+        }
+      },
+      "workflows": [
+        {
+          "id": 35292326898,
+          "name": "Personal recovery set",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292326898"
+        },
+        {
+          "id": 35292326930,
+          "name": "Task-aware personal recall",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292326930"
+        },
+        {
+          "id": 35292326983,
+          "name": "Native personal integrations",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292326983"
+        },
+        {
+          "id": 35292326956,
+          "name": "Personal client portability",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292326956"
+        },
+        {
+          "id": 35292326954,
+          "name": "Personal user services",
+          "status": "completed",
+          "conclusion": "failure",
+          "event": "pull_request",
+          "head_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292326954"
+        },
+        {
+          "id": 35292327125,
+          "name": "Validate ultrabrain",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "event": "pull_request",
+          "head_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292327125"
+        },
+        {
+          "id": 35292323818,
+          "name": "Source snapshot",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292323818"
+        },
+        {
+          "id": 35292323828,
+          "name": "Personal recovery set",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292323828"
+        },
+        {
+          "id": 35292323830,
+          "name": "Task-aware personal recall",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292323830"
+        },
+        {
+          "id": 35292323834,
+          "name": "Native personal integrations",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292323834"
+        },
+        {
+          "id": 35292323832,
+          "name": "Personal user services",
+          "status": "completed",
+          "conclusion": "failure",
+          "event": "push",
+          "head_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292323832"
+        },
+        {
+          "id": 35292323962,
+          "name": "Personal client portability",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292323962"
+        },
+        {
+          "id": 35292323948,
+          "name": "Validate ultrabrain",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292323948"
+        }
+      ],
+      "failures": [
+        {
+          "run_id": 35292323832,
+          "job_id": 105437623991,
+          "event": "push",
+          "checked_out_sha": "7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3",
+          "case": "owned_live_console",
+          "error_code": "readiness_unverified",
+          "readiness_checks_completed": 0
+        },
+        {
+          "run_id": 35292326954,
+          "job_id": 105437632791,
+          "event": "pull_request",
+          "checked_out_sha": "2ae92c8afc38c5d33110473fac2a117740ea79ce",
+          "case": "owned_live_console",
+          "error_code": "readiness_unverified",
+          "readiness_checks_completed": 0
+        }
+      ],
+      "preceding_services_acceptance": {
+        "checks": 18,
+        "scope": "actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment",
+        "model_calls_to_local_fixture": 2
+      },
+      "logs": [
+        {
+          "path": "job-105437623991.log",
+          "bytes": 41420,
+          "sha256": "9d5ef0b619f8904746c083d4b2b7151b7be3b8618147772f7bc296c6f3cf35f7"
+        },
+        {
+          "path": "job-105437632791.log",
+          "bytes": 42417,
+          "sha256": "241089c0ba8ef374089e110f85fe2d5f4376c88c575ea743f4b7616c5c30129b"
+        },
+        {
+          "path": "job-105437633164.log",
+          "bytes": 310101,
+          "sha256": "8cf23e35d3d5271381ab7c2eeb404d0131ee579e1e367fe8ab5b1f52cea58eb3"
+        }
+      ],
+      "limitations": [
+        "PR Validate was cancelled after 11 successful and 6 cancelled jobs; its unit job completed successfully.",
+        "Both services runs failed before any readiness case passed.",
+        "Cause attribution comes from implementation investigation, not this CI-only audit. The CI result only establishes readiness_unverified.",
+        "No acceptance or code-review approval is inferred from this audit."
+      ]
+    },
+    "final": {
+      "auditor": "/root/ready_ci_audit",
+      "audit_type": "read-only CI evidence audit, not code-review approval",
+      "observed_at": "2026-09-18T00:57:45Z",
+      "pull_request": "https://github.com/youq616/ultrabrain/pull/12",
+      "candidate_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+      "candidate_tree": "38dece61288c8f7e9eb2b3726e6343b5595b1ef5",
+      "tested_pull_request_merge_sha": "8e053f13e7b2374f26ef79a202a43bb41dcb2936",
+      "merge_tree": "38dece61288c8f7e9eb2b3726e6343b5595b1ef5",
+      "merge_parents": [
+        "d2d8c30b939000b26fe41fc0e5bcab618232ca28",
+        "715314236183ff75f97bc96fcfef57bd6b421192"
+      ],
+      "pull_request_state": {
+        "state": "open",
+        "draft": true,
+        "merged": false,
+        "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+        "base_sha": "d2d8c30b939000b26fe41fc0e5bcab618232ca28",
+        "merge_commit_sha": "8e053f13e7b2374f26ef79a202a43bb41dcb2936"
+      },
+      "verdict": "CI_PASS",
+      "pull_request_workflow_count": 6,
+      "pull_request_job_count": 23,
+      "push_workflow_count": 7,
+      "unit": {
+        "run_id": 35292739710,
+        "job_id": 105438934991,
+        "conclusion": "success",
+        "checked_out_sha": "8e053f13e7b2374f26ef79a202a43bb41dcb2936",
+        "node": {
+          "tests": 557,
+          "passed": 557,
+          "failed": 0,
+          "skipped": 0
+        },
+        "python": {
+          "tests": 438,
+          "verdict": "OK"
+        }
+      },
+      "services_runs": [
+        {
+          "run_id": 35292736874,
+          "job_id": 105438869882,
+          "event": "push",
+          "checked_out_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739684,
+          "job_id": 105438878555,
+          "event": "pull_request",
+          "checked_out_sha": "8e053f13e7b2374f26ef79a202a43bb41dcb2936",
+          "conclusion": "success"
+        }
+      ],
+      "services_log_summaries": [
+        {
+          "passed": true,
+          "checks": 18,
+          "scope": "actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment",
+          "model_calls_to_local_fixture": 2
+        },
+        {
+          "ok": true,
+          "checks": 15,
+          "systemd": "actual-user-manager",
+          "postgresql": "actual",
+          "http": "authenticated-local-console",
+          "personal_readiness": {
+            "checks": 12,
+            "systemd": "same-actual-console-invocation",
+            "database": "actual-source-removal-and-table-lock-refusal",
+            "recovery": "same-console-instance-after-source-and-lock-restoration",
+            "readonly_snapshot_unchanged": true,
+            "actual_postgres_address_conversion_verified": true,
+            "model_calls": 0
+          },
+          "interruption": "actual-process-exit-and-cli-recovery",
+          "repeated_recovery": "actual-referenced-stale-manager-cache-reloaded",
+          "fragment_path_forms": [
+            "installed-link"
+          ],
+          "model_calls": 0,
+          "user_host_deployed": false
+        }
+      ],
+      "workflows": [
+        {
+          "id": 35292739703,
+          "name": "Task-aware personal recall",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292739703"
+        },
+        {
+          "id": 35292739690,
+          "name": "Native personal integrations",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292739690"
+        },
+        {
+          "id": 35292739720,
+          "name": "Personal client portability",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292739720"
+        },
+        {
+          "id": 35292739669,
+          "name": "Personal recovery set",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292739669"
+        },
+        {
+          "id": 35292739684,
+          "name": "Personal user services",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292739684"
+        },
+        {
+          "id": 35292739710,
+          "name": "Validate ultrabrain",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "pull_request",
+          "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292739710"
+        },
+        {
+          "id": 35292736944,
+          "name": "Personal recovery set",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292736944"
+        },
+        {
+          "id": 35292736943,
+          "name": "Source snapshot",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292736943"
+        },
+        {
+          "id": 35292736909,
+          "name": "Task-aware personal recall",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292736909"
+        },
+        {
+          "id": 35292736917,
+          "name": "Personal client portability",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292736917"
+        },
+        {
+          "id": 35292736883,
+          "name": "Native personal integrations",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292736883"
+        },
+        {
+          "id": 35292736874,
+          "name": "Personal user services",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292736874"
+        },
+        {
+          "id": 35292736881,
+          "name": "Validate ultrabrain",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35292736881"
+        }
+      ],
+      "pull_request_jobs": [
+        {
+          "run_id": 35292739703,
+          "id": 105438878795,
+          "name": "task-context",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739690,
+          "id": 105438878905,
+          "name": "opencode-and-hermes",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739720,
+          "id": 105438878717,
+          "name": "client-contracts (windows-2025)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739720,
+          "id": 105438878910,
+          "name": "client-contracts (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739669,
+          "id": 105438878692,
+          "name": "recovery",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739684,
+          "id": 105438878555,
+          "name": "user-systemd",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438934991,
+          "name": "unit",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935097,
+          "name": "native-integration (31f43aa1ff1343bb649e39cf44ca57203ce0ebac)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935102,
+          "name": "native-integration (d7be484b445a893112d3a132c30f42282865a41a)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935120,
+          "name": "native-integration (09a4c8fe95242d5939e28cc3957d4605a6823a81)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935140,
+          "name": "native-integration (fb397f0f3a8ba12253f9e993bba93c387e6de57a)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935142,
+          "name": "native-integration (32f97e8d45b312980ce6ab1784cf316feddd698e)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935146,
+          "name": "native-integration (38e0e6657561e17ba85c71d0783d604242a054e8)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935148,
+          "name": "native-integration (225fef02de4c3aa33d655c4b2dfde9f246571329)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935173,
+          "name": "native-integration (a3f1790b0e837e3c4788c19de531332e55b7a908)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935180,
+          "name": "native-integration (a81374c1bc626623616a47358f7105c91a49dea5)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935202,
+          "name": "native-integration (f8cc5b980c260cd61e66e032ebce94a5cdc065e3)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935209,
+          "name": "native-integration (b46c067f0ef110900af7fe8bb2334b4a9c509c3c)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935218,
+          "name": "native-integration (52aff84feb4bf77b32554dcbfa902625e3008c4c)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935236,
+          "name": "native-integration (c0c85d85284779599d1e5722cc9345373c945b62)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935259,
+          "name": "native-integration (115978df6069ad11d376f848d214654ba6adde16)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105438935280,
+          "name": "native-integration (57852fed3d1839bab105c5b56632af1f65bb4b15)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35292739710,
+          "id": 105439237284,
+          "name": "n8n-engine",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "logs": [
+        {
+          "path": "job-105438934991.log",
+          "bytes": 310275,
+          "sha256": "c883a9224fe5ae65b4614e48568d66ab8d7aee2d608786edfaa9144f2549bb59"
+        },
+        {
+          "path": "job-105438878555.log",
+          "bytes": 41283,
+          "sha256": "624399ff706cf42e9be5f7fd21fa7dee671f9b0ab36d2dc6f4af2df9d8677c31"
+        },
+        {
+          "path": "job-105438869882.log",
+          "bytes": 40375,
+          "sha256": "e600ae2df8a7529ff90d2650399da439df5592e4f80ed7e02212bdc49f4ede54"
+        }
+      ],
+      "previous_failure_audits": [
+        "CI-FIRST-AUDIT.json",
+        "CI-SECOND-AUDIT.json"
+      ],
+      "limitations": [
+        "CI_PASS verifies these completed CI runs only; it is not an independent code-review approval or merge authorization.",
+        "The readiness/deployment integration ran against disposable CI services, not the user's host.",
+        "The 18 legacy service checks used two calls to a local synthetic provider. The 12 readiness and 15 deployment checks report zero model calls.",
+        "This snapshot precedes merge; it makes no claim about post-merge main workflows."
+      ]
+    },
+    "post_merge": {
+      "auditor": "/root/ready_ci_audit",
+      "audit_type": "read-only post-merge CI evidence audit, not code-review approval",
+      "observed_at": "2026-09-18T01:04:02Z",
+      "verdict": "POST_MERGE_CI_PASS",
+      "pull_request": "https://github.com/youq616/ultrabrain/pull/12",
+      "tested_application_merge_sha": "d72ee27cafe9b309253ebd382fd752932fbe9e38",
+      "tested_application_merge_tree": "38dece61288c8f7e9eb2b3726e6343b5595b1ef5",
+      "merge_parents": [
+        "d2d8c30b939000b26fe41fc0e5bcab618232ca28",
+        "715314236183ff75f97bc96fcfef57bd6b421192"
+      ],
+      "accepted_candidate_sha": "715314236183ff75f97bc96fcfef57bd6b421192",
+      "accepted_candidate_tree": "38dece61288c8f7e9eb2b3726e6343b5595b1ef5",
+      "candidate_pull_request_merge_sha": "8e053f13e7b2374f26ef79a202a43bb41dcb2936",
+      "application_trees_identical": true,
+      "branch": "main",
+      "event": "push",
+      "workflow_count": 7,
+      "job_count": 24,
+      "unit": {
+        "run_id": 35293471243,
+        "job_id": 105441091763,
+        "conclusion": "success",
+        "checked_out_sha": "d72ee27cafe9b309253ebd382fd752932fbe9e38",
+        "node": {
+          "tests": 557,
+          "passed": 557,
+          "failed": 0,
+          "skipped": 0
+        },
+        "python": {
+          "tests": 438,
+          "verdict": "OK"
+        }
+      },
+      "services": {
+        "run_id": 35293471223,
+        "job_id": 105441091888,
+        "conclusion": "success",
+        "checked_out_sha": "d72ee27cafe9b309253ebd382fd752932fbe9e38",
+        "log_summaries": [
+          {
+            "passed": true,
+            "checks": 18,
+            "scope": "actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment",
+            "model_calls_to_local_fixture": 2
+          },
+          {
+            "ok": true,
+            "checks": 15,
+            "systemd": "actual-user-manager",
+            "postgresql": "actual",
+            "http": "authenticated-local-console",
+            "personal_readiness": {
+              "checks": 12,
+              "systemd": "same-actual-console-invocation",
+              "database": "actual-source-removal-and-table-lock-refusal",
+              "recovery": "same-console-instance-after-source-and-lock-restoration",
+              "readonly_snapshot_unchanged": true,
+              "actual_postgres_address_conversion_verified": true,
+              "model_calls": 0
+            },
+            "interruption": "actual-process-exit-and-cli-recovery",
+            "repeated_recovery": "actual-referenced-stale-manager-cache-reloaded",
+            "fragment_path_forms": [
+              "installed-link"
+            ],
+            "model_calls": 0,
+            "user_host_deployed": false
+          }
+        ]
+      },
+      "workflows": [
+        {
+          "id": 35293471234,
+          "name": "Source snapshot",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "d72ee27cafe9b309253ebd382fd752932fbe9e38",
+          "head_branch": "main",
+          "run_attempt": 1,
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35293471234"
+        },
+        {
+          "id": 35293471219,
+          "name": "Personal recovery set",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "d72ee27cafe9b309253ebd382fd752932fbe9e38",
+          "head_branch": "main",
+          "run_attempt": 1,
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35293471219"
+        },
+        {
+          "id": 35293471229,
+          "name": "Personal client portability",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "d72ee27cafe9b309253ebd382fd752932fbe9e38",
+          "head_branch": "main",
+          "run_attempt": 1,
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35293471229"
+        },
+        {
+          "id": 35293471211,
+          "name": "Task-aware personal recall",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "d72ee27cafe9b309253ebd382fd752932fbe9e38",
+          "head_branch": "main",
+          "run_attempt": 1,
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35293471211"
+        },
+        {
+          "id": 35293471217,
+          "name": "Native personal integrations",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "d72ee27cafe9b309253ebd382fd752932fbe9e38",
+          "head_branch": "main",
+          "run_attempt": 1,
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35293471217"
+        },
+        {
+          "id": 35293471223,
+          "name": "Personal user services",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "d72ee27cafe9b309253ebd382fd752932fbe9e38",
+          "head_branch": "main",
+          "run_attempt": 1,
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35293471223"
+        },
+        {
+          "id": 35293471243,
+          "name": "Validate ultrabrain",
+          "status": "completed",
+          "conclusion": "success",
+          "event": "push",
+          "head_sha": "d72ee27cafe9b309253ebd382fd752932fbe9e38",
+          "head_branch": "main",
+          "run_attempt": 1,
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35293471243"
+        }
+      ],
+      "jobs": [
+        {
+          "run_id": 35293471234,
+          "id": 105441091854,
+          "name": "snapshot",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471219,
+          "id": 105441091799,
+          "name": "recovery",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471229,
+          "id": 105441091797,
+          "name": "client-contracts (windows-2025)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471229,
+          "id": 105441091943,
+          "name": "client-contracts (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471211,
+          "id": 105441092030,
+          "name": "task-context",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471217,
+          "id": 105441092443,
+          "name": "opencode-and-hermes",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471223,
+          "id": 105441091888,
+          "name": "user-systemd",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441091763,
+          "name": "unit",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441091927,
+          "name": "native-integration (fb397f0f3a8ba12253f9e993bba93c387e6de57a)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441091934,
+          "name": "native-integration (31f43aa1ff1343bb649e39cf44ca57203ce0ebac)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441091960,
+          "name": "native-integration (a3f1790b0e837e3c4788c19de531332e55b7a908)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441091972,
+          "name": "native-integration (38e0e6657561e17ba85c71d0783d604242a054e8)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441091974,
+          "name": "native-integration (32f97e8d45b312980ce6ab1784cf316feddd698e)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441091975,
+          "name": "native-integration (57852fed3d1839bab105c5b56632af1f65bb4b15)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441091991,
+          "name": "native-integration (f8cc5b980c260cd61e66e032ebce94a5cdc065e3)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441091999,
+          "name": "native-integration (c0c85d85284779599d1e5722cc9345373c945b62)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441092009,
+          "name": "native-integration (a81374c1bc626623616a47358f7105c91a49dea5)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441092018,
+          "name": "native-integration (52aff84feb4bf77b32554dcbfa902625e3008c4c)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441092042,
+          "name": "native-integration (115978df6069ad11d376f848d214654ba6adde16)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441092077,
+          "name": "native-integration (225fef02de4c3aa33d655c4b2dfde9f246571329)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441092086,
+          "name": "native-integration (09a4c8fe95242d5939e28cc3957d4605a6823a81)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441092090,
+          "name": "native-integration (b46c067f0ef110900af7fe8bb2334b4a9c509c3c)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441092116,
+          "name": "native-integration (d7be484b445a893112d3a132c30f42282865a41a)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "run_id": 35293471243,
+          "id": 105441205858,
+          "name": "n8n-engine",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "logs": [
+        {
+          "path": "job-105441091763.log",
+          "bytes": 309209,
+          "sha256": "203668a3c6379afed2353864767d3cc8a02b56e0a028c795e414150ee3b9f431"
+        },
+        {
+          "path": "job-105441091888.log",
+          "bytes": 40215,
+          "sha256": "d835d3482e53aa287948581ce70d918fb5d1cd8ce6da87174688f53a1a2342e7"
+        }
+      ],
+      "candidate_audit": "CI-FINAL-AUDIT.json",
+      "previous_failure_audits": [
+        "CI-FIRST-AUDIT.json",
+        "CI-SECOND-AUDIT.json"
+      ],
+      "failures_observed_for_this_application_merge": [],
+      "limitations": [
+        "This audit covers application merge d72ee27cafe9b309253ebd382fd752932fbe9e38 only. It does not attribute these CI runs to any later documentation-only [skip ci] commit.",
+        "POST_MERGE_CI_PASS verifies completed CI runs only; it is not an independent code-review approval.",
+        "The readiness/deployment integration ran against disposable CI services, not the user's host.",
+        "The 18 legacy service checks used two calls to a local synthetic provider. The 12 readiness and 15 deployment checks report zero model calls.",
+        "No physical power-loss testing or real-model quality claim is inferred."
+      ]
+    }
+  },
+  "ci_audit_source_digests": [
+    {
+      "name": "CI-FIRST-AUDIT.json",
+      "bytes": 4280,
+      "sha256": "6b6cd61ec14ed62e5c10c23ae92b7834c90811e83f9be5ce7d8014f097292faf"
+    },
+    {
+      "name": "CI-SECOND-AUDIT.json",
+      "bytes": 6610,
+      "sha256": "51f40531405ff39e733e79da6f5fdc65dfa609586b103837ccaa5365fe58b042"
+    },
+    {
+      "name": "CI-FINAL-AUDIT.json",
+      "bytes": 12286,
+      "sha256": "5e8c8e42fc858ca74d2a8e93137f41589e1bccefd234428da5045531b9415d37"
+    },
+    {
+      "name": "CI-MERGE-AUDIT.json",
+      "bytes": 10711,
+      "sha256": "34546109cda9eda0e80191a26b1dc060d3e315736a1a728255d52793ebcd5984"
+    }
+  ],
+  "audited_log_excerpts": [
+    {
+      "log_name": "job-105436136607.log",
+      "job_url": "https://github.com/youq616/ultrabrain/actions/runs/35291835217/job/105436136607",
+      "bytes": 41562,
+      "sha256": "b311ea24a3873ff04419a091c18293b9b84bfa1c6da0625e0f84b359d7ddc55d",
+      "safe_exact_excerpts": [
+        {
+          "line": 112,
+          "text": "2026-09-18T00:35:39.7523199Z fde82fa97843d22b3f1a92fb83926cc99d53dcaa"
+        },
+        {
+          "line": 420,
+          "text": "2026-09-18T00:37:16.2882023Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}"
+        },
+        {
+          "line": 432,
+          "text": "2026-09-18T00:37:23.5221085Z {\"personal_readiness_failure_after_checks\":0,\"case\":\"owned_live_console\",\"error_code\":\"readiness_timeout\"}"
+        }
+      ]
+    },
+    {
+      "log_name": "job-105436203699.log",
+      "job_url": "https://github.com/youq616/ultrabrain/actions/runs/35291857404/job/105436203699",
+      "bytes": 309890,
+      "sha256": "83f633ab54a5d392d4812fa0ddd6824bd44eb70bbaf69e00c302877aa452209a",
+      "safe_exact_excerpts": [
+        {
+          "line": 122,
+          "text": "2026-09-18T00:36:24.0705609Z e3c6d1b6055d0381f3056486887e07d66aa7db7f"
+        },
+        {
+          "line": 3487,
+          "text": "2026-09-18T00:36:35.5427982Z # tests 557"
+        },
+        {
+          "line": 3489,
+          "text": "2026-09-18T00:36:35.5428345Z # pass 557"
+        },
+        {
+          "line": 3490,
+          "text": "2026-09-18T00:36:35.5428529Z # fail 0"
+        },
+        {
+          "line": 3492,
+          "text": "2026-09-18T00:36:35.5428896Z # skipped 0"
+        },
+        {
+          "line": 3941,
+          "text": "2026-09-18T00:36:52.4523927Z Ran 436 tests in 16.529s"
+        },
+        {
+          "line": 3943,
+          "text": "2026-09-18T00:36:52.4524313Z OK"
+        }
+      ]
+    },
+    {
+      "log_name": "job-105436203942.log",
+      "job_url": "https://github.com/youq616/ultrabrain/actions/runs/35291857487/job/105436203942",
+      "bytes": 42420,
+      "sha256": "e3edf15089ca5db06d7b2c475cb8c2a57e76d395df0172cc288bccef7f4938da",
+      "safe_exact_excerpts": [
+        {
+          "line": 128,
+          "text": "2026-09-18T00:37:26.8371614Z e3c6d1b6055d0381f3056486887e07d66aa7db7f"
+        },
+        {
+          "line": 435,
+          "text": "2026-09-18T00:39:00.4202695Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}"
+        },
+        {
+          "line": 447,
+          "text": "2026-09-18T00:39:07.6047580Z {\"personal_readiness_failure_after_checks\":0,\"case\":\"owned_live_console\",\"error_code\":\"readiness_timeout\"}"
+        }
+      ]
+    },
+    {
+      "log_name": "job-105437623991.log",
+      "job_url": "https://github.com/youq616/ultrabrain/actions/runs/35292323832/job/105437623991",
+      "bytes": 41420,
+      "sha256": "9d5ef0b619f8904746c083d4b2b7151b7be3b8618147772f7bc296c6f3cf35f7",
+      "safe_exact_excerpts": [
+        {
+          "line": 112,
+          "text": "2026-09-18T00:42:47.4258001Z 7ffbe5c14c5cf31e90510c6f62ed752a6552b5c3"
+        },
+        {
+          "line": 418,
+          "text": "2026-09-18T00:44:24.7574633Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}"
+        },
+        {
+          "line": 430,
+          "text": "2026-09-18T00:44:28.0386055Z {\"personal_readiness_failure_after_checks\":0,\"case\":\"owned_live_console\",\"error_code\":\"readiness_unverified\"}"
+        }
+      ]
+    },
+    {
+      "log_name": "job-105437632791.log",
+      "job_url": "https://github.com/youq616/ultrabrain/actions/runs/35292326954/job/105437632791",
+      "bytes": 42417,
+      "sha256": "241089c0ba8ef374089e110f85fe2d5f4376c88c575ea743f4b7616c5c30129b",
+      "safe_exact_excerpts": [
+        {
+          "line": 128,
+          "text": "2026-09-18T00:43:37.7736264Z 2ae92c8afc38c5d33110473fac2a117740ea79ce"
+        },
+        {
+          "line": 435,
+          "text": "2026-09-18T00:45:11.8155370Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}"
+        },
+        {
+          "line": 447,
+          "text": "2026-09-18T00:45:15.0678258Z {\"personal_readiness_failure_after_checks\":0,\"case\":\"owned_live_console\",\"error_code\":\"readiness_unverified\"}"
+        }
+      ]
+    },
+    {
+      "log_name": "job-105437633164.log",
+      "job_url": "https://github.com/youq616/ultrabrain/actions/runs/35292327125/job/105437633164",
+      "bytes": 310101,
+      "sha256": "8cf23e35d3d5271381ab7c2eeb404d0131ee579e1e367fe8ab5b1f52cea58eb3",
+      "safe_exact_excerpts": [
+        {
+          "line": 122,
+          "text": "2026-09-18T00:44:31.3843910Z 2ae92c8afc38c5d33110473fac2a117740ea79ce"
+        },
+        {
+          "line": 3487,
+          "text": "2026-09-18T00:44:40.5894111Z # tests 557"
+        },
+        {
+          "line": 3489,
+          "text": "2026-09-18T00:44:40.5894478Z # pass 557"
+        },
+        {
+          "line": 3490,
+          "text": "2026-09-18T00:44:40.5894656Z # fail 0"
+        },
+        {
+          "line": 3492,
+          "text": "2026-09-18T00:44:40.5895033Z # skipped 0"
+        },
+        {
+          "line": 3942,
+          "text": "2026-09-18T00:44:56.6716043Z Ran 437 tests in 15.792s"
+        },
+        {
+          "line": 3944,
+          "text": "2026-09-18T00:44:56.6716282Z OK"
+        }
+      ]
+    },
+    {
+      "log_name": "job-105438934991.log",
+      "job_url": "https://github.com/youq616/ultrabrain/actions/runs/35292739710/job/105438934991",
+      "bytes": 310275,
+      "sha256": "c883a9224fe5ae65b4614e48568d66ab8d7aee2d608786edfaa9144f2549bb59",
+      "safe_exact_excerpts": [
+        {
+          "line": 122,
+          "text": "2026-09-18T00:49:58.5105732Z 8e053f13e7b2374f26ef79a202a43bb41dcb2936"
+        },
+        {
+          "line": 3487,
+          "text": "2026-09-18T00:50:07.8130401Z # tests 557"
+        },
+        {
+          "line": 3489,
+          "text": "2026-09-18T00:50:07.8130729Z # pass 557"
+        },
+        {
+          "line": 3490,
+          "text": "2026-09-18T00:50:07.8130889Z # fail 0"
+        },
+        {
+          "line": 3492,
+          "text": "2026-09-18T00:50:07.8131216Z # skipped 0"
+        },
+        {
+          "line": 3943,
+          "text": "2026-09-18T00:50:24.7011943Z Ran 438 tests in 16.654s"
+        },
+        {
+          "line": 3945,
+          "text": "2026-09-18T00:50:24.7012246Z OK"
+        }
+      ]
+    },
+    {
+      "log_name": "job-105438878555.log",
+      "job_url": "https://github.com/youq616/ultrabrain/actions/runs/35292739684/job/105438878555",
+      "bytes": 41283,
+      "sha256": "624399ff706cf42e9be5f7fd21fa7dee671f9b0ab36d2dc6f4af2df9d8677c31",
+      "safe_exact_excerpts": [
+        {
+          "line": 128,
+          "text": "2026-09-18T00:49:22.5722455Z 8e053f13e7b2374f26ef79a202a43bb41dcb2936"
+        },
+        {
+          "line": 434,
+          "text": "2026-09-18T00:50:58.6693194Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}"
+        },
+        {
+          "line": 446,
+          "text": "2026-09-18T00:51:11.9722626Z {\"ok\":true,\"checks\":15,\"systemd\":\"actual-user-manager\",\"postgresql\":\"actual\",\"http\":\"authenticated-local-console\",\"personal_readiness\":{\"checks\":12,\"systemd\":\"same-actual-console-invocation\",\"database\":\"actual-source-removal-and-table-lock-refusal\",\"recovery\":\"same-console-instance-after-source-and-lock-restoration\",\"readonly_snapshot_unchanged\":true,\"actual_postgres_address_conversion_verified\":true,\"model_calls\":0},\"interruption\":\"actual-process-exit-and-cli-recovery\",\"repeated_recovery\":\"actual-referenced-stale-manager-cache-reloaded\",\"fragment_path_forms\":[\"installed-link\"],\"model_calls\":0,\"user_host_deployed\":false}"
+        }
+      ]
+    },
+    {
+      "log_name": "job-105438869882.log",
+      "job_url": "https://github.com/youq616/ultrabrain/actions/runs/35292736874/job/105438869882",
+      "bytes": 40375,
+      "sha256": "e600ae2df8a7529ff90d2650399da439df5592e4f80ed7e02212bdc49f4ede54",
+      "safe_exact_excerpts": [
+        {
+          "line": 112,
+          "text": "2026-09-18T00:49:00.6851615Z 715314236183ff75f97bc96fcfef57bd6b421192"
+        },
+        {
+          "line": 418,
+          "text": "2026-09-18T00:50:41.8804366Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}"
+        },
+        {
+          "line": 430,
+          "text": "2026-09-18T00:50:59.8205678Z {\"ok\":true,\"checks\":15,\"systemd\":\"actual-user-manager\",\"postgresql\":\"actual\",\"http\":\"authenticated-local-console\",\"personal_readiness\":{\"checks\":12,\"systemd\":\"same-actual-console-invocation\",\"database\":\"actual-source-removal-and-table-lock-refusal\",\"recovery\":\"same-console-instance-after-source-and-lock-restoration\",\"readonly_snapshot_unchanged\":true,\"actual_postgres_address_conversion_verified\":true,\"model_calls\":0},\"interruption\":\"actual-process-exit-and-cli-recovery\",\"repeated_recovery\":\"actual-referenced-stale-manager-cache-reloaded\",\"fragment_path_forms\":[\"installed-link\"],\"model_calls\":0,\"user_host_deployed\":false}"
+        }
+      ]
+    },
+    {
+      "log_name": "job-105441091763.log",
+      "job_url": "https://github.com/youq616/ultrabrain/actions/runs/35293471243/job/105441091763",
+      "bytes": 309209,
+      "sha256": "203668a3c6379afed2353864767d3cc8a02b56e0a028c795e414150ee3b9f431",
+      "safe_exact_excerpts": [
+        {
+          "line": 106,
+          "text": "2026-09-18T00:59:34.8269045Z d72ee27cafe9b309253ebd382fd752932fbe9e38"
+        },
+        {
+          "line": 3471,
+          "text": "2026-09-18T00:59:44.2006724Z # tests 557"
+        },
+        {
+          "line": 3473,
+          "text": "2026-09-18T00:59:44.2007078Z # pass 557"
+        },
+        {
+          "line": 3474,
+          "text": "2026-09-18T00:59:44.2007251Z # fail 0"
+        },
+        {
+          "line": 3476,
+          "text": "2026-09-18T00:59:44.2007618Z # skipped 0"
+        },
+        {
+          "line": 3927,
+          "text": "2026-09-18T01:00:00.5716240Z Ran 438 tests in 16.071s"
+        },
+        {
+          "line": 3929,
+          "text": "2026-09-18T01:00:00.5716631Z OK"
+        }
+      ]
+    },
+    {
+      "log_name": "job-105441091888.log",
+      "job_url": "https://github.com/youq616/ultrabrain/actions/runs/35293471223/job/105441091888",
+      "bytes": 40215,
+      "sha256": "d835d3482e53aa287948581ce70d918fb5d1cd8ce6da87174688f53a1a2342e7",
+      "safe_exact_excerpts": [
+        {
+          "line": 112,
+          "text": "2026-09-18T00:59:47.5057020Z d72ee27cafe9b309253ebd382fd752932fbe9e38"
+        },
+        {
+          "line": 418,
+          "text": "2026-09-18T01:01:23.6180838Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}"
+        },
+        {
+          "line": 430,
+          "text": "2026-09-18T01:01:38.4945566Z {\"ok\":true,\"checks\":15,\"systemd\":\"actual-user-manager\",\"postgresql\":\"actual\",\"http\":\"authenticated-local-console\",\"personal_readiness\":{\"checks\":12,\"systemd\":\"same-actual-console-invocation\",\"database\":\"actual-source-removal-and-table-lock-refusal\",\"recovery\":\"same-console-instance-after-source-and-lock-restoration\",\"readonly_snapshot_unchanged\":true,\"actual_postgres_address_conversion_verified\":true,\"model_calls\":0},\"interruption\":\"actual-process-exit-and-cli-recovery\",\"repeated_recovery\":\"actual-referenced-stale-manager-cache-reloaded\",\"fragment_path_forms\":[\"installed-link\"],\"model_calls\":0,\"user_host_deployed\":false}"
+        }
+      ]
+    }
+  ],
+  "local_implementation_test_history": {
+    "scope": "local fixture/protocol tests; actual user-systemd/PostgreSQL acceptance is separate",
+    "initial_revision": "fde82fa97843d22b3f1a92fb83926cc99d53dcaa",
+    "history": [
+      {
+        "stage": "process helper first implementation",
+        "tests": 41,
+        "passed": 41,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "stage": "optional full Python process trusted-path probe",
+        "tests": 42,
+        "failures": 0,
+        "errors": 1,
+        "error": "unsafe_directory_owner",
+        "correction": "Production trust check retained. Actual-proc fixture decoupled kernel identity checks from the runtime-owned Python installation; synthetic tests cover trusted path acceptance/refusal."
+      },
+      {
+        "stage": "final initial process helper suite",
+        "tests": 42,
+        "passed": 42,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "stage": "complete-frame/retained-peer regression on original client",
+        "tests": 28,
+        "failures": 0,
+        "errors": 1,
+        "error": "readiness_timeout",
+        "log": "length-frame-before-fix.log",
+        "log_sha256": "7a320dea4c272e880896be1955f68705209d93bc18fa6da43e1e374b86e6cd20",
+        "log_bytes": 1159
+      },
+      {
+        "stage": "first incremental parser run",
+        "tests": 70,
+        "failures": 1,
+        "errors": 0,
+        "error": "oversized-header test expected readiness_response_too_large but parser now rejects invalid_readiness_http earlier",
+        "correction": "Test accepts either bounded refusal; header/total byte limits unchanged."
+      },
+      {
+        "stage": "corrected framing client and regression",
+        "tests": 70,
+        "passed": 70,
+        "failures": 0,
+        "errors": 0,
+        "log": "length-frame-after-fix.log",
+        "log_sha256": "69ef962b8b167be02b095698275198b8c46263168f8342ce318c4d6bc46e766d",
+        "log_bytes": 98
+      },
+      {
+        "stage": "host address normalization plus maximum-header split-delimiter regression",
+        "tests": 71,
+        "passed": 71,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "stage": "updated server/console/CLI Node tests after host correction",
+        "tests": 53,
+        "passed": 53,
+        "failures": 0,
+        "skipped": 0
+      }
+    ],
+    "no_user_production_services_changed": true
+  },
+  "application_merge": {
+    "sha": "d72ee27cafe9b309253ebd382fd752932fbe9e38",
+    "tree": "38dece61288c8f7e9eb2b3726e6343b5595b1ef5",
+    "parents": [
+      "d2d8c30b939000b26fe41fc0e5bcab618232ca28",
+      "715314236183ff75f97bc96fcfef57bd6b421192"
+    ],
+    "verified_by": "/root",
+    "verification": "GitHub git commit and main ref GET after merge; same tree as reviewed candidate and actual PR test merge.",
+    "url": "https://github.com/youq616/ultrabrain/commit/d72ee27cafe9b309253ebd382fd752932fbe9e38"
+  },
+  "limitations": [
+    "Readiness observes managed console-only installations and live PostgreSQL within a bounded cooperative maintenance window.",
+    "No user-host deployment or activation, enablement, migration or model request is performed by personal-ready.",
+    "Full source-content/cached-systemd-settings attestation, direct kernel socket ownership, worker readiness, external client/model quality and future availability are not established.",
+    "New readiness/deployment integration uses actual disposable ordinary-user CI systemd/PostgreSQL/HTTP and zero model calls; legacy service integration uses two local synthetic-provider calls.",
+    "Root-only local fixture tests are not ordinary-user live-service acceptance."
+  ]
+}
