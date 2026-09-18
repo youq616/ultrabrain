@@ -4,11 +4,13 @@ Linux-first agent memory, built around GBrain's PostgreSQL-native business engin
 
 ## 当前接手状态（2026-09-18）
 
+受管控制台激活与中断恢复已通过 [PR #13](https://github.com/youq616/ultrabrain/pull/13) 合入 `17bf51a2e998718665082a0245b5b49369ac6ec6`。新增 `personal-activate plan|apply|status|recover`，只启动已安装、当前停止的 console-only 配置，并通过共享 pending 和持久化记录处理中断；恢复只观察，不补发启动。完整候选 `88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4` 获独立整阶段 PASS 及补充恢复审核 PASS；47 个候选 CI jobs 和 24 个 main 合并后 jobs 全部成功，563 Node / 542 Python、18 项新真实激活检查通过。用法见 [控制台激活与恢复](docs/PERSONAL-ACTIVATE.md)，完整身份、范围、首次失败与原文证据见 [本阶段验收](docs/reviews/personal-activate/README.md)。
+
 只读 `personal-ready` 已通过 [PR #12](https://github.com/youq616/ultrabrain/pull/12) 合入 `d72ee27cafe9b309253ebd382fd752932fbe9e38`。它将已安装的 console-only 回执、实际管理台进程和新鲜认证的托管 PostgreSQL 查询绑定起来，不启停服务。最终候选 `715314236183ff75f97bc96fcfef57bd6b421192` 获两个独立代理 PASS；六组 PR CI 的 23 个 jobs 全部成功，557 Node / 438 Python 全通过，新增 12 项真实就绪检查通过。用法见 [个人管理台就绪检查](docs/PERSONAL-READY.md)，精确提交、逐轮审核和首次失败记录见 [本阶段验收](docs/reviews/personal-ready/README.md)。
 
 停止状态下的个人服务部署已通过 [PR #11](https://github.com/youq616/ultrabrain/pull/11) 合入 `50718455448b90c1eb70e3df70c96700b67bc867`。新增 `personal-deploy plan|apply|status|rollback|recover`，绑定审核后的导出与当前安装状态，提供独立配置副本、停止后更新、持久化中断恢复和逐代回滚。最终候选 `8c519f23a359691a24e9780766c5baed54c58c40` 获两个独立代理 PASS；六组 PR CI 的 23 个 jobs 全部成功，含 524 Node / 367 Python 测试及 15 项真实部署集成。用法见 [个人服务部署](docs/PERSONAL-DEPLOY.md)，精确验收与首次失败记录见 [项目状态](docs/PROJECT-STATUS.md)。
 
-此前任务上下文阶段已通过 [PR #10](https://github.com/youq616/ultrabrain/pull/10) 合入 `6c1c6becb1ae898d37d6bdcd2782c750481b27de`，提供显式 `task-context` 与单独授权的 Claude 主会话任务 Hook。个人 V1 仍未整体完成；自动激活切换与激活失败恢复是后续独立阶段，真实用户主机部署和完整客户端/模型验收仍待完成。上述就绪与部署集成在一次性 CI 的普通 Linux 账号下执行；新的就绪检查不调用模型，既有服务检查使用两次本地合成响应。部署命令只重载配置，启动与自动启用由操作者明确执行。
+此前任务上下文阶段已通过 [PR #10](https://github.com/youq616/ultrabrain/pull/10) 合入 `6c1c6becb1ae898d37d6bdcd2782c750481b27de`，提供显式 `task-context` 与单独授权的 Claude 主会话任务 Hook。个人 V1 仍未整体完成；当前已完成停止状态的显式控制台激活与同 manager 中断恢复；运行中切换、自动停止回滚、跨 manager 恢复、真实用户主机部署和完整客户端/模型验收仍待完成。上述就绪与部署集成在一次性 CI 的普通 Linux 账号下执行；新的就绪检查不调用模型，既有服务检查使用两次本地合成响应。部署命令只重载配置；控制台启动由操作者明确调用 personal-activate，自动启用仍不在本阶段。
 
 ## 架构与状态
 
@@ -110,6 +112,8 @@ context/profile 改为先排名后取前 100（修复旧 high 偏好被时间窗
 `python3 -B scripts/preflight.py --mode install` 可在尚未安装 Bun 时报告本地前置条件；`bun src/cli.mjs preflight --mode runtime` 检查已有托管配置和运行时元数据。均不安装、不修复、不连接数据库、不调用模型。通过不代表服务已启动或全部 Agent 已接通，详见 [部署预检](docs/DEPLOYMENT-PREFLIGHT.md)。阶段发布以实际候选 CI 和独立审核为准。
 
 已由 `personal-deploy` 安装的 console-only 配置可使用 `personal-ready`，将安装回执、实际控制台进程与一次认证的托管数据库查询绑定起来。该检查要求预期回执和数据库实例 UUID，通过专用挑战签名避免把控制台令牌发给陌生监听者；它不启停服务。参数、证明范围与验收层次见 [个人管理台就绪检查](docs/PERSONAL-READY.md)。
+
+已有令牌、托管 PostgreSQL 已运行且安装处于停止状态时，可用 personal-activate 先审核启动计划，再显式应用；若进程中断，按精确 pending 摘要恢复。命令不会补发恢复启动请求。支持的 systemd 版本与前置条件见 [控制台激活与恢复](docs/PERSONAL-ACTIVATE.md)。
 
 ## 个人服务状态（按提交验收）
 

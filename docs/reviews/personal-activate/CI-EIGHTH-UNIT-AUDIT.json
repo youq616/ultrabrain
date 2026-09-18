@@ -1,0 +1,42 @@
+{
+  "format": 1,
+  "auditor": "/root",
+  "type": "Direct CI log and checkout verification; not independent code review",
+  "candidate": "88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4",
+  "candidate_tree": "f8f540288ffcc5de31b865588130528f05130c71",
+  "run_id": 35370431502,
+  "job_id": 105682838275,
+  "url": "https://github.com/youq616/ultrabrain/actions/runs/35370431502/job/105682838275",
+  "checkout": "bdb287727eed2c574385aded849e8b923bf71fda",
+  "checkout_tree": "f8f540288ffcc5de31b865588130528f05130c71",
+  "checkout_parents": [
+    "5b3c88826984a9b5c8b34ca2cf7ffff171501697",
+    "88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4"
+  ],
+  "conclusion": "success",
+  "node": {
+    "tests": 563,
+    "pass": 563,
+    "fail": 0,
+    "skipped": 0
+  },
+  "python": {
+    "tests": 542,
+    "conclusion": "OK",
+    "skipped": 0
+  },
+  "log": {
+    "filename": "ci-unit-88e05f3-pr.log",
+    "bytes": 332173,
+    "sha256": "af15e2e753fbca9c70a6758df4c86e80d0c85989fe3634fd4bb3f9476f30c42d"
+  },
+  "safe_excerpts": [
+    "2026-09-18T16:49:06.6726750Z HEAD is now at bdb2877 Merge 88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4 into 5b3c88826984a9b5c8b34ca2cf7ffff171501697",
+    "2026-09-18T16:49:17.1156645Z # tests 563",
+    "2026-09-18T16:49:17.1157032Z # pass 563",
+    "2026-09-18T16:49:17.1157212Z # fail 0",
+    "2026-09-18T16:49:17.1157590Z # skipped 0",
+    "2026-09-18T16:49:42.0803228Z Ran 542 tests in 24.512s",
+    "2026-09-18T16:49:42.0803635Z OK"
+  ]
+}

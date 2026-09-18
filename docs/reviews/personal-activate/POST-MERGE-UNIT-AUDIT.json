@@ -1,0 +1,43 @@
+{
+  "format": 1,
+  "auditor": "/root",
+  "type": "Direct main CI raw-log and exact checkout audit",
+  "head_sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+  "head_branch": "main",
+  "event": "push",
+  "tree": "f8f540288ffcc5de31b865588130528f05130c71",
+  "run_id": 35372105777,
+  "job_id": 105688253263,
+  "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253263",
+  "checkout": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+  "conclusion": "success",
+  "node": {
+    "tests": 563,
+    "pass": 563,
+    "fail": 0,
+    "skipped": 0
+  },
+  "python": {
+    "tests": 542,
+    "conclusion": "OK",
+    "skipped": 0
+  },
+  "log": {
+    "filename": "ci-unit-17bf51a-main.log",
+    "bytes": 331127,
+    "sha256": "66e45bd5f61142bb4a35b67324fb5e4530ca09ab8593d6e68f4f9b480ca9300b"
+  },
+  "safe_excerpts": [
+    "2026-09-18T17:03:45.5866489Z 17bf51a2e998718665082a0245b5b49369ac6ec6",
+    "2026-09-18T17:03:56.2120772Z # tests 563",
+    "2026-09-18T17:03:56.2121140Z # pass 563",
+    "2026-09-18T17:03:56.2121319Z # fail 0",
+    "2026-09-18T17:03:56.2121702Z # skipped 0",
+    "2026-09-18T17:04:22.3254377Z Ran 542 tests in 25.747s",
+    "2026-09-18T17:04:22.3254893Z OK"
+  ],
+  "extraction_note": {
+    "first_attempt": "Root extraction assertion expected detached checkout wording HEAD is now at 17bf51a; assertion failed.",
+    "resolution": "Actual branch checkout instead prints the exact 40-character commit with git log. Corrected extractor verifies that full commit and unchanged successful test totals. This was an extraction assertion, not a failing CI test; original raw log bytes were retained."
+  }
+}

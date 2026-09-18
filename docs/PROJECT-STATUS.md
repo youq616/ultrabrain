@@ -2,6 +2,30 @@
 
 记录日期：2026-09-18。本记录以 GitHub 实际提交、已执行 CI 和独立代理审核为依据。历史会话、候选 README、接收报告中的 pending/frozen 字样描述的是当时状态；继续开发前应复查远程 main 和开放 PR。
 
+## 已完成阶段：停止控制台的显式激活与同管理器中断恢复
+
+从主线 `5b3c88826984a9b5c8b34ca2cf7ffff171501697` 实现 personal-activate，已通过 [PR #13](https://github.com/youq616/ultrabrain/pull/13) 合并。它要求已有令牌、已运行托管 PostgreSQL、已安装且停止的 console-only 配置；核对精确计划后只发送一次固定 StartUnit。共享部署锁、唯一 pending 和 intent/attempt/ack/receipt 处理进程中断。恢复在同一 systemd 255 manager 确认旧 sender 消失并完成屏障后，只观察终态或新鲜认证 readiness；历史 receipt 清理明确返回本次未检查就绪。详见 [命令合同](PERSONAL-ACTIVATE.md)。
+
+| 验收对象 | 精确结果 |
+| --- | --- |
+| 最终审核候选 | `88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4` |
+| 候选 / PR 实测 / main 应用共同代码树 | `f8f540288ffcc5de31b865588130528f05130c71` |
+| PR CI 实际 merge | `bdb287727eed2c574385aded849e8b923bf71fda` |
+| main 应用合并提交 | `17bf51a2e998718665082a0245b5b49369ac6ec6` |
+| 候选 CI | PR 6 组 / 23 jobs + push 7 组 / 24 jobs，全 47 成功；563 Node / 542 Python，无跳过；15 条历史升级和 n8n 成功。 |
+| 真实服务 CI | 两份候选与 main 各通过 18 activation、15 deploy、12 ready、18 既有 services；7 个真实崩溃点均无额外启动。 |
+| 合并后 main | 7 组 / 24 jobs 全部成功，563 Node / 542 Python 和上述服务计数再次通过。 |
+
+[/root/activate_boundary_review](reviews/personal-activate/boundary-review-88e05f3.md) 对完整阶段给出 PASS；[/root/activate_boundary_review/dbus_abi_crosscheck](reviews/personal-activate/recovery-boundary-review-88e05f3.md) 对 journal/recovery/CLI 给出补充 PASS，明确不是另一份整阶段验收。两人均未实现代码，当前候选按真实分工执行 262 项相关 Python、14 项 CLI，另有 42 Python / 16 JavaScript 检查。此前旧 reviewer 的批准仅保留原 SHA 归属。
+
+候选 [全量 CI](https://github.com/youq616/ultrabrain/actions/runs/35370431502) 和 [服务 CI](https://github.com/youq616/ultrabrain/actions/runs/35370431603)，以及 main [全量 CI](https://github.com/youq616/ultrabrain/actions/runs/35372105777) 和 [服务 CI](https://github.com/youq616/ultrabrain/actions/runs/35372105846) 的精确身份、所有运行和日志哈希见 [最终机器记录](reviews/personal-activate/evidence.json)。main 统计排除同一 SHA 的文档分支运行。
+
+本阶段修复了独立审核发现的 device 隐藏 following 依赖、真实 C 绑定的位置参数兼容、一次性 CI 的 manager proc 访问与注册时序，以及源码证明的被动 swap 缓存引用误拒。原始八轮候选、首次失败、未执行/取消状态和旧 BLOCK 均在 [审核档案](reviews/personal-activate/README.md) 与原字节 ZIP 保留。CI7 的具体被拒字段及首轮 capture 子进程被丢弃的 stderr 仍未知，不用后来成功倒推历史值。
+
+实际未读回复场景在三份服务 CI 中都观察到 ready，并保留 outcome_unknown；该路径的 manager 拒绝终态和 transport NoReply 仍只属于受控夹具覆盖。历史 receipt 两点恢复为 not_checked。新增激活/就绪不调用模型；旧 services 各有两次本地合成响应。用户主机部署、Worker、运行中替换、自动停止回滚、跨 manager/boot 恢复与真实模型质量不在此次验收内。
+
+本节和同批 README、检查表、审核档案是后续文档更新，应用文件未变。应用 CI 归属于上述应用候选及相同代码树的 main 合并，不冒称对文档提交重新执行。下方旧阶段提及“后续激活/恢复”描述当时状态；当前已完成范围以本节为准。
+
 ## 已完成阶段：个人管理台的只读认证就绪检查
 
 从文档主线 `d2d8c30b939000b26fe41fc0e5bcab618232ca28` 新增 `personal-ready`，已通过 [PR #12](https://github.com/youq616/ultrabrain/pull/12) 合并。该命令要求调用方给出预期安装回执和数据库实例 UUID，将 console-only 安装代际、管理器元数据、实际 Bun 运行实例、新鲜认证 HTTP 响应和托管 PostgreSQL 后端进程绑定起来。它不启动、停止、重载或启用服务，不读取记忆正文、不创建令牌、不迁移或调用模型。命令和证明范围见 [个人管理台就绪检查](PERSONAL-READY.md)。

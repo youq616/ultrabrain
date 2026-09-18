@@ -1,0 +1,16 @@
+{
+  "format": 1,
+  "auditor": "/root",
+  "merged": true,
+  "pr": 13,
+  "sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+  "tree": "f8f540288ffcc5de31b865588130528f05130c71",
+  "parents": [
+    "5b3c88826984a9b5c8b34ca2cf7ffff171501697",
+    "88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4"
+  ],
+  "candidate": "88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4",
+  "pr_test_merge": "bdb287727eed2c574385aded849e8b923bf71fda",
+  "url": "https://github.com/youq616/ultrabrain/pull/13",
+  "observed_at": "2026-09-18 17:04:35 UTC"
+}

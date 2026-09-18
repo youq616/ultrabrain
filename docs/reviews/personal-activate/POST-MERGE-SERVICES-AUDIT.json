@@ -1,0 +1,245 @@
+{
+  "auditor": "/root/activate_integration",
+  "audit_type": "implementation-agent read-only post-merge CI triage, not independent code review",
+  "selection": {
+    "head_branch": "main",
+    "event": "push",
+    "head_sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+    "same_sha_documentation_branch_runs_excluded": true
+  },
+  "application_sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+  "application_tree": "f8f540288ffcc5de31b865588130528f05130c71",
+  "application_parents": [
+    "5b3c88826984a9b5c8b34ca2cf7ffff171501697",
+    "88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4"
+  ],
+  "actual_checkout_observed": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+  "tree_matches_candidate8": true,
+  "run": {
+    "id": 35372105846,
+    "head_branch": "main",
+    "event": "push",
+    "head_sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105846"
+  },
+  "job": {
+    "id": 105688253026,
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "services_verdict": "PASS on actual main push after merge",
+  "manager_setup": {
+    "conclusion": "success",
+    "attempts": [
+      {
+        "attempt": 1,
+        "ok": false,
+        "dbus_error": "NameHasNoOwner",
+        "manager_proc_observed": false,
+        "manager_permitted_capabilities_empty": null
+      },
+      {
+        "attempt": 2,
+        "ok": true,
+        "dbus_error": null,
+        "manager_proc_observed": true,
+        "manager_permitted_capabilities_empty": true
+      }
+    ],
+    "production_identity_verified": true,
+    "actual_capprm_empty": true
+  },
+  "results": {
+    "legacy_services": {
+      "checks": 18,
+      "model_calls_to_local_fixture": 2,
+      "conclusion": "success"
+    },
+    "deployment": {
+      "checks": 15,
+      "conclusion": "success"
+    },
+    "readiness": {
+      "checks": 12,
+      "systemd": "same-actual-console-invocation",
+      "database": "actual-source-removal-and-table-lock-refusal",
+      "recovery": "same-console-instance-after-source-and-lock-restoration",
+      "readonly_snapshot_unchanged": true,
+      "actual_postgres_address_conversion_verified": true,
+      "model_calls": 0,
+      "conclusion": "success"
+    },
+    "activation": {
+      "checks": 18,
+      "systemd": "actual-disposable-user-manager",
+      "database": "actual-managed-postgresql",
+      "activation": "direct-console-start-with-target-inactive",
+      "recovery": "actual-process-exit-and-observation-only-recovery",
+      "checkpoints": [
+        {
+          "checkpoint": "after_journal",
+          "outcome": "terminal_stopped",
+          "extra_starts": 0
+        },
+        {
+          "checkpoint": "after_attempt",
+          "outcome": "terminal_stopped",
+          "extra_starts": 0
+        },
+        {
+          "checkpoint": "after_send_before_reply",
+          "outcome": "observed_ready",
+          "dispatch_state": "outcome_unknown",
+          "client_waited_for_reply": false,
+          "extra_starts": 0
+        },
+        {
+          "checkpoint": "after_start_before_ack",
+          "outcome": "observed_ready",
+          "client_waited_for_reply": true,
+          "acknowledgement_durable": false,
+          "extra_starts": 0
+        },
+        {
+          "checkpoint": "after_ack",
+          "outcome": "observed_ready",
+          "extra_starts": 0
+        },
+        {
+          "checkpoint": "after_receipt",
+          "outcome": "receipt_completed",
+          "extra_starts": 0
+        },
+        {
+          "checkpoint": "before_clear_pending",
+          "outcome": "receipt_completed",
+          "extra_starts": 0
+        }
+      ],
+      "source_removed_after_dispatch_refused": true,
+      "same_console_after_source_restoration": true,
+      "fixture_between_cases": "stop-and-reset-failed-only-the-verified-owned-console",
+      "fixture_console_cache_reference": "existing-ci-helper-with-180-second-bound",
+      "lock": "actual-exclusive-deployment-flock",
+      "configuration_unchanged": true,
+      "model_calls": 0,
+      "user_host_deployed": false,
+      "conclusion": "success"
+    },
+    "workflow_cleanup": {
+      "step": 12,
+      "conclusion": "success"
+    }
+  },
+  "receipt": {
+    "ok": true,
+    "checks": 15,
+    "systemd": "actual-user-manager",
+    "postgresql": "actual",
+    "http": "authenticated-local-console",
+    "personal_readiness": {
+      "checks": 12,
+      "systemd": "same-actual-console-invocation",
+      "database": "actual-source-removal-and-table-lock-refusal",
+      "recovery": "same-console-instance-after-source-and-lock-restoration",
+      "readonly_snapshot_unchanged": true,
+      "actual_postgres_address_conversion_verified": true,
+      "model_calls": 0
+    },
+    "personal_activation": {
+      "checks": 18,
+      "systemd": "actual-disposable-user-manager",
+      "database": "actual-managed-postgresql",
+      "activation": "direct-console-start-with-target-inactive",
+      "recovery": "actual-process-exit-and-observation-only-recovery",
+      "checkpoints": [
+        {
+          "checkpoint": "after_journal",
+          "outcome": "terminal_stopped",
+          "extra_starts": 0
+        },
+        {
+          "checkpoint": "after_attempt",
+          "outcome": "terminal_stopped",
+          "extra_starts": 0
+        },
+        {
+          "checkpoint": "after_send_before_reply",
+          "outcome": "observed_ready",
+          "dispatch_state": "outcome_unknown",
+          "client_waited_for_reply": false,
+          "extra_starts": 0
+        },
+        {
+          "checkpoint": "after_start_before_ack",
+          "outcome": "observed_ready",
+          "client_waited_for_reply": true,
+          "acknowledgement_durable": false,
+          "extra_starts": 0
+        },
+        {
+          "checkpoint": "after_ack",
+          "outcome": "observed_ready",
+          "extra_starts": 0
+        },
+        {
+          "checkpoint": "after_receipt",
+          "outcome": "receipt_completed",
+          "extra_starts": 0
+        },
+        {
+          "checkpoint": "before_clear_pending",
+          "outcome": "receipt_completed",
+          "extra_starts": 0
+        }
+      ],
+      "source_removed_after_dispatch_refused": true,
+      "same_console_after_source_restoration": true,
+      "fixture_between_cases": "stop-and-reset-failed-only-the-verified-owned-console",
+      "fixture_console_cache_reference": "existing-ci-helper-with-180-second-bound",
+      "lock": "actual-exclusive-deployment-flock",
+      "configuration_unchanged": true,
+      "model_calls": 0,
+      "user_host_deployed": false
+    },
+    "interruption": "actual-process-exit-and-cli-recovery",
+    "repeated_recovery": "actual-referenced-stale-manager-cache-reloaded",
+    "fragment_path_forms": [
+      "installed-link"
+    ],
+    "model_calls": 0,
+    "user_host_deployed": false
+  },
+  "log": {
+    "local_raw_log": "POST-MERGE-SERVICES-raw.log",
+    "safe_excerpts": [
+      "2026-09-18T17:04:15.1804312Z {\"fixture_setup_attempt\": 1, \"diagnostic\": \"personal_activation_manager\", \"ok\": false, \"exception_chain\": [{\"type\": \"ActivateManagerError\", \"safe_code\": \"manager_unavailable\", \"dbus_error\": null, \"errno\": null, \"frames\": [{\"file\": \"personal-activate-crash.py\", \"function\": \"diagnose_manager\", \"line\": 283}, {\"file\": \"personal_activate_manager.py\", \"function\": \"connection_identity\", \"line\": 286}, {\"file\": \"personal_activate_manager.py\", \"function\": \"_connect\", \"line\": 217}, {\"file\": \"personal_activate_manager.py\", \"function\": \"_bus\", \"line\": 273}, {\"file\": \"personal_activate_manager.py\", \"function\": \"_call\", \"line\": 253}]}, {\"type\": \"DBusException\", \"safe_code\": null, \"dbus_error\": \"NameHasNoOwner\", \"errno\": null, \"frames\": [{\"file\": \"personal_activate_manager.py\", \"function\": \"_call\", \"line\": 249}, {\"file\": \"personal_activate_manager.py\", \"function\": \"_raw_call\", \"line\": 261}]}], \"proc_checks\": {\"self_proc_available\": true, \"self_proc_errno\": null, \"self_process_stable\": true, \"self_capprm_nonzero\": false, \"self_pid_namespace_readable\": true, \"self_pid_namespace_errno\": null, \"self_net_namespace_readable\": true, \"self_net_namespace_errno\": null, \"self_security_label_readable\": true, \"self_security_label_errno\": null, \"self_security_label_kind\": \"unconfined\", \"manager_proc_available\": false, \"manager_proc_errno\": null, \"manager_process_stable\": null, \"manager_capprm_nonzero\": null, \"manager_pid_namespace_readable\": false, \"manager_pid_namespace_errno\": null, \"manager_net_namespace_readable\": false, \"manager_net_namespace_errno\": null, \"manager_security_label_readable\": false, \"manager_security_label_errno\": null, \"manager_security_label_kind\": null, \"self_fsuid_matches_euid\": true, \"self_fsgid_matches_egid\": true, \"self_capeff_nonzero\": false, \"manager_directory_owner_matches_self_fsuid\": null, \"manager_uids_three_match_self_fsuid\": null, \"manager_uids_four_match_self_fsuid\": null, \"manager_gids_three_match_self_fsgid\": null, \"manager_gids_four_match_self_fsgid\": null, \"manager_capprm_subset_self_capprm\": null, \"manager_capprm_subset_self_capeff\": null, \"pid_namespace_equal\": null, \"net_namespace_equal\": null, \"security_label_equal\": null}}",
+      "2026-09-18T17:04:15.8176575Z {\"fixture_setup_attempt\": 2, \"diagnostic\": \"personal_activation_manager\", \"ok\": true, \"exception_chain\": [], \"proc_checks\": {\"self_proc_available\": true, \"self_proc_errno\": null, \"self_process_stable\": true, \"self_capprm_nonzero\": false, \"self_pid_namespace_readable\": true, \"self_pid_namespace_errno\": null, \"self_net_namespace_readable\": true, \"self_net_namespace_errno\": null, \"self_security_label_readable\": true, \"self_security_label_errno\": null, \"self_security_label_kind\": \"unconfined\", \"manager_proc_available\": true, \"manager_proc_errno\": null, \"manager_process_stable\": true, \"manager_capprm_nonzero\": false, \"manager_pid_namespace_readable\": true, \"manager_pid_namespace_errno\": null, \"manager_net_namespace_readable\": true, \"manager_net_namespace_errno\": null, \"manager_security_label_readable\": true, \"manager_security_label_errno\": null, \"manager_security_label_kind\": \"unconfined\", \"self_fsuid_matches_euid\": true, \"self_fsgid_matches_egid\": true, \"self_capeff_nonzero\": false, \"manager_directory_owner_matches_self_fsuid\": true, \"manager_uids_three_match_self_fsuid\": true, \"manager_uids_four_match_self_fsuid\": true, \"manager_gids_three_match_self_fsgid\": true, \"manager_gids_four_match_self_fsgid\": true, \"manager_capprm_subset_self_capprm\": true, \"manager_capprm_subset_self_capeff\": true, \"pid_namespace_equal\": true, \"net_namespace_equal\": true, \"security_label_equal\": true}}",
+      "2026-09-18T17:05:21.0760430Z {\"passed\":true,\"checks\":18,\"scope\":\"actual disposable user-systemd, real PostgreSQL and synthetic provider; no live user deployment\",\"model_calls_to_local_fixture\":2}",
+      "2026-09-18T17:05:56.5941035Z {\"ok\":true,\"checks\":15,\"systemd\":\"actual-user-manager\",\"postgresql\":\"actual\",\"http\":\"authenticated-local-console\",\"personal_readiness\":{\"checks\":12,\"systemd\":\"same-actual-console-invocation\",\"database\":\"actual-source-removal-and-table-lock-refusal\",\"recovery\":\"same-console-instance-after-source-and-lock-restoration\",\"readonly_snapshot_unchanged\":true,\"actual_postgres_address_conversion_verified\":true,\"model_calls\":0},\"personal_activation\":{\"checks\":18,\"systemd\":\"actual-disposable-user-manager\",\"database\":\"actual-managed-postgresql\",\"activation\":\"direct-console-start-with-target-inactive\",\"recovery\":\"actual-process-exit-and-observation-only-recovery\",\"checkpoints\":[{\"checkpoint\":\"after_journal\",\"outcome\":\"terminal_stopped\",\"extra_starts\":0},{\"checkpoint\":\"after_attempt\",\"outcome\":\"terminal_stopped\",\"extra_starts\":0},{\"checkpoint\":\"after_send_before_reply\",\"outcome\":\"observed_ready\",\"dispatch_state\":\"outcome_unknown\",\"client_waited_for_reply\":false,\"extra_starts\":0},{\"checkpoint\":\"after_start_before_ack\",\"outcome\":\"observed_ready\",\"client_waited_for_reply\":true,\"acknowledgement_durable\":false,\"extra_starts\":0},{\"checkpoint\":\"after_ack\",\"outcome\":\"observed_ready\",\"extra_starts\":0},{\"checkpoint\":\"after_receipt\",\"outcome\":\"receipt_completed\",\"extra_starts\":0},{\"checkpoint\":\"before_clear_pending\",\"outcome\":\"receipt_completed\",\"extra_starts\":0}],\"source_removed_after_dispatch_refused\":true,\"same_console_after_source_restoration\":true,\"fixture_between_cases\":\"stop-and-reset-failed-only-the-verified-owned-console\",\"fixture_console_cache_reference\":\"existing-ci-helper-with-180-second-bound\",\"lock\":\"actual-exclusive-deployment-flock\",\"configuration_unchanged\":true,\"model_calls\":0,\"user_host_deployed\":false},\"interruption\":\"actual-process-exit-and-cli-recovery\",\"repeated_recovery\":\"actual-referenced-stale-manager-cache-reloaded\",\"fragment_path_forms\":[\"installed-link\"],\"model_calls\":0,\"user_host_deployed\":false}"
+    ],
+    "bytes": 54252,
+    "sha256": "0ae17b659a773d0f2fd5dc510f83794158a1bd75aee84f4492b5937b4a18311f"
+  },
+  "earlier_evidence_preserved": [
+    "CI-FIRST-SERVICES-AUDIT.json",
+    "CI-SECOND-SERVICES-AUDIT.json",
+    "CI-THIRD-SERVICES-AUDIT.json",
+    "CI-FOURTH-SERVICES-AUDIT.json",
+    "CI-FIFTH-SERVICES-AUDIT.json",
+    "CI-SIXTH-SERVICES-AUDIT.json",
+    "CI-SEVENTH-SERVICES-AUDIT.json",
+    "CI-EIGHTH-SERVICES-AUDIT.json"
+  ],
+  "limitations": [
+    "This audit covers only the exact application merge main push services workflow. Other required workflows and phase review records are tracked by root.",
+    "The same SHA may also appear on a documentation branch. Only the independently fetched run with branch main and event push is included.",
+    "Execution used actual disposable ordinary-user systemd and managed PostgreSQL. No live user host was deployed.",
+    "The legacy test used two local synthetic provider calls. Activation and readiness made zero model calls; this does not certify live-model quality.",
+    "Sent-before-reading-reply recovered an observed ready console on main. The alternate manager-refused terminal outcome was not exercised by this run, and outcome_unknown does not claim a reply was read or accepted.",
+    "Already durable receipt recovery at after_receipt and before_clear_pending asserted application_ready='not_checked'; fresh readiness SQL is not claimed for those resumptions.",
+    "The first setup probe's NameHasNoOwner is preserved; only its explicitly permitted bounded readonly retry succeeded. No workflow reruns or code mutations were performed during this post-merge triage."
+  ]
+}

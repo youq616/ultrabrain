@@ -1,0 +1,21 @@
+# Independent narrow registration-wait review
+
+Reviewed commit: **`9f4e5c2ac81250b7025234fd61008d0bc92e31ef`**.
+
+Reviewed tree: **`a03ce02592501574bf03d145cce127fe8eebe5fd`**.
+
+Actual reviewer: `/root/activate_boundary_review/dbus_abi_crosscheck`.
+
+Verdict: **NO BLOCKER found in the new read-only workflow wait. This is not whole-phase approval or a real-CI pass.** The main reviewer separately checks the new error enum/getter and JS schema. I read their delta but did not independently rerun those tests. No real manager/service operations or diagnostic child were executed by me.
+
+The complete changed workflow loop at `.github/workflows/personal-services.yml:141–166` was extracted with `git show` at the exact SHA. Static inspection and isolated execution confirm:
+
+- A single deadline is created before the loop. At most 20 diagnostic children are launched. Each receives only the remaining budget from that 35-second deadline; sleeps are capped by both 0.5 seconds and the remaining budget. The twentieth retryable failure raises immediately after logging, without another sleep or attempt. A child timeout propagates as a failure and is not retried. This is subprocess timeout budgeting, not a claim that process creation and OS scheduling provide a mathematically exact wall-clock cutoff.
+- The only retryable nonzero result has `ok is False`, exactly two exception layers, outer ActivateManagerError/manager_unavailable and inner DBusException/NameHasNoOwner. It additionally requires manager_proc_available False and manager_proc_errno, manager_capprm_nonzero and manager_process_stable all None. An observed manager proc binding, any errno, known capability result or known stability result refuses retry. Other fixed DBus errors and malformed outcomes fail immediately.
+- Every valid diagnostic is printed with its attempt number before the success or retry decision. A first registration failure remains in output when a later attempt succeeds. The limit-exhausting failure is also printed. Invalid JSON, oversized output, unexpected outer shape/kind, or invalid child exit status are rejected before raw output is printed.
+- Success still requires zero child exit status, `ok is True` from the production identity verification, and actual manager permitted capabilities reported as zero. Failure and unknown capability outcomes cannot be accepted as success.
+- The only subprocess invoked in the loop is the fixed `/usr/bin/python3 -I -B test/personal-activate-crash.py diagnose-manager --home` command for the fixed installation environment. The single systemctl restart remains outside the loop at line 135; daemon reload and linger likewise remain outside. No retry sends StartUnit, restarts the manager, or invokes an activation apply operation. Product code remains unchanged.
+
+Executed evidence: **36 isolated cases passed** with fake time, OS environment and subprocess modules, while executing the actual extracted loop. Cases cover immediate and eventual success, first-failure preservation, 20-attempt exhaustion, a clipped final sleep, deadline exhaustion after a child, direct and later child timeout with shrinking budgets, every other allowlisted DBus error and None, wrong wrapper type/code and inner type, 0/1/3 exception layers, all four manager-binding gates including False/True stability and capabilities, non-boolean failure markers, rejected success/capability outcomes, and invalid exit/output/schema cases. Every simulated subprocess call asserted the exact read-only argv and remaining-timeout value. No actual sleep or workflow command was used. Exact application/documentation-path comparison against c6b409c and whitespace diff checks also passed.
+
+Per-case output is preserved in `boundary-registration-wait-9f4e5c2-checks.json` beside this report. These are branch and budgeting checks, not kernel, D-Bus, systemd or real service tests. The earlier root-path/capability setup review remains explicitly tied to c6b409c; its mutation sequence is unchanged by this delta. I did not rerun the 259 Python or 14 CLI suites and did not read CI7 results. Earlier real-CI failures remain valid first-failure evidence; this change is not claimed to explain them until new CI evidence is assessed. Final full-phase approval remains with the independent main reviewer after real integration results.

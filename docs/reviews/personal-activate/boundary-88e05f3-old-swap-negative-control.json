@@ -1,0 +1,10 @@
+{
+  "reviewer": "/root/activate_boundary_review",
+  "candidate": "9f4e5c2ac81250b7025234fd61008d0bc92e31ef",
+  "fixture": "passive root slice RequiredBy/Before swap only",
+  "expected_negative_control": true,
+  "observed_failure": "invalid_manager_dependencies",
+  "start_calls": 0,
+  "swap_load_calls": 0,
+  "limitation": "Synthetic regression does not prove the unlogged offending CI7 dependency value."
+}

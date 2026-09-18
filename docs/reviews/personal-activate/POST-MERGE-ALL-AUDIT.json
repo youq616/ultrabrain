@@ -1,0 +1,308 @@
+{
+  "format": 1,
+  "auditor": "/root",
+  "type": "Actual main post-merge CI audit; only main/push/exact merge SHA included",
+  "head_sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+  "tree": "f8f540288ffcc5de31b865588130528f05130c71",
+  "observed_at": "2026-09-18 17:10:09 UTC",
+  "runs": [
+    {
+      "id": 35372105825,
+      "name": "Source snapshot",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/youq616/ultrabrain/actions/runs/35372105825",
+      "run_attempt": 1,
+      "created_at": "2026-09-18T17:03:39Z",
+      "updated_at": "2026-09-18T17:03:52Z",
+      "jobs": [
+        {
+          "id": 105688252600,
+          "name": "snapshot",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105825/job/105688252600",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "id": 35372105874,
+      "name": "Personal client portability",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/youq616/ultrabrain/actions/runs/35372105874",
+      "run_attempt": 1,
+      "created_at": "2026-09-18T17:03:39Z",
+      "updated_at": "2026-09-18T17:04:28Z",
+      "jobs": [
+        {
+          "id": 105688251491,
+          "name": "client-contracts (windows-2025)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105874/job/105688251491",
+          "steps": []
+        },
+        {
+          "id": 105688251886,
+          "name": "client-contracts (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105874/job/105688251886",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "id": 35372105959,
+      "name": "Personal recovery set",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/youq616/ultrabrain/actions/runs/35372105959",
+      "run_attempt": 1,
+      "created_at": "2026-09-18T17:03:39Z",
+      "updated_at": "2026-09-18T17:04:22Z",
+      "jobs": [
+        {
+          "id": 105688252032,
+          "name": "recovery",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105959/job/105688252032",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "id": 35372105839,
+      "name": "Task-aware personal recall",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/youq616/ultrabrain/actions/runs/35372105839",
+      "run_attempt": 1,
+      "created_at": "2026-09-18T17:03:39Z",
+      "updated_at": "2026-09-18T17:04:38Z",
+      "jobs": [
+        {
+          "id": 105688251758,
+          "name": "task-context",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105839/job/105688251758",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "id": 35372105783,
+      "name": "Native personal integrations",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/youq616/ultrabrain/actions/runs/35372105783",
+      "run_attempt": 1,
+      "created_at": "2026-09-18T17:03:39Z",
+      "updated_at": "2026-09-18T17:05:10Z",
+      "jobs": [
+        {
+          "id": 105688252021,
+          "name": "opencode-and-hermes",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105783/job/105688252021",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "id": 35372105846,
+      "name": "Personal user services",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/youq616/ultrabrain/actions/runs/35372105846",
+      "run_attempt": 1,
+      "created_at": "2026-09-18T17:03:39Z",
+      "updated_at": "2026-09-18T17:06:00Z",
+      "jobs": [
+        {
+          "id": 105688253026,
+          "name": "user-systemd",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105846/job/105688253026",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "id": 35372105777,
+      "name": "Validate ultrabrain",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777",
+      "run_attempt": 1,
+      "created_at": "2026-09-18T17:03:39Z",
+      "updated_at": "2026-09-18T17:08:53Z",
+      "jobs": [
+        {
+          "id": 105688253263,
+          "name": "unit",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253263",
+          "steps": []
+        },
+        {
+          "id": 105688253543,
+          "name": "native-integration (32f97e8d45b312980ce6ab1784cf316feddd698e)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253543",
+          "steps": []
+        },
+        {
+          "id": 105688253565,
+          "name": "native-integration (a81374c1bc626623616a47358f7105c91a49dea5)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253565",
+          "steps": []
+        },
+        {
+          "id": 105688253567,
+          "name": "native-integration (52aff84feb4bf77b32554dcbfa902625e3008c4c)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253567",
+          "steps": []
+        },
+        {
+          "id": 105688253570,
+          "name": "native-integration (d7be484b445a893112d3a132c30f42282865a41a)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253570",
+          "steps": []
+        },
+        {
+          "id": 105688253573,
+          "name": "native-integration (b46c067f0ef110900af7fe8bb2334b4a9c509c3c)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253573",
+          "steps": []
+        },
+        {
+          "id": 105688253584,
+          "name": "native-integration (fb397f0f3a8ba12253f9e993bba93c387e6de57a)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253584",
+          "steps": []
+        },
+        {
+          "id": 105688253594,
+          "name": "native-integration (31f43aa1ff1343bb649e39cf44ca57203ce0ebac)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253594",
+          "steps": []
+        },
+        {
+          "id": 105688253605,
+          "name": "native-integration (c0c85d85284779599d1e5722cc9345373c945b62)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253605",
+          "steps": []
+        },
+        {
+          "id": 105688253622,
+          "name": "native-integration (09a4c8fe95242d5939e28cc3957d4605a6823a81)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253622",
+          "steps": []
+        },
+        {
+          "id": 105688253643,
+          "name": "native-integration (57852fed3d1839bab105c5b56632af1f65bb4b15)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253643",
+          "steps": []
+        },
+        {
+          "id": 105688253652,
+          "name": "native-integration (225fef02de4c3aa33d655c4b2dfde9f246571329)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253652",
+          "steps": []
+        },
+        {
+          "id": 105688253653,
+          "name": "native-integration (a3f1790b0e837e3c4788c19de531332e55b7a908)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253653",
+          "steps": []
+        },
+        {
+          "id": 105688253657,
+          "name": "native-integration (f8cc5b980c260cd61e66e032ebce94a5cdc065e3)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253657",
+          "steps": []
+        },
+        {
+          "id": 105688253663,
+          "name": "native-integration (38e0e6657561e17ba85c71d0783d604242a054e8)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253663",
+          "steps": []
+        },
+        {
+          "id": 105688253726,
+          "name": "native-integration (115978df6069ad11d376f848d214654ba6adde16)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688253726",
+          "steps": []
+        },
+        {
+          "id": 105688486880,
+          "name": "n8n-engine",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/youq616/ultrabrain/actions/runs/35372105777/job/105688486880",
+          "steps": []
+        }
+      ]
+    }
+  ],
+  "excluded": "Same-SHA documentation/personal-activate-acceptance branch runs are not main verification."
+}

@@ -1,0 +1,191 @@
+{
+  "reviewer": "/root/activate_boundary_review",
+  "candidate": "88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4",
+  "source": "Independent parse and assertions against raw immutable CI logs; GitHub API identity/status in companion file",
+  "jobs": [
+    {
+      "job": 105682842046,
+      "raw_log": "job-105682842046.log",
+      "sha256": "ef3d117419f5d65f7bd0ce31baa0fe72c95172405596b1c22cc3e6314f8d29a5",
+      "setup_lines": [
+        522,
+        523
+      ],
+      "setup_first_observation": "NameHasNoOwner",
+      "setup_second_observation": "verified_identity_and_empty_CapPrm",
+      "legacy_line": 535,
+      "legacy_checks": 18,
+      "synthetic_provider_calls": 2,
+      "receipt_line": 547,
+      "deployment_checks": 15,
+      "readiness_checks": 12,
+      "activation": {
+        "checks": 18,
+        "systemd": "actual-disposable-user-manager",
+        "database": "actual-managed-postgresql",
+        "activation": "direct-console-start-with-target-inactive",
+        "recovery": "actual-process-exit-and-observation-only-recovery",
+        "checkpoints": [
+          {
+            "checkpoint": "after_journal",
+            "outcome": "terminal_stopped",
+            "extra_starts": 0
+          },
+          {
+            "checkpoint": "after_attempt",
+            "outcome": "terminal_stopped",
+            "extra_starts": 0
+          },
+          {
+            "checkpoint": "after_send_before_reply",
+            "outcome": "observed_ready",
+            "dispatch_state": "outcome_unknown",
+            "client_waited_for_reply": false,
+            "extra_starts": 0
+          },
+          {
+            "checkpoint": "after_start_before_ack",
+            "outcome": "observed_ready",
+            "client_waited_for_reply": true,
+            "acknowledgement_durable": false,
+            "extra_starts": 0
+          },
+          {
+            "checkpoint": "after_ack",
+            "outcome": "observed_ready",
+            "extra_starts": 0
+          },
+          {
+            "checkpoint": "after_receipt",
+            "outcome": "receipt_completed",
+            "extra_starts": 0
+          },
+          {
+            "checkpoint": "before_clear_pending",
+            "outcome": "receipt_completed",
+            "extra_starts": 0
+          }
+        ],
+        "source_removed_after_dispatch_refused": true,
+        "same_console_after_source_restoration": true,
+        "fixture_between_cases": "stop-and-reset-failed-only-the-verified-owned-console",
+        "fixture_console_cache_reference": "existing-ci-helper-with-180-second-bound",
+        "lock": "actual-exclusive-deployment-flock",
+        "configuration_unchanged": true,
+        "model_calls": 0,
+        "user_host_deployed": false
+      }
+    },
+    {
+      "job": 105682825972,
+      "raw_log": "job-105682825972.log",
+      "sha256": "41167fd31495ae8d4239ec09d0baf7eef664b39fe0f100bb6474add298ab233e",
+      "setup_lines": [
+        506,
+        507
+      ],
+      "setup_first_observation": "NameHasNoOwner",
+      "setup_second_observation": "verified_identity_and_empty_CapPrm",
+      "legacy_line": 519,
+      "legacy_checks": 18,
+      "synthetic_provider_calls": 2,
+      "receipt_line": 531,
+      "deployment_checks": 15,
+      "readiness_checks": 12,
+      "activation": {
+        "checks": 18,
+        "systemd": "actual-disposable-user-manager",
+        "database": "actual-managed-postgresql",
+        "activation": "direct-console-start-with-target-inactive",
+        "recovery": "actual-process-exit-and-observation-only-recovery",
+        "checkpoints": [
+          {
+            "checkpoint": "after_journal",
+            "outcome": "terminal_stopped",
+            "extra_starts": 0
+          },
+          {
+            "checkpoint": "after_attempt",
+            "outcome": "terminal_stopped",
+            "extra_starts": 0
+          },
+          {
+            "checkpoint": "after_send_before_reply",
+            "outcome": "observed_ready",
+            "dispatch_state": "outcome_unknown",
+            "client_waited_for_reply": false,
+            "extra_starts": 0
+          },
+          {
+            "checkpoint": "after_start_before_ack",
+            "outcome": "observed_ready",
+            "client_waited_for_reply": true,
+            "acknowledgement_durable": false,
+            "extra_starts": 0
+          },
+          {
+            "checkpoint": "after_ack",
+            "outcome": "observed_ready",
+            "extra_starts": 0
+          },
+          {
+            "checkpoint": "after_receipt",
+            "outcome": "receipt_completed",
+            "extra_starts": 0
+          },
+          {
+            "checkpoint": "before_clear_pending",
+            "outcome": "receipt_completed",
+            "extra_starts": 0
+          }
+        ],
+        "source_removed_after_dispatch_refused": true,
+        "same_console_after_source_restoration": true,
+        "fixture_between_cases": "stop-and-reset-failed-only-the-verified-owned-console",
+        "fixture_console_cache_reference": "existing-ci-helper-with-180-second-bound",
+        "lock": "actual-exclusive-deployment-flock",
+        "configuration_unchanged": true,
+        "model_calls": 0,
+        "user_host_deployed": false
+      }
+    }
+  ],
+  "unit_log": {
+    "file": "ci-unit-88e05f3-pr.log",
+    "sha256": "af15e2e753fbca9c70a6758df4c86e80d0c85989fe3634fd4bb3f9476f30c42d",
+    "observations": [
+      {
+        "line": 92,
+        "text": "2026-09-18T16:49:05.6690547Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +bdb287727eed2c574385aded849e8b923bf71fda:refs/remotes/pull/13/merge"
+      },
+      {
+        "line": 94,
+        "text": "2026-09-18T16:49:06.6307632Z  * [new ref]         bdb287727eed2c574385aded849e8b923bf71fda -> pull/13/merge"
+      },
+      {
+        "line": 122,
+        "text": "2026-09-18T16:49:06.6785391Z bdb287727eed2c574385aded849e8b923bf71fda"
+      },
+      {
+        "line": 3523,
+        "text": "2026-09-18T16:49:17.1156645Z # tests 563"
+      },
+      {
+        "line": 3525,
+        "text": "2026-09-18T16:49:17.1157032Z # pass 563"
+      },
+      {
+        "line": 3526,
+        "text": "2026-09-18T16:49:17.1157212Z # fail 0"
+      },
+      {
+        "line": 3528,
+        "text": "2026-09-18T16:49:17.1157590Z # skipped 0"
+      },
+      {
+        "line": 4083,
+        "text": "2026-09-18T16:49:42.0803228Z Ran 542 tests in 24.512s"
+      }
+    ]
+  }
+}

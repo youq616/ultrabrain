@@ -1,0 +1,236 @@
+{
+  "reviewer": "/root/activate_boundary_review",
+  "candidate": "88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4",
+  "observed_utc": "2026-09-18 16:56:51 UTC",
+  "sources": [
+    {
+      "url": "https://api.github.com/repos/youq616/ultrabrain/git/commits/bdb287727eed2c574385aded849e8b923bf71fda",
+      "sha": "bdb287727eed2c574385aded849e8b923bf71fda",
+      "tree": "f8f540288ffcc5de31b865588130528f05130c71",
+      "parents": [
+        "5b3c88826984a9b5c8b34ca2cf7ffff171501697",
+        "88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4"
+      ]
+    },
+    {
+      "url": "https://api.github.com/repos/youq616/ultrabrain/actions/runs/35370431603/jobs",
+      "jobs": [
+        {
+          "id": 105682842046,
+          "head_sha": "88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4",
+          "name": "user-systemd",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Run oven-sh/setup-bun@v2",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Native and user-manager prerequisites on disposable runner",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Run install -d -m 0700 \"$ULTRABRAIN_HOME\"",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Run actions/cache@v4",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Initialize only synthetic installation",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Harden system unit search directories only on this disposable runner",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Start runner user manager (not a user production machine)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Actual generated user services, restart, consent and periodic model fixture",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Transactional install, console activation, crash recovery and stopped rollback",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 12,
+              "name": "Stop only synthetic service names and database",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 22,
+              "name": "Post Run actions/cache@v4",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 23,
+              "name": "Post Run oven-sh/setup-bun@v2",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 24,
+              "name": "Post Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 25,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "url": "https://api.github.com/repos/youq616/ultrabrain/actions/runs/35370427343/jobs",
+      "jobs": [
+        {
+          "id": 105682825972,
+          "head_sha": "88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4",
+          "name": "user-systemd",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Run oven-sh/setup-bun@v2",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Native and user-manager prerequisites on disposable runner",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Run install -d -m 0700 \"$ULTRABRAIN_HOME\"",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Run actions/cache@v4",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Initialize only synthetic installation",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Harden system unit search directories only on this disposable runner",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Start runner user manager (not a user production machine)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Actual generated user services, restart, consent and periodic model fixture",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Transactional install, console activation, crash recovery and stopped rollback",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 12,
+              "name": "Stop only synthetic service names and database",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 22,
+              "name": "Post Run actions/cache@v4",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 23,
+              "name": "Post Run oven-sh/setup-bun@v2",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 24,
+              "name": "Post Run actions/checkout@v4",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 25,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

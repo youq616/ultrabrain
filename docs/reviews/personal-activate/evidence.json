@@ -1,0 +1,168 @@
+{
+  "format": 1,
+  "document_type": "accepted phase evidence",
+  "assembler": "/root",
+  "repository": "youq616/ultrabrain",
+  "acceptance": {
+    "status": "ACCEPTED",
+    "scope": "explicit stopped console activation and observation-only same-manager recovery",
+    "phase_base": "5b3c88826984a9b5c8b34ca2cf7ffff171501697",
+    "reviewed_candidate": "88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4",
+    "candidate_tree": "f8f540288ffcc5de31b865588130528f05130c71",
+    "pr": 13,
+    "pr_test_merge": "bdb287727eed2c574385aded849e8b923bf71fda",
+    "application_main_merge": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+    "application_main_tree": "f8f540288ffcc5de31b865588130528f05130c71"
+  },
+  "independent_reviews": [
+    {
+      "reviewer": "/root/activate_boundary_review",
+      "scope": "whole implementation phase",
+      "verdict": "PASS",
+      "candidate": "88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4",
+      "artifact": {
+        "path": "boundary-review-88e05f3.md",
+        "bytes": 22364,
+        "sha256": "6a1714453b16c35113903820457ce3a9467697c3053895d583b7decaf8088ca0"
+      },
+      "executed": {
+        "manager_python": 52,
+        "deployment_python": 87,
+        "node_cli": 14,
+        "additional_python": 42,
+        "additional_javascript": 16
+      }
+    },
+    {
+      "reviewer": "/root/activate_boundary_review/dbus_abi_crosscheck",
+      "scope": "supplementary journal/recovery/CLI and fixed-source review; not separate whole-phase acceptance",
+      "verdict": "PASS",
+      "candidate": "88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4",
+      "artifact": {
+        "path": "recovery-boundary-review-88e05f3.md",
+        "bytes": 11514,
+        "sha256": "5b661f8c5122223e1f62b50ea2e23dd823532701a46b5d4af8b2b83630a28026"
+      },
+      "executed": {
+        "activation_state_python": 52,
+        "ready_process_python": 71
+      }
+    }
+  ],
+  "fresh_independent_tests": {
+    "affected_python": 262,
+    "node_cli": 14,
+    "additional_python": 42,
+    "additional_javascript": 16
+  },
+  "ci": {
+    "candidate": {
+      "runs": 13,
+      "jobs": 47,
+      "pr_runs": 6,
+      "pr_jobs": 23,
+      "push_runs": 7,
+      "push_jobs": 24,
+      "all_success": true,
+      "audit": {
+        "path": "CI-EIGHTH-ALL-AUDIT.json",
+        "bytes": 20553,
+        "sha256": "d68fa9741402ebec6de9addb97fe5a95d7f3b5e7db3bd75c7640b8e32de7491f"
+      }
+    },
+    "main_after_merge": {
+      "head_sha": "17bf51a2e998718665082a0245b5b49369ac6ec6",
+      "head_branch": "main",
+      "event": "push",
+      "runs": 7,
+      "jobs": 24,
+      "all_success": true,
+      "audit": {
+        "path": "POST-MERGE-ALL-AUDIT.json",
+        "bytes": 11069,
+        "sha256": "42492ad3ca4a6e299fbff8191340be5b7406892aec9e4ac520e1b85e1b0630f5"
+      },
+      "same_sha_other_branch_runs_excluded": true
+    },
+    "candidate_unit": {
+      "path": "CI-EIGHTH-UNIT-AUDIT.json",
+      "bytes": 1447,
+      "sha256": "688da17efc7eabb79231c5bd82de6c15e08300429c20386a11f9d85f18b4b921"
+    },
+    "main_unit": {
+      "path": "POST-MERGE-UNIT-AUDIT.json",
+      "bytes": 1635,
+      "sha256": "bdd726666e1982816fbbbc2132ba9fb0b8836a3c830587336b6221d8f97ecafc"
+    },
+    "node_tests": 563,
+    "python_tests": 542,
+    "skipped": 0,
+    "historical_upgrade_paths": 15,
+    "n8n_engine_passed": true,
+    "candidate_services": {
+      "path": "CI-EIGHTH-SERVICES-AUDIT.json",
+      "bytes": 28805,
+      "sha256": "95d90f43e9f704ee8e412453c0057bdbdb5f3a67f66e3299039e975a95fdb16b"
+    },
+    "main_services": {
+      "path": "POST-MERGE-SERVICES-AUDIT.json",
+      "bytes": 14904,
+      "sha256": "60ea096f52a6c9f326dc6ccb0201545dd30d482acca851a63684ae184b731b15"
+    },
+    "per_services_run": {
+      "activation": 18,
+      "deployment": 15,
+      "readiness": 12,
+      "legacy_services": 18,
+      "legacy_local_synthetic_model_calls": 2,
+      "activation_readiness_model_calls": 0,
+      "crash_checkpoints": 7,
+      "all_checkpoint_extra_starts": 0,
+      "sent_without_read_reply_observed": "ready in both candidate runs and main run; terminal branch not observed in these runs",
+      "historical_receipt_application_ready": "not_checked"
+    }
+  },
+  "history_snapshot": {
+    "artifact": {
+      "path": "history-before-acceptance.json",
+      "bytes": 313118,
+      "sha256": "3e53e2c4ac4b4dfdd6f24e8000ba6e0335c2b0417f1626f229af71d7a3ad7852"
+    },
+    "meaning": "Immutable pre-acceptance revision 4 snapshot; its PENDING status and missing-final-review fields describe its timestamp and are superseded by this final evidence index, not rewritten."
+  },
+  "raw_evidence": {
+    "archive": {
+      "path": "raw-evidence.zip",
+      "bytes": 778123,
+      "sha256": "e0aa93014f87cd8bf618586c2c92df1c62f79eb10c285e3978942cfbce004474"
+    },
+    "manifest": {
+      "path": "raw-evidence-manifest.json",
+      "bytes": 30409,
+      "sha256": "162fe8787bbd150d53bc81d3332a7432ffcf9edff066573840911d8e89771dc7"
+    },
+    "entries": 181,
+    "all_history_inventory_entries_preserved_exactly": true
+  },
+  "review_at_merge": {
+    "initial_pass_snapshot": {
+      "path": "boundary-review-88e05f3-initial-pass.md",
+      "bytes": 21612,
+      "sha256": "9d3697afec3d2501e2983a4246def75c82f9f814ee4594b2fe90418c9e674ae6"
+    },
+    "final_report_same_commit_addendum": {
+      "path": "boundary-review-88e05f3.md",
+      "bytes": 22364,
+      "sha256": "6a1714453b16c35113903820457ce3a9467697c3053895d583b7decaf8088ca0"
+    },
+    "note": "The reviewer retained whole-phase PASS and later added explicit cross-check of the already successful 47-job snapshot; no code or verdict changed."
+  },
+  "limits": [
+    "systemd 255 ordinary Linux user manager; existing valid token and active managed PostgreSQL; proc identity readable",
+    "cooperative maintenance window; selected cached properties, not every systemd setting or socket ownership",
+    "no running replacement, automatic stop/rollback, Worker activation or cross-manager/boot recovery",
+    "CI is disposable, not user host deployment; model responses in legacy services are synthetic",
+    "Historical CI7 invalid dependency field/value and first capture child stderr remain unknown; passing CI8 does not reconstruct them"
+  ],
+  "documentation_scope": "This documentation follow-up changes no application files. Application CI belongs to the exact candidate and same-tree main application merge, not a rerun on this documentation commit."
+}
