@@ -8,6 +8,7 @@ import {createServer} from 'node:net';
 import {randomBytes,createHash} from 'node:crypto';
 import {requireMissingUnit} from './personal-services-harness.mjs';
 import {verifyPersonalReadiness} from './personal-ready-integration.mjs';
+import {verifyPersonalActivation} from './personal-activate-integration.mjs';
 import {connect,ROOT,HOME} from '../src/runtime.mjs';
 
 if(process.env.GITHUB_ACTIONS!=='true'||process.env.ULTRABRAIN_TEST_ALLOW_WRITE!=='1'||process.env.ULTRABRAIN_SYSTEMD_TEST!=='1'||
@@ -16,7 +17,7 @@ if(process.env.GITHUB_ACTIONS!=='true'||process.env.ULTRABRAIN_TEST_ALLOW_WRITE!
 const units=['ultrabrain-personal.target','ultrabrain-personal-console.service','ultrabrain-personal-worker.service'];
 const [target,consoleUnit,worker]=units,db='ultrabrain-postgres.service';
 const privateDir=mkdtempSync(join(homedir(),'.ub-deploy-verification-')),unitDir=join(homedir(),'.config/systemd/user');
-let engine,dbLink,dbBytes,dbIdentity,originalUnits,cachePin,readiness,current=null,owned=new Map(),checks=0,complete=false,primaryError;
+let engine,dbLink,dbBytes,dbIdentity,originalUnits,cachePin,readiness,activation,current=null,owned=new Map(),checks=0,complete=false,primaryError;
 const fragmentPathForms=new Set();
 const pass=()=>checks++,sha=value=>createHash('sha256').update(value).digest('hex');
 async function run(command,args,{ok=true,timeout=120000}={}){
@@ -160,7 +161,10 @@ try{
  const aid=await apply(a);await verifyStopped(a);pass();
  const savedContent=readFileSync(readlinkSync(join(unitDir,consoleUnit)));
  rmSync(a.dir,{recursive:true});assert.deepEqual(readFileSync(readlinkSync(join(unitDir,consoleUnit))),savedContent);pass();
- const bplan=await reviewed(b);await verifyHTTP(a);pass();
+ const bplan=await reviewed(b);
+ activation=await verifyPersonalActivation({engine,spec:a,current:aid,run,unrelatedUnits,
+  competingDeployment:[...b.args,'--expected-deployment',bplan.deployment_sha256]});
+ await verifyHTTP(a);pass();
  readiness=await verifyPersonalReadiness({engine,spec:a,current:aid,run,unrelatedUnits});
  const refused=await call(['apply',...b.args,'--expected-deployment',bplan.deployment_sha256],{ok:false});
  assert.notEqual(refused.code,0);assert.equal(JSON.parse(refused.text).ok,false);assert.equal((await status()).current_sha256,aid);
@@ -221,5 +225,6 @@ try{
 if(primaryError)throw primaryError;
 console.log(JSON.stringify({ok:true,checks,systemd:'actual-user-manager',postgresql:'actual',http:'authenticated-local-console',
  personal_readiness:readiness,
+ personal_activation:activation,
  interruption:'actual-process-exit-and-cli-recovery',repeated_recovery:'actual-referenced-stale-manager-cache-reloaded',
  fragment_path_forms:[...fragmentPathForms].sort(),model_calls:0,user_host_deployed:false}));

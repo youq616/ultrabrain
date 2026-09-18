@@ -179,7 +179,7 @@ class Context:
             need(raw == b'' and identity == self.lock_identity, 'deployment_lock_changed')
 
     @contextmanager
-    def _lock(self, write=False):
+    def _lock(self, write=False, *, exclusive=False):
         fd = None
         try:
             try:
@@ -209,7 +209,7 @@ class Context:
                 self.store.regular(st)
                 need(st.st_size == 0, 'invalid_deployment_lock')
                 try:
-                    fcntl.flock(fd, (fcntl.LOCK_EX if write else fcntl.LOCK_SH) | fcntl.LOCK_NB)
+                    fcntl.flock(fd, (fcntl.LOCK_EX if write or exclusive else fcntl.LOCK_SH) | fcntl.LOCK_NB)
                 except BlockingIOError:
                     raise DeployError('deployment_busy') from None
                 self.store.visible(directory, self.shared)
@@ -350,6 +350,10 @@ class Context:
         need(local is None or shared is None or local == shared, 'pending_journal_mismatch')
         journal = local if local is not None else shared
         if journal is not None:
+            # Activation reserves this same slot. Older deployers reject its
+            # different schema too, rather than silently changing a generation
+            # while an earlier startup request may still be unresolved.
+            need(journal.get('operation') != 'activate', 'activation_pending')
             self._validate_journal(journal)
         return journal
 

@@ -306,13 +306,26 @@ class Context(DEPLOY.Context):
                 'units': rows, 'console': console, 'process': process}
 
     def check(self, *, bun, source, port, expected_current, expected_instance):
-        deadline = time.monotonic() + 10
+        with self._lock():
+            return self._check_locked(bun=bun, source=source, port=port,
+                                      expected_current=expected_current,
+                                      expected_instance=expected_instance)
+
+    def _check_locked(self, *, bun, source, port, expected_current, expected_instance, deadline=None):
+        """Internal composition under the caller's verified deployment lock.
+
+        Activation holds the same lock exclusively across dispatch/readiness.
+        The public read-only command always acquires its own shared lock above.
+        """
+        self._lock_check()
+        need(self.lock_identity is not None, 'deployment_lock_missing')
+        deadline = min(time.monotonic() + 10, deadline) if deadline is not None else time.monotonic() + 10
         bun = FS.absolute(bun)
         FS.sha(expected_current)
         need(isinstance(expected_instance, str) and UUID.fullmatch(expected_instance)
              and expected_instance != '00000000-0000-0000-0000-000000000000', 'invalid_expected_instance')
         plan = SERVICES.plan(str(self.root), str(self.home), str(bun), source=source, port=port)
-        with self._lock(), PREFLIGHT.PrivateHome(self.home) as view:
+        with PREFLIGHT.PrivateHome(self.home) as view:
             before = self._snapshot(plan, expected_current, bun=bun, source=source, port=port, deadline=deadline)
             pins = PREFLIGHT.check_pins(self.root)
             database = self.processes.database_snapshot(view, pins)
