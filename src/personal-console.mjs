@@ -11,6 +11,7 @@ import {objectFields} from './personal-memory.mjs';
 import {PersonalConsolidator} from './personal-consolidation.mjs';
 import {PersonalMemoryStore} from './personal-memory-store.mjs';
 import {PersonalDocumentStore} from './personal-documents.mjs';
+import {createPersonalReadiness} from './personal-readiness.mjs';
 const WEB=fileURLToPath(new URL('../web/personal/',import.meta.url));
 const METHODS=Object.freeze({capture:'capture',jobs:'job_status',consolidate:'job_process',cancel_job:'job_cancel',search:'search',profile:'profile',context:'context',agents:'agents',register:'register',commit:'commit',review:'review',update:'update',
   document_import:'documentImport',document_list:'documentList',document_read:'documentRead',document_queue:'documentQueue',document_archive:'documentArchive'});
@@ -59,25 +60,35 @@ function headers(res) {
   res.setHeader('Cross-Origin-Resource-Policy','same-origin');res.setHeader('Cross-Origin-Opener-Policy','same-origin');
   res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()');
 }
-function send(res,status,value) {
+function send(res,status,value,readiness=false) {
   if(res.destroyed||res.writableEnded)return;
-  res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.end(JSON.stringify(value));
+  const body=JSON.stringify(value);
+  res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');
+  if(readiness){res.setHeader('Content-Length',Buffer.byteLength(body));res.setHeader('Connection','close');}
+  res.end(body);
 }
-async function jsonBody(req) {
+async function jsonBody(req,limit=280000,canonical=false) {
   requireThat(/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(req.headers['content-type']??''),'invalid_content_type','JSON required');
   requireThat(!req.headers['content-encoding'],'invalid_content_type','Compressed bodies are not accepted');
-  const size=Number(req.headers['content-length']);requireThat(!Number.isFinite(size)||size<=280000,'request_too_large','Request exceeds limit');
+  const size=Number(req.headers['content-length']);requireThat(!Number.isFinite(size)||size<=limit,'request_too_large','Request exceeds limit');
   let n=0;const chunks=[];
   // Do not parse partial/invalid UTF-8 or execute after the client has aborted the body.
-  for await(const chunk of req){n+=chunk.length;requireThat(n<=280000,'request_too_large','Request exceeds limit');chunks.push(chunk);}
+  for await(const chunk of req){n+=chunk.length;requireThat(n<=limit,'request_too_large','Request exceeds limit');chunks.push(chunk);}
   requireThat(req.complete,'invalid_params','Incomplete request');
-  try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));}
+  try{
+    const text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:canonical}).decode(Buffer.concat(chunks)),value=JSON.parse(text);
+    // Readiness has a single canonical wire spelling; duplicate keys, lossy numbers
+    // and alternate escapes are refused rather than silently normalized.
+    requireThat(!canonical||JSON.stringify(value)===text,'invalid_params','Canonical JSON required');
+    return value;
+  }
   catch{throw new UltraError('invalid_params','Invalid JSON request');}
 }
-export async function startPersonalConsole({engine,source,token,port=3132}) {
+export async function startPersonalConsole({engine,source,token,port=3132,invocationId=process.env.INVOCATION_ID}) {
   sourceId(source);integer(port,3132,0,65535);
   requireThat(typeof token==='string'&&/^[a-f0-9]{64}$/.test(token),'invalid_token_file','A full console token is required');
   const hash=createHash('sha256').update(token).digest();
+  const readiness=createPersonalReadiness({engine,source,token,invocationId});
   const [exists]=await engine.executeRaw('SELECT id FROM public.sources WHERE id=$1',[source]);
   requireThat(exists,'not_found','Create or select an existing source; the console never guesses ownership or creates a source');
   const store=new PersonalMemoryStore({sourceId:source,engine,remote:false,transport:'stdio'});
@@ -87,7 +98,7 @@ export async function startPersonalConsole({engine,source,token,port=3132}) {
   const server=createServer({maxHeaderSize:8192,requestTimeout:15000,headersTimeout:10000,keepAliveTimeout:1000},(req,res)=>{
     headers(res);
     const task=(async()=>{
-      let submitted=false,held=false;
+      let submitted=false,held=false,probing=false,expired=false,deadline;
       try {
         requireThat(!stopping,'unavailable','Console is shutting down');
         requireThat(req.socket.remoteAddress==='127.0.0.1','permission_denied','Loopback only');
@@ -98,8 +109,30 @@ export async function startPersonalConsole({engine,source,token,port=3132}) {
         if(req.method==='GET'&&assets.has(req.url)) {
           const a=assets.get(req.url);res.setHeader('Content-Type',a.type);res.end(a.body);return;
         }
-        requireThat(req.url==='/api/call'&&req.method==='POST','not_found','Unknown route');
+        requireThat(['/api/call','/api/readiness'].includes(req.url)&&req.method==='POST','not_found','Unknown route');
         requireThat(req.headers.origin===origin,'permission_denied','Exact browser origin required');
+        if(req.url==='/api/readiness') {
+          probing=true;
+          requireThat(req.headers.authorization===undefined,'unauthorized','Readiness uses a dedicated request proof');
+          requireThat(inflight<4,'busy','Too many console requests');inflight++;held=true;
+          // End the HTTP response even if the adapter hangs. Keep this task and its
+          // shared concurrency slot until the real operation finishes, so timed-out
+          // probes cannot accumulate unbounded database work.
+          deadline=setTimeout(()=>{
+            expired=true;
+            if(!res.destroyed&&!res.writableEnded) {
+              res.setHeader('Connection','close');
+              if(!req.complete)res.once('finish',()=>req.destroy());
+              send(res,503,{ok:false,error:'readiness_unavailable',delivery:'rejected'},true);
+            }
+          },3000);deadline.unref();
+          const body=await jsonBody(req,1024,true);
+          requireThat(!expired&&!req.aborted&&!res.destroyed,'readiness_unavailable','Readiness is unavailable');
+          const request=readiness.authenticate(body,origin);
+          const result=await readiness.query(request,origin);
+          if(!expired)send(res,200,{ok:true,result},true);
+          return;
+        }
         const auth=req.headers.authorization??'';
         const candidate=/^Bearer ([a-f0-9]{64})$/.exec(auth)?.[1]??'';
         requireThat(timingSafeEqual(hash,createHash('sha256').update(candidate).digest()),'unauthorized','Console authentication required');
@@ -116,11 +149,11 @@ export async function startPersonalConsole({engine,source,token,port=3132}) {
         send(res,200,{ok:true,result});
       }catch(e){
         const local=e instanceof UltraError;
-        const code=local&&(SAFE_CODES.has(e.code)||['permission_denied','unauthorized','not_found','busy','request_too_large','invalid_content_type','unavailable'].includes(e.code))?e.code:'personal_storage_error';
-        const status=code==='unauthorized'?401:code==='permission_denied'?403:code==='not_found'?404:code==='request_too_large'?413:code==='invalid_content_type'?415:code==='busy'?429:code==='unavailable'?503:code==='personal_storage_error'?500:400;
+        const code=local&&(SAFE_CODES.has(e.code)||['permission_denied','unauthorized','not_found','busy','request_too_large','invalid_content_type','unavailable','readiness_unavailable'].includes(e.code))?e.code:probing?'readiness_unavailable':'personal_storage_error';
+        const status=code==='unauthorized'?401:code==='permission_denied'?403:code==='not_found'?404:code==='request_too_large'?413:code==='invalid_content_type'?415:code==='busy'?429:['unavailable','readiness_unavailable'].includes(code)?503:code==='personal_storage_error'?500:400;
         // A storage/transport failure after submission must not assert that nothing was stored.
-        send(res,status,{ok:false,error:code,delivery:submitted&&code==='personal_storage_error'?'unconfirmed':'rejected'});
-      }finally{if(held)inflight--;}
+        send(res,status,{ok:false,error:code,delivery:submitted&&code==='personal_storage_error'?'unconfirmed':'rejected'},probing);
+      }finally{clearTimeout(deadline);if(held)inflight--;}
     })();running.add(task);task.finally(()=>running.delete(task));
   });
   server.on('clientError',(_error,socket)=>socket.destroy());
