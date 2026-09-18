@@ -255,7 +255,8 @@ class LocalManager:
         message.set_auto_start(False)
         message.set_allow_interactive_authorization(False)
         message.append(*args, signature=signature)
-        reply = self.connection.send_message_with_reply_and_block(message, timeout_s=timeout)
+        # dbus-python 1.3.2's C method is positional-only (METH_VARARGS).
+        reply = self.connection.send_message_with_reply_and_block(message, timeout)
         expected = {'GetId': 's', 'GetNameOwner': 's', 'GetConnectionUnixUser': 'u',
                     'GetConnectionUnixProcessID': 'u', 'LoadUnit': 'o', 'StartUnit': 'o',
                     'Get': 'v', 'GetAll': 'a{sv}', 'Ping': ''}[method]

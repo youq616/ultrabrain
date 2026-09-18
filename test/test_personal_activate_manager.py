@@ -145,7 +145,9 @@ class FakeBus:
         if name.endswith('.service'):
             self.services[name] = {**service(), 'MainPID': 321 if active else 0}
 
-    def send_message_with_reply_and_block(self, message, timeout_s):
+    # dbus-python 1.3.2 exposes this C method as METH_VARARGS, without
+    # METH_KEYWORDS. A Python fake accepting keywords hid a real CI failure.
+    def send_message_with_reply_and_block(self, message, timeout_s, /):
         if message.auto_start is not False or message.interactive is not False:
             raise AssertionError('Implicit activation or interactive authorization')
         self.messages.append(message)
