@@ -2,6 +2,8 @@
 
 `personal-ready` 在普通 Linux 服务账号下，对已安装、正在运行的管理台进行一次只读验收。它同时核对受管部署回执、用户管理器、实际 Bun 进程、认证 HTTP 响应和当前托管 PostgreSQL 后端。检查不会启动、停止、重载或启用服务，不创建令牌，不迁移数据，也不请求模型或读取记忆正文。
 
+后续独立入口 [personal-activate](PERSONAL-ACTIVATE.md) 可对符合额外依赖和恢复条件的停止安装发起控制台启动；本页的 `personal-ready` 入口仍保持只读。
+
 本能力已于 2026-09-18 通过 [PR #12](https://github.com/youq616/ultrabrain/pull/12) 合入 `d72ee27cafe9b309253ebd382fd752932fbe9e38`，是后续自动激活的前置步骤。自动激活、运行中切换和激活失败恢复需要独立的启动意图、运行实例和依赖传播合同，本阶段未提供这些操作。精确应用提交、两名独立代理的最终 PASS 和实际 CI 见 [本阶段验收](reviews/personal-ready/README.md) 与 [项目状态](PROJECT-STATUS.md)。
 
 ## 使用
