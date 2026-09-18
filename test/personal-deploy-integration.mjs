@@ -162,8 +162,16 @@ try{
  const savedContent=readFileSync(readlinkSync(join(unitDir,consoleUnit)));
  rmSync(a.dir,{recursive:true});assert.deepEqual(readFileSync(readlinkSync(join(unitDir,consoleUnit))),savedContent);pass();
  const bplan=await reviewed(b);
- activation=await verifyPersonalActivation({engine,spec:a,current:aid,run,unrelatedUnits,
-  competingDeployment:[...b.args,'--expected-deployment',bplan.deployment_sha256]});
+ // ResetFailedUnit does not load an inactive unit that systemd has already
+ // garbage-collected. Keep this verified console referenced while the bounded
+ // activation fixture resets its start counter between independent cases.
+ await pinConsoleCache();
+ let activationError;
+ try{activation=await verifyPersonalActivation({engine,spec:a,current:aid,run,unrelatedUnits,
+  competingDeployment:[...b.args,'--expected-deployment',bplan.deployment_sha256]});}
+ catch(error){activationError=error;throw error;}
+ finally{try{await releaseConsoleCache();}catch(error){
+  throw new AggregateError([...(activationError?[activationError]:[]),error],'Activation fixture cache release failed');}}
  await verifyHTTP(a);pass();
  readiness=await verifyPersonalReadiness({engine,spec:a,current:aid,run,unrelatedUnits});
  const refused=await call(['apply',...b.args,'--expected-deployment',bplan.deployment_sha256],{ok:false});

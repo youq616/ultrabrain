@@ -94,6 +94,43 @@ test('directory symlink/junction is refused',t=>{
  assert.throws(()=>new CaptureOutbox({...input,outbox_directory:link}),{code:'insecure_outbox'});
 });
 test('multiple independent processes enqueue without lost updates',async t=>{
- const {input,q,dir}=setup(t);const runner=join(dir,'writer.mjs');writeFileSync(runner,`import {CaptureOutbox} from ${JSON.stringify(new URL('../src/capture-outbox.mjs',import.meta.url).href)};await new CaptureOutbox(JSON.parse(process.argv[2])).enqueue(JSON.parse(process.argv[3]));`);
- const results=await Promise.all(Array.from({length:8},(_,i)=>new Promise((resolve,reject)=>{const p=spawn(process.execPath,[runner,JSON.stringify(input),JSON.stringify(item('child'+i))],{stdio:'ignore'});p.once('error',reject);p.once('exit',resolve);})));assert.ok(results.every(n=>n===0));assert.equal((await q.status()).pending,8);
+ const {input,q,dir}=setup(t);const runner=join(dir,'writer.mjs');writeFileSync(runner,`
+import {CaptureOutbox} from ${JSON.stringify(new URL('../src/capture-outbox.mjs',import.meta.url).href)};
+import {setTimeout as delay} from 'node:timers/promises';
+let busyRetries=0;
+try {
+ const q=new CaptureOutbox(JSON.parse(process.argv[2])),payload=JSON.parse(process.argv[3]);
+ const deadline=performance.now()+10000;
+ for(;;){
+  try {await q.enqueue(payload);break;}
+  catch(e){
+   // The production queue has a bounded lock wait. Replay the same event only
+   // for this documented contention outcome; every other error fails at once.
+   if(e?.code!=='outbox_busy'||busyRetries>=7||performance.now()>=deadline)throw e;
+   busyRetries++;await delay(25);
+  }
+ }
+ process.stdout.write(JSON.stringify({ok:true,busy_retries:busyRetries}));
+}catch(e){
+ const code=['outbox_busy','identity_mismatch','conflict','insecure_outbox','outbox_corrupt','outbox_unbound','outbox_full','capture_disabled','invalid_profile','invalid_params','outbox_lock_changed'].includes(e?.code)?e.code:'writer_failed';
+ process.stdout.write(JSON.stringify({ok:false,code,busy_retries:busyRetries}));process.exitCode=1;
+}
+`);
+ const results=await Promise.all(Array.from({length:8},(_,i)=>new Promise(resolve=>{
+  const p=spawn(process.execPath,[runner,JSON.stringify(input),JSON.stringify(item('child'+i))],{stdio:['ignore','pipe','ignore']});
+  let output='',bytes=0,overflow=false;
+  const timer=setTimeout(()=>p.kill(),15000);timer.unref();
+  p.stdout.on('data',chunk=>{bytes+=chunk.length;if(bytes>1024){overflow=true;p.kill();}else output+=chunk;});
+  p.once('error',()=>resolve({exit:null,code:'spawn_failed'}));
+  p.once('close',(exit,signal)=>{
+   clearTimeout(timer);let report;
+   try{report=JSON.parse(output);}catch{}
+   const codes=['outbox_busy','identity_mismatch','conflict','insecure_outbox','outbox_corrupt','outbox_unbound','outbox_full','capture_disabled','invalid_profile','invalid_params','outbox_lock_changed','writer_failed'];
+   const valid=!overflow&&report&&typeof report.ok==='boolean'&&Number.isInteger(report.busy_retries)&&report.busy_retries>=0&&report.busy_retries<=7;
+   resolve({exit,signal,ok:valid&&report.ok,busy_retries:valid?report.busy_retries:null,code:valid&&codes.includes(report.code)?report.code:valid&&report.ok?'ok':'invalid_diagnostic'});
+  });
+ })));
+ assert.ok(results.every(r=>r.exit===0&&r.ok),JSON.stringify(results));assert.equal((await q.status()).pending,8);
+ const ids=readdirSync(q.directory).filter(n=>n.endsWith('.entry')).map(n=>JSON.parse(readFileSync(join(q.directory,n))).payload.event_id).sort();
+ assert.deepEqual(ids,Array.from({length:8},(_,i)=>'child'+i));
 });

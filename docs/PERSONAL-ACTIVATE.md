@@ -71,4 +71,4 @@ bun src/cli.mjs personal-activate recover --home "$ULTRABRAIN_HOME" \
 
 `dispatch_state` 区分 `not_attempted`、`outcome_unknown`、`acknowledged`；它不声称“本工具确定启动了这个进程”。`activation_outcome` 表示本次操作的已记录结果，`application_ready` 只在本次新鲜检查通过时为 true。status 的 `last_completed` 是历史记录，status 本身不接触 D-Bus 或执行 HTTP readiness。错误输出仅含固定错误码，不打印令牌、数据库 URI 或原始服务日志。
 
-本地 Python 测试覆盖缓存依赖、真实私有文件事务与故障注入，进程/HTTP/manager 是受控夹具。`test/personal-activate-integration.mjs` 由既有 `Personal user services` 工作流调用，在明确授权的一次性普通 Linux 账号中检查实际 systemd、PostgreSQL、认证 HTTP、flock 和真实 coordinator 进程退出。只有 CI 夹具在各场景之间停止并清除自己控制台的启动限流计数；产品命令没有这些动作。新增激活集成不调用模型，既有服务集成的模型响应仍为合成夹具。用户主机部署、Windows 客户端和真实模型质量不属于这些检查的证明范围。
+本地 Python 测试覆盖缓存依赖、真实私有文件事务与故障注入，进程/HTTP/manager 是受控夹具。`test/personal-activate-integration.mjs` 由既有 `Personal user services` 工作流调用，在明确授权的一次性普通 Linux 账号中检查实际 systemd、PostgreSQL、认证 HTTP、flock 和真实 coordinator 进程退出。只有 CI 夹具在各场景之间停止并清除自己控制台的启动限流计数；产品命令没有这些动作。夹具复用已有的单元引用助手，在 180 秒上限内保留控制台缓存，避免 inactive 单元被回收后无法执行 ResetFailedUnit；引用结束必须确认释放。新增激活集成不调用模型，既有服务集成的模型响应仍为合成夹具。用户主机部署、Windows 客户端和真实模型质量不属于这些检查的证明范围。

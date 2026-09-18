@@ -49,9 +49,13 @@ export async function verifyPersonalActivation({engine,spec,current,run,unrelate
  assert.match(identity?.instance_id??'',/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
  const base=['--home',HOME,'--bun',process.execPath,'--source',spec.source,'--port',String(spec.port),
   '--expected-current',current,'--expected-instance',identity.instance_id];
- let checks=0,activeCase='initial_snapshot',lastCode=null,lockPin,sourceRemoved=false,tokenMoved=false;
+ let checks=0,activeCase='initial_snapshot',lastCode=null,lockPin,baseline,sourceRemoved=false,tokenMoved=false;
  const checkpoints=[],pass=()=>checks++;
- const ctl=(...args)=>run('/usr/bin/systemctl',['--user','--no-pager','--no-ask-password',...args],{timeout:15000});
+ async function ctl(...args){
+  assert.ok(['show','stop','reset-failed'].includes(args[0]),'Only fixed fixture manager operations are allowed');
+  const result=await run('/usr/bin/systemctl',['--user','--no-pager','--no-ask-password',...args],{ok:false,timeout:15000});
+  assert.equal(result.code,0,'Activation fixture systemctl '+args[0]+' failed');return result;
+ }
  async function property(unit,key){return (await ctl('show',unit,'--property='+key,'--value')).text.trim();}
  async function invocation(){
   return {pid:await property(consoleUnit,'MainPID'),id:await property(consoleUnit,'InvocationID'),
@@ -209,9 +213,10 @@ export async function verifyPersonalActivation({engine,spec,current,run,unrelate
  const coordination=()=>({deployment:tree(join(HOME,'personal-deployment')),
   activation:existsSync(join(HOME,'personal-activation'))?tree(join(HOME,'personal-activation')):null,
   shared:tree(join(homedir(),'.config/ultrabrain-personal-deployment'))});
- await stopped();await ctl('reset-failed',consoleUnit);
- const baseline=await snapshot(),beforePlan=coordination();
  try{
+  activeCase='initial_stopped';await stopped();
+  activeCase='initial_start_counter_reset';await ctl('reset-failed',consoleUnit);
+  activeCase='initial_snapshot';baseline=await snapshot();const beforePlan=coordination();
   assert.equal((await status()).pending_sha256,null);const initial=await plan();await stopped();
   assert.deepEqual(coordination(),beforePlan,'Plan and status must not write deployment or coordination files');pass();
   await refused('wrong_plan',['apply',...base,'--expected-plan',(initial[0]==='0'?'1':'0')+initial.slice(1)]);
@@ -294,6 +299,7 @@ export async function verifyPersonalActivation({engine,spec,current,run,unrelate
    activation:'direct-console-start-with-target-inactive',recovery:'actual-process-exit-and-observation-only-recovery',
    checkpoints,source_removed_after_dispatch_refused:true,same_console_after_source_restoration:true,
    fixture_between_cases:'stop-and-reset-failed-only-the-verified-owned-console',
+   fixture_console_cache_reference:'existing-ci-helper-with-180-second-bound',
    lock:'actual-exclusive-deployment-flock',configuration_unchanged:true,model_calls:0,user_host_deployed:false};
  }catch(error){
   console.log(JSON.stringify({personal_activation_failure_after_checks:checks,case:activeCase,error_code:lastCode}));
