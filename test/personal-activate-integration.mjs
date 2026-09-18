@@ -136,15 +136,15 @@ export async function verifyPersonalActivation({engine,spec,current,run,unrelate
   assert.deepEqual(value.starts,[consoleUnit]);assert.equal(value.target_started,false);assert.equal(value.worker_authorized,false);
   unchanged(value);return value.activation_plan_sha256;
  }
- async function diagnoseManager(){
+ async function diagnosePlan(){
   try{
    const response=await run('/usr/bin/python3',['-I','-B',ROOT+'/test/personal-activate-crash.py',
-    'diagnose-manager','--home',HOME],{ok:false,timeout:35000});
+    'diagnose-plan',...base],{ok:false,timeout:35000});
    assert.ok([0,1].includes(response.code)&&response.text.length<=16384);
    assert.equal([...secrets].some(secret=>response.text.includes(secret)),false);
    const value=JSON.parse(response.text);
-   assert.deepEqual(Object.keys(value).sort(),['diagnostic','exception_chain','ok','proc_checks']);
-   assert.equal(value.diagnostic,'personal_activation_manager');assert.equal(typeof value.ok,'boolean');
+   assert.deepEqual(Object.keys(value).sort(),['dependency_failures','dependency_failures_truncated','diagnostic','exception_chain','ok']);
+   assert.equal(value.diagnostic,'personal_activation_plan');assert.equal(typeof value.ok,'boolean');
    assert.ok(Array.isArray(value.exception_chain)&&value.exception_chain.length<=6);
    let count=0;
    for(const entry of value.exception_chain){
@@ -161,25 +161,28 @@ export async function verifyPersonalActivation({engine,spec,current,run,unrelate
      assert.ok(Number.isInteger(frame.line)&&frame.line>=0&&frame.line<=1000000);
     }
    }
-   const procBooleans=new Set(['self_proc_available','manager_proc_available','self_process_stable','manager_process_stable',
-    'self_capprm_nonzero','manager_capprm_nonzero','self_capeff_nonzero','self_fsuid_matches_euid','self_fsgid_matches_egid',
-    'manager_directory_owner_matches_self_fsuid','manager_uids_three_match_self_fsuid','manager_uids_four_match_self_fsuid',
-    'manager_gids_three_match_self_fsgid','manager_gids_four_match_self_fsgid','manager_capprm_subset_self_capprm',
-    'manager_capprm_subset_self_capeff','pid_namespace_equal','net_namespace_equal','security_label_equal',
-    ...['self','manager'].flatMap(who=>['pid_namespace','net_namespace','security_label'].map(name=>who+'_'+name+'_readable'))]);
-   const procErrnos=new Set(['self','manager'].flatMap(who=>['proc','pid_namespace','net_namespace','security_label'].map(name=>who+'_'+name+'_errno')));
-   const procLabels=new Set(['self_security_label_kind','manager_security_label_kind']);
-   assert.ok(value.proc_checks&&typeof value.proc_checks==='object'&&!Array.isArray(value.proc_checks));
-   assert.deepEqual(Object.keys(value.proc_checks).sort(),[...procBooleans,...procErrnos,...procLabels].sort());
-   for(const [key,field] of Object.entries(value.proc_checks)){
-    if(procBooleans.has(key))assert.ok(field===null||typeof field==='boolean');
-    else if(procErrnos.has(key))assert.ok(field===null||Number.isInteger(field)&&field>=0&&field<=4095);
-    else assert.ok(field===null||['unconfined','systemd','other'].includes(field));
+   const suffixes=['service','target','socket','path','timer','slice','mount','automount','scope','device','swap','other'];
+   const unitKinds=new Set(['console','database','target','root_slice','app_slice','basic_target','sockets_target',
+    'dbus_service','dbus_socket','other',...suffixes.filter(s=>s!=='other').map(s=>'other_'+s)]);
+   const properties=new Set(['Names','Requires','Wants','BindsTo','Upholds','RequiredBy','RequisiteOf','BoundBy','ConsistsOf',
+    'PropagatesStopTo','Requisite','PartOf','WantedBy','UpheldBy','Conflicts','ConflictedBy','Before','After','OnFailure','OnSuccess',
+    'Triggers','TriggeredBy','PropagatesReloadTo','ReloadPropagatedFrom','StopPropagatedFrom']);
+   const booleans=['over_limit','all_strings','has_duplicates','matches_unit_name','name_over_255','invalid_charset'];
+   assert.equal(typeof value.dependency_failures_truncated,'boolean');
+   assert.ok(Array.isArray(value.dependency_failures)&&value.dependency_failures.length<=8);
+   for(const entry of value.dependency_failures){
+    assert.deepEqual(Object.keys(entry).sort(),['unit_kind','property','value_type','length','invalid_suffixes',...booleans].sort());
+    assert.ok(unitKinds.has(entry.unit_kind)&&properties.has(entry.property));
+    assert.ok(['list','string','integer','boolean','object','number','null','other','missing'].includes(entry.value_type));
+    assert.ok(entry.length===null||Number.isInteger(entry.length)&&entry.length>=0&&entry.length<=513);
+    for(const key of booleans)assert.ok(entry[key]===null||typeof entry[key]==='boolean');
+    assert.ok(Array.isArray(entry.invalid_suffixes)&&entry.invalid_suffixes.length<=suffixes.length);
+    assert.ok(entry.invalid_suffixes.every(s=>suffixes.includes(s))&&new Set(entry.invalid_suffixes).size===entry.invalid_suffixes.length);
    }
    // The guarded helper emits only its fixed allowlists. Never print captured
    // stdout unless the complete bounded, value-free schema is satisfied.
    console.log(JSON.stringify(value));
-  }catch{console.log(JSON.stringify({diagnostic:'personal_activation_manager',available:false}));}
+  }catch{console.log(JSON.stringify({diagnostic:'personal_activation_plan',available:false}));}
  }
  async function pending(){const value=await status();assert.match(value.pending_sha256,/^[a-f0-9]{64}$/);return value.pending_sha256;}
  async function recover(hash,ready){
@@ -263,7 +266,7 @@ export async function verifyPersonalActivation({engine,spec,current,run,unrelate
   activeCase='initial_start_counter_reset';await ctl('reset-failed',consoleUnit);
   activeCase='initial_snapshot';baseline=await snapshot();const beforePlan=coordination();
   assert.equal((await status()).pending_sha256,null);let initial;
-  try{initial=await plan();}catch(error){await diagnoseManager();throw error;}
+  try{initial=await plan();}catch(error){await diagnosePlan();throw error;}
   await stopped();
   assert.deepEqual(coordination(),beforePlan,'Plan and status must not write deployment or coordination files');pass();
   await refused('wrong_plan',['apply',...base,'--expected-plan',(initial[0]==='0'?'1':'0')+initial.slice(1)]);

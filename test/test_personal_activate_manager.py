@@ -301,8 +301,47 @@ class ManagerTests(unittest.TestCase):
         self.assertFalse(any(c[3] == 'StartUnit' for c in self.bus.calls))
 
     def test_swap_dependency_is_not_supported(self):
-        self.bus.units['basic.target']['Wants'].append('dev-review.swap')
-        self.fails('invalid_manager_dependencies')
+        swap = 'dev-review.swap'
+        self.bus.add(swap)
+        self.bus.units['basic.target']['Wants'].append(swap)
+        self.fails('unsupported_activation_unit')
+        self.assertFalse(any(c[3] == 'LoadUnit' and c[5] == (swap,) for c in self.bus.calls))
+        self.assertFalse(any(c[3] == 'StartUnit' for c in self.bus.calls))
+
+    def test_swap_stop_closure_is_refused_before_loading(self):
+        swap = 'dev-review.swap'
+        self.bus.add(swap)
+        self.bus.units['shutdown.target']['RequiredBy'].append(swap)
+        self.fails('unsupported_activation_unit')
+        self.assertFalse(any(c[3] == 'LoadUnit' and c[5] == (swap,) for c in self.bus.calls))
+        self.assertFalse(any(c[3] == 'StartUnit' for c in self.bus.calls))
+
+    def test_swap_verify_closure_is_refused_before_loading(self):
+        swap = 'dev-review.swap'
+        self.bus.add(swap)
+        self.bus.units['basic.target']['Requisite'].append(swap)
+        self.fails('unsupported_activation_unit')
+        self.assertFalse(any(c[3] == 'LoadUnit' and c[5] == (swap,) for c in self.bus.calls))
+        self.assertFalse(any(c[3] == 'StartUnit' for c in self.bus.calls))
+
+    def test_root_slice_records_passive_swap_without_loading_it(self):
+        # v255 enumerates /proc/swaps in user managers too. Such extrinsic
+        # units require/order after -.slice, even when this transaction only
+        # starts an already active root slice and never reaches the swap.
+        swap = 'dev-review.swap'
+        self.bus.add(swap)
+        self.bus.units[swap]['Requires'] = ['-.slice']
+        self.bus.units[swap]['After'] = ['-.slice']
+        self.bus.units['-.slice']['RequiredBy'].append(swap)
+        self.bus.units['-.slice']['Before'].append(swap)
+        graph = self.manager.inspect_start_graph(**ARGS)
+        self.assertIn(swap, graph['contract']['units']['-.slice']['RequiredBy'])
+        self.assertIn(swap, graph['contract']['units']['-.slice']['Before'])
+        self.assertNotIn(swap, graph['contract']['units'])
+        self.assertNotIn(swap, graph['observation'])
+        for key in ('start_units', 'stop_units', 'verify_units'):
+            self.assertNotIn(swap, graph['contract'][key])
+        self.assertFalse(any(c[3] == 'LoadUnit' and c[5] == (swap,) for c in self.bus.calls))
         self.assertFalse(any(c[3] == 'StartUnit' for c in self.bus.calls))
 
     def test_conflict_cannot_stop_active_foreign_unit(self):

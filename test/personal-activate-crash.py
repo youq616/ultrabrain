@@ -27,8 +27,11 @@ DIAGNOSTIC_FILES = frozenset((
     "preflight.py", "personal-services.py", "contextlib.py",
 ))
 DIAGNOSTIC_FUNCTIONS = frozenset((
-    "main", "diagnose_manager", "manager_process", "connection_identity", "verify_identity",
+    "main", "diagnose_manager", "diagnose_plan", "manager_process", "connection_identity", "verify_identity",
     "_connect", "_call", "_raw_call", "_bus", "_property", "_timeout", "plain", "need",
+    "plan", "_plan", "_observe", "activation_graph", "names", "select", "read",
+    "inspect_graph", "inspect_start_graph", "_console_guard", "_load", "_all", "_paths",
+    "_row", "_invocation", "__call__", "expected_command",
     "absolute", "open_dir", "directory", "visible", "_process_snapshot", "_proc_directory",
     "_self_namespaces", "_namespaces", "_read", "_number", "_metadata", "_parse_stat",
     "_parse_status", "_executable", "_process_executable", "__enter__", "__exit__",
@@ -53,10 +56,28 @@ DIAGNOSTIC_CODES = frozenset((
     "proc_file_changed", "invalid_process_namespace", "process_namespace_mismatch",
     "process_namespace_changed", "unsafe_process_executable", "process_executable_changed",
     "process_executable_mismatch", "directory_changed", "untrusted_system_unit_path",
+    "invalid_manager_dependencies", "invalid_unit_name", "manager_property_missing",
+    "invalid_manager_response", "invalid_unit_object", "unit_alias_refused", "invalid_manager_action",
+    "unsupported_manager_unit_paths", "console_unit_unavailable", "invalid_console_invocation",
+    "invalid_activation_arguments", "activation_graph_limit", "unsupported_activation_unit",
+    "unexpected_activation_unit", "activation_unit_not_stable", "dependency_stop_when_unneeded",
+    "invalid_activation_graph", "activation_dependency_not_ready", "database_unit_not_ready",
+    "activation_graph_changed", "console_cache_mismatch", "console_dependency_side_effect",
+    "console_dependency_mismatch", "console_extra_command", "console_exec_mismatch",
+    "console_not_running", "console_must_be_stopped",
 ))
 DIAGNOSTIC_DBUS_ERRORS = {"org.freedesktop.DBus.Error." + name: name for name in (
     "NameHasNoOwner", "ServiceUnknown", "NoReply", "Disconnected", "AccessDenied",
 )}
+DIAGNOSTIC_SUFFIXES = frozenset((
+    "service", "target", "socket", "path", "timer", "slice", "mount", "automount", "scope", "device", "swap",
+))
+DIAGNOSTIC_UNIT_KINDS = {
+    "ultrabrain-personal-console.service": "console", "ultrabrain-postgres.service": "database",
+    "ultrabrain-personal.target": "target", "-.slice": "root_slice", "app.slice": "app_slice",
+    "basic.target": "basic_target", "sockets.target": "sockets_target",
+    "dbus.service": "dbus_service", "dbus.socket": "dbus_socket",
+}
 
 
 def diagnostic_dbus_error(error):
@@ -273,6 +294,71 @@ def diagnose_manager(activate):
         manager.close()
 
 
+def diagnostic_suffix(name):
+    suffix = name.rsplit(".", 1)[-1] if type(name) is str else None
+    return suffix if suffix in DIAGNOSTIC_SUFFIXES else "other"
+
+
+def diagnostic_dependency(module, unit, key, value, present):
+    unit_kind = DIAGNOSTIC_UNIT_KINDS.get(unit) if type(unit) is str else None
+    if unit_kind is None:
+        suffix = diagnostic_suffix(unit)
+        unit_kind = "other_" + suffix if suffix != "other" else "other"
+    value_type = {list: "list", str: "string", int: "integer", bool: "boolean", dict: "object",
+                  float: "number", type(None): "null"}.get(type(value), "other") if present else "missing"
+    length = len(value) if type(value) is list else None
+    strings = all(type(item) is str for item in value) if length is not None and length <= 512 else None
+    invalid = [name for name in value if not module.UNIT_NAME.fullmatch(name)] if strings else None
+    return {"unit_kind": unit_kind, "property": key, "value_type": value_type,
+            "length": min(length, 513) if length is not None else None,
+            "over_limit": length > 512 if length is not None else None, "all_strings": strings,
+            "has_duplicates": len(value) != len(set(value)) if strings else None,
+            "matches_unit_name": not invalid if strings else None,
+            "name_over_255": any(len(name) > 255 for name in value) if strings else None,
+            "invalid_charset": any(not re.fullmatch(r"[A-Za-z0-9_.:@\\-]+", name) for name in value) if strings else None,
+            "invalid_suffixes": sorted({diagnostic_suffix(name) for name in invalid}) if invalid else []}
+
+
+def diagnose_plan(activate, args):
+    manager = activate.MANAGER.LocalManager()
+    original = manager._all
+    failures, truncated = [], False
+
+    def observe_all(path, interface):
+        nonlocal truncated
+        raw = original(path, interface)
+        if interface == activate.MANAGER.UNIT and type(raw) is dict:
+            for key in ("Names", *activate.MANAGER.EDGES):
+                try:
+                    activate.MANAGER.names(raw.get(key))
+                except activate.MANAGER.ActivateManagerError:
+                    if len(failures) < 8:
+                        failures.append(diagnostic_dependency(activate.MANAGER, raw.get("Id"), key,
+                                                              raw.get(key), key in raw))
+                    else:
+                        truncated = True
+        return raw  # Preserve the actual response, including the rejected value.
+
+    manager._all = observe_all
+    try:
+        context = activate.Context(args.home, manager=manager)
+        context.plan(bun=args.bun, source=args.source, port=args.port,
+                     expected_current=args.expected_current, expected_instance=args.expected_instance)
+    except Exception as error:
+        value = safe_diagnostic(error)
+        code = 1
+    else:
+        value = {"ok": True, "exception_chain": []}
+        code = 0
+    finally:
+        manager._all = original
+        manager.close()
+    value.update(diagnostic="personal_activation_plan", dependency_failures=failures,
+                 dependency_failures_truncated=truncated)
+    print(json.dumps(value, ensure_ascii=True))
+    return code
+
+
 def load(path):
     spec = importlib.util.spec_from_file_location("ci_personal_activate", path)
     module = importlib.util.module_from_spec(spec)
@@ -299,6 +385,10 @@ def main():
     hold.add_argument("--home", required=True)
     diagnose = actions.add_parser("diagnose-manager", allow_abbrev=False)
     diagnose.add_argument("--home", required=True)
+    plan_diagnostic = actions.add_parser("diagnose-plan", allow_abbrev=False)
+    for name in ("home", "bun", "source", "expected-current", "expected-instance"):
+        plan_diagnostic.add_argument("--" + name, required=True)
+    plan_diagnostic.add_argument("--port", type=int, required=True)
     args = parser.parse_args()
     if Path(args.home) != expected:
         raise SystemExit("Wrong fixture installation")
@@ -306,6 +396,8 @@ def main():
     activate = load(root / "scripts/personal-activate.py")
     if args.action == "diagnose-manager":
         raise SystemExit(diagnose_manager(activate))
+    if args.action == "diagnose-plan":
+        raise SystemExit(diagnose_plan(activate, args))
 
     def crash(label):
         if label == args.checkpoint:

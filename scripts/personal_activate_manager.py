@@ -61,7 +61,9 @@ MAX_EDGES = 2048
 MAX_VALUE_CELLS = 32768
 MAX_VALUE_BYTES = 262144
 UNIQUE = re.compile(r':[0-9]+\.[0-9]+')
-UNIT_NAME = re.compile(r'[A-Za-z0-9_.:@\\-]{1,255}\.(?:service|target|socket|path|timer|slice|mount|automount|scope|device)')
+# Cached reverse/ordering facts can name types outside the traversal contract.
+# Actual traversal still rejects both device and swap units before loading them.
+UNIT_NAME = re.compile(r'[A-Za-z0-9_.:@\\-]{1,255}\.(?:service|target|socket|path|timer|slice|mount|automount|scope|device|swap)')
 UUID = re.compile(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}')
 
 
@@ -434,7 +436,8 @@ class LocalManager:
                 # v255 device.c's canonical sys-* device has Following="" but
                 # following_set() still adds sibling devices to a transaction.
                 # This bounded graph does not certify that hidden inventory.
-                # Swap units are already excluded by UNIT_NAME as well.
+                # Swaps also have following sets; passive cached references to
+                # either type do not authorize traversing/loading those units.
                 need(not name.endswith(('.device', '.swap')), 'unsupported_activation_unit')
                 need(not name.startswith('ultrabrain-') or name in (CONSOLE, DATABASE),
                      'unexpected_activation_unit')
