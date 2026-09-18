@@ -49,6 +49,11 @@ export async function verifyPersonalReadiness({engine,spec,current,run,unrelated
  const [identity]=await engine.executeRaw('SELECT instance_id::text AS instance_id FROM ultrabrain.instance_identity WHERE singleton');
  assert.match(identity?.instance_id??'',/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
  const instance=identity.instance_id;
+ // PostgreSQL's explicit inet-to-text cast keeps /32; readiness needs the
+ // canonical host address. Exercise this real type contract, not a mocked row.
+ const [address]=await engine.executeRaw(`SELECT pg_catalog.inet_server_addr()::text AS cast_address,
+  pg_catalog.host(pg_catalog.inet_server_addr()) AS host_address`);
+ assert.equal(address.cast_address,'127.0.0.1/32');assert.equal(address.host_address,'127.0.0.1');
  const base=new Map([['--home',HOME],['--bun',process.execPath],['--source',spec.source],
   ['--port',String(spec.port)],['--expected-current',current],['--expected-instance',instance]]);
  let checks=0,activeCase='initial_snapshot',lastCode=null,releaseLock,lockTask,lockGuard;
@@ -173,7 +178,8 @@ export async function verifyPersonalReadiness({engine,spec,current,run,unrelated
   activeCase='unchanged_after_probes';
   assert.deepEqual(await snapshot(),baseline,'Probes must preserve configuration, unit identity, enablement and personal data');pass();
   return {checks,systemd:'same-actual-console-invocation',database:'actual-source-removal-and-table-lock-refusal',
-   recovery:'same-console-instance-after-source-and-lock-restoration',readonly_snapshot_unchanged:true,model_calls:0};
+   recovery:'same-console-instance-after-source-and-lock-restoration',readonly_snapshot_unchanged:true,
+   actual_postgres_address_conversion_verified:true,model_calls:0};
  }catch(error){
   console.log(JSON.stringify({personal_readiness_failure_after_checks:checks,case:activeCase,error_code:lastCode}));
   throw error;

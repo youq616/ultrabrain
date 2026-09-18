@@ -128,10 +128,13 @@ def parse_http(raw, *, partial=False):
     # Only our bounded, length-delimited HTTP endpoint is supported. No proxies,
     # redirects, trailers, compression, transfer encodings or alternate routes.
     header, separator, body = raw.partition(b'\r\n\r\n')
-    need(len(header) <= 4096, 'invalid_readiness_http')
     if not separator and partial:
+        # Up to three delimiter bytes may follow a maximum-length header in a
+        # split TCP packet. They do not count toward the header's byte limit.
+        suffix = max(n for n in range(4) if raw.endswith(b'\r\n\r\n'[:n]))
+        need(len(raw)-suffix <= 4096, 'invalid_readiness_http')
         return None
-    need(separator, 'invalid_readiness_http')
+    need(separator and len(header) <= 4096, 'invalid_readiness_http')
     lines = header.split(b'\r\n')
     need(re.fullmatch(rb'HTTP/1\.[01] [0-9]{3}(?: [\x20-\x7e]*)?', lines[0]),
          'invalid_readiness_http')

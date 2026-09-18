@@ -57,6 +57,8 @@ Linux 必须允许本服务账号读取相关 `/proc` 元数据，并使用可�
 
 服务器先鉴权，再在同一数据库连接的只读事务内执行固定 SQL：确认 source、逻辑实例、public schema、必要个人表和 actor_key 列，并取得实际 PostgreSQL 会话身份。事务使用 2 秒 statement timeout、1 秒 lock timeout；不会调用 migrate、health 或重新 connect。HTTP 等待 3 秒后结束，但未真正结束的数据库任务继续占用共享的四个并发名额，避免超时后无限积累查询。
 
+实际数据库地址通过 `pg_catalog.host(pg_catalog.inet_server_addr())` 取得并严格核对 `127.0.0.1`。不能使用 `inet::text` 直接与纯地址比较，因为该转换会保留 `/32`；真实数据库 CI 同时验证转换形态和成功的端到端探测。[PostgreSQL 网络地址函数](https://www.postgresql.org/docs/18/functions-net.html)
+
 非成功 HTTP 响应没有认证的诊断证明。客户端仅报告 `readiness_unverified` 等检查失败，不将陌生端口返回的错误文字当作真实数据库诊断。成功结果中的全部身份字段均先验证 HMAC，再与本地预期比较。
 
 带签名的 `postmaster_started` 来自 SQL `pg_postmaster_start_time()`。它与 PID 文件第三行的早期 `MyStartTime` 来源不同，不做错误的精确相等比较；实际本机绑定依赖 PGDATA、PID/PPid、启动 tick 和可执行文件身份。依据见 [固定 PostgreSQL PID 文件定义](https://github.com/postgres/postgres/blob/724edf9bde9d356724ad384a2e196edc3c9f80f7/src/include/utils/pidfile.h)、[PID 文件写入](https://github.com/postgres/postgres/blob/724edf9bde9d356724ad384a2e196edc3c9f80f7/src/backend/utils/init/miscinit.c) 和 [postmaster 初始化](https://github.com/postgres/postgres/blob/724edf9bde9d356724ad384a2e196edc3c9f80f7/src/backend/postmaster/postmaster.c)。

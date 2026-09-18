@@ -206,6 +206,15 @@ class WireTests(unittest.TestCase):
             with self.subTest(raw=raw[:100]), self.assertRaises(m.ReadyError):
                 m.parse_http(raw)
 
+    def test_maximum_header_accepts_each_split_delimiter_prefix(self):
+        prefix = http(extra=b'X-Pad: \r\n').partition(b'\r\n\r\n')[0]
+        header = prefix + b'x'*(4096-len(prefix))
+        self.assertEqual(len(header), 4096)
+        for size in range(4):
+            with self.subTest(size=size):
+                self.assertIsNone(m.parse_http(header+b'\r\n\r\n'[:size], partial=True))
+        self.assertEqual(m.parse_http(header+b'\r\n\r\n{}'), b'{}')
+
 
 class ReadyFixtureManager:
     def __init__(self, fixture):

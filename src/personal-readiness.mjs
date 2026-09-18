@@ -50,7 +50,7 @@ export function createPersonalReadiness({engine,source,token,invocationId}) {
           pg_catalog.inet_server_port() AS database_port,
           pg_catalog.current_database() AS database_name,
           current_user AS database_user,
-          pg_catalog.inet_server_addr()::text AS database_address,
+          pg_catalog.host(pg_catalog.inet_server_addr()) AS database_address,
           session_user AS database_session_user,
           pg_catalog.floor(EXTRACT(EPOCH FROM pg_catalog.pg_postmaster_start_time()))::bigint::text AS postmaster_started,
           pg_catalog.current_schema()='public' AND
