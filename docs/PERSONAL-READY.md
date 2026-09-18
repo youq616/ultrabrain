@@ -26,7 +26,7 @@ bun src/cli.mjs personal-ready \
 
 | 字段 | 含义 |
 |---|---|
-| `unit_binding_verified:true` | 本次前后观察到的固定个人单元、安装代际和实际 console 进程一致 |
+| `unit_binding_verified:true` | 本次前后观察到的安装代际、固定单元元数据和实际 console 参数/运行实例一致；未逐项认证所有缓存的 systemd 设置 |
 | `authenticated_console_ready:true` | 预期 console 运行实例完成了新鲜认证响应，实际数据库查询通过 |
 | `database_process_binding_verified:true` | 返回的 PostgreSQL 后端属于当前托管安装中的活动 postmaster |
 | `expected_instance_verified:true` | 认证查询的逻辑实例 UUID 与调用方预期相同 |
@@ -45,11 +45,11 @@ bun src/cli.mjs personal-ready \
 
 Linux 必须允许本服务账号读取相关 `/proc` 元数据，并使用可核对的统一 cgroup。hidepid、namespace 不一致、被替换/删除的可执行文件、半写 PID 文件或探测期间退出的后端均返回失败。数据库单元使用 PrivateTmp，因此检查不会错误地要求 mount namespace 相同。
 
-所有观察仍以可信服务账号和维护窗口为前提。共享锁不能隔离不合作的同 UID 编辑器、调试器或直接 systemctl 操作；安装回执冻结的是单元配置，并未冻结整棵 Git 源码、Bun 或所有依赖内容。这次成功也不能保证将来的可用性、外部客户端已接通、备份可恢复或模型效果。
+所有观察仍以可信服务账号和维护窗口为前提。共享锁不能隔离不合作的同 UID 编辑器、调试器或直接 systemctl 操作；安装回执冻结的是单元配置，并未冻结整棵 Git 源码、Bun 或所有依赖内容。检查没有逐项认证所有缓存的 systemd 设置，例如任意外部改写再还原的 Restart/UMask；这次成功也不能保证将来的可用性、外部客户端已接通、备份可恢复或模型效果。
 
 ## 专用认证协议
 
-探测器只连接固定 IPv4 `127.0.0.1:PORT` 的 `POST /api/readiness`，使用精确 Host/Origin，不读取代理设置、不跟随重定向、不重试其他地址，也不回退到 `/api/call`。整个 CLI 检查使用 10 秒 monotonic 期限；HTTP 阶段最多 4 秒，响应最多 8192 字节、JSON 正文最多 4096 字节。只接受明确 Content-Length 的非压缩响应。
+探测器只连接固定 IPv4 `127.0.0.1:PORT` 的 `POST /api/readiness`，使用精确 Host/Origin，不读取代理设置、不跟随重定向、不重试其他地址，也不回退到 `/api/call`。整个 CLI 检查使用 10 秒 monotonic 期限；HTTP 阶段最多 4 秒，响应最多 8192 字节、JSON 正文最多 4096 字节。只接受明确 Content-Length 的非压缩响应，收到完整单条响应后立即关闭本端连接，不依赖对端及时关闭。
 
 请求为规范 JSON 对象 `{format,nonce,origin,invocation_id,issued_at,proof}`，正文最多 1024 字节。nonce 每次使用新的 32 字节随机值。issued_at 必须在服务时钟的过去 10 秒至未来 2 秒之内；因此它是短时重放窗口，不是完全阻止合法请求重放。请求和响应以十六进制令牌解码后的 32 字节作为 HMAC-SHA256 密钥，使用不同域和固定 ASCII 数组编码。请求签名、响应签名均不能作为 `/api/call` 的 Bearer token。
 

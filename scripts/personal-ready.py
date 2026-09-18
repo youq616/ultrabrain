@@ -124,11 +124,14 @@ def verify_response(raw, *, token, request, request_sha256, source, pid, instanc
     return value
 
 
-def parse_http(raw):
+def parse_http(raw, *, partial=False):
     # Only our bounded, length-delimited HTTP endpoint is supported. No proxies,
     # redirects, trailers, compression, transfer encodings or alternate routes.
     header, separator, body = raw.partition(b'\r\n\r\n')
-    need(separator and len(header) <= 4096, 'invalid_readiness_http')
+    need(len(header) <= 4096, 'invalid_readiness_http')
+    if not separator and partial:
+        return None
+    need(separator, 'invalid_readiness_http')
     lines = header.split(b'\r\n')
     need(re.fullmatch(rb'HTTP/1\.[01] [0-9]{3}(?: [\x20-\x7e]*)?', lines[0]),
          'invalid_readiness_http')
@@ -143,8 +146,11 @@ def parse_http(raw):
     need(b'transfer-encoding' not in fields and b'content-encoding' not in fields,
          'invalid_readiness_http')
     length = fields.get(b'content-length', b'')
-    need(re.fullmatch(rb'(?:0|[1-9][0-9]{0,3})', length) and int(length) == len(body)
-         and len(body) <= 4096, 'invalid_readiness_http')
+    need(re.fullmatch(rb'(?:0|[1-9][0-9]{0,3})', length) and int(length) <= 4096,
+         'invalid_readiness_http')
+    if partial and len(body) < int(length):
+        return None
+    need(int(length) == len(body), 'invalid_readiness_http')
     need(lines[0].split(b' ', 2)[1] == b'200', 'readiness_unverified')
     need(fields.get(b'content-type', b'').lower() == b'application/json; charset=utf-8',
          'invalid_readiness_http')
@@ -188,6 +194,13 @@ def probe_http(port, body, *, deadline):
                 total += len(chunk)
                 need(total <= 8192, 'readiness_response_too_large')
                 chunks.append(chunk)
+                # Content-Length frames the response. A valid complete frame
+                # does not require the peer to acknowledge Connection: close.
+                # Close our own connection immediately; never consume a second
+                # message or reuse this connection for authenticated operations.
+                parsed = parse_http(b''.join(chunks), partial=True)
+                if parsed is not None:
+                    return parsed
     return parse_http(b''.join(chunks))
 
 
@@ -325,7 +338,7 @@ class Context(DEPLOY.Context):
                     'unit_binding_verified': True, 'database_process_binding_verified': True,
                     'expected_instance_verified': True, 'authenticated_console_ready': True,
                     'worker_readiness': 'not_checked', 'socket_owner_verified': False,
-                    'scope': 'current console/source and live managed database; not future availability or model quality',
+                    'scope': 'installed unit bytes, actual console invocation/arguments and live managed database; not every cached systemd setting or future availability',
                     **NO_ACTIONS}
 
 

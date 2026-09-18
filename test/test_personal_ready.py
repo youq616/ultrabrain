@@ -165,6 +165,17 @@ class WireTests(unittest.TestCase):
         port = self.listen(send)
         self.assertEqual(m.probe_http(port, b'{}', deadline=time.monotonic()+2), b'{"ok":true}')
 
+    def test_complete_length_delimited_response_does_not_wait_for_peer_close(self):
+        release = threading.Event()
+        def hold(conn):
+            conn.sendall(http(b'{"ok":true}'))
+            release.wait(2)
+        port = self.listen(hold)
+        try:
+            self.assertEqual(m.probe_http(port, b'{}', deadline=time.monotonic()+.25), b'{"ok":true}')
+        finally:
+            release.set()
+
     def test_redirect_is_rejected_and_not_followed(self):
         port = self.listen(lambda conn: conn.sendall(http(status=b'302 Found', extra=b'Location: http://secret.invalid/\r\n')))
         with self.assertRaisesRegex(m.ReadyError, 'readiness_unverified'):
@@ -172,7 +183,9 @@ class WireTests(unittest.TestCase):
 
     def test_oversized_response_is_bounded(self):
         port = self.listen(lambda conn: conn.sendall(b'x'*9000))
-        with self.assertRaisesRegex(m.ReadyError, 'readiness_response_too_large'):
+        # Incremental parsing may reject the malformed/oversized header before
+        # the overall response byte budget is reached; both are bounded refusals.
+        with self.assertRaisesRegex(m.ReadyError, 'readiness_response_too_large|invalid_readiness_http'):
             m.probe_http(port, b'{}', deadline=time.monotonic()+2)
 
     def test_drip_response_cannot_extend_total_deadline(self):
