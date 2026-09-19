@@ -1,0 +1,105 @@
+{
+  "format": 1,
+  "base_commit": "57c6c98712020e51f5ff276cf9bff3909bad8d01",
+  "imported_commit": "b18ca811ed699c5c0fc56c6b2742cf508512da19",
+  "imported_source_blobs": {
+    "src/client-agent.mjs": "f3b7a92539d137d356e956d2e28d3c03a30e9e40",
+    "src/capture-delivery.mjs": "489c5fa02d2c7b51fb906e8e94af4c83b5bf4c93",
+    "src/client-document.mjs": "d8cb4270e5dbb75e42fadd66f54329b927b84bff",
+    "src/client-kit.mjs": "f93d91080168eff3af15081d5d2416bb9ef15207",
+    "test/capture-delivery.test.mjs": "e7290bbb91450777f8407d8975094a115174b257",
+    "test/capture-hardening.test.mjs": "f87fe447f7574272d4062e50f222440ed41f4990",
+    "test/capture-integration.mjs": "7b3b0c506127fc1504a99eae83e6d9fbeab0b609",
+    "test/client-kit.test.mjs": "7ebdc47a72b19b7b13644cc90614218cf9918aa4",
+    "test/client-agent-registration.test.mjs": "df004571aeebab5132ef896d246b47c8ff8097c8"
+  },
+  "changed_source_blobs": {
+    "scripts/personal-activate.py": "9f1c3af471b828b0fcc08d581677707c35c8ec15",
+    "scripts/personal-identity.py": "28629b83afb619b63ca8598329348c282bb246b9",
+    "src/cli.mjs": "808dddc685006cead423f803489d4f8a2ade62fd",
+    "test/test_personal_activation_prepare.py": "11e5cf36c7e9cd831510af878bb8cb85b71ba442",
+    "test/personal-activate-cli.test.mjs": "5ee80e5e6e3ad22710d451cce7868d00cbfea221",
+    "test/personal-activate-integration.mjs": "23b14c9e896a83b7ee32c79bdbba23dedc75ed0b",
+    ".github/workflows/personal-services.yml": "200b96a1f298ba3cbe5fac25b4d07cdb07c4a7ca"
+  },
+  "results": {
+    "node_final": {
+      "tests": 652,
+      "pass": 652,
+      "fail": 0,
+      "skipped": 0,
+      "exit_code": 0
+    },
+    "python_final": {
+      "tests": 647,
+      "passed": true,
+      "exit_code": 0
+    },
+    "prepare_focused": {
+      "tests": 20,
+      "passed": true
+    },
+    "prepare_optimized": {
+      "tests": 20,
+      "passed": true
+    },
+    "identity_focused": {
+      "tests": 33,
+      "passed": true
+    },
+    "real_systemd_postgresql_ci": "pending at publication",
+    "independent_review": "PENDING; implementation self-review only"
+  },
+  "first_failures": {
+    "before_implementation": "14 methods: failures=6, errors=3; primarily missing feature plus lazy-home regression, not 9 distinct bugs",
+    "nested_deadline": "4 methods: failures=7 including subTests, errors=2; missing inherited deadline API, not 9 distinct bugs",
+    "node_integrated": "interrupted by execution limit; never counted as successful"
+  },
+  "logs": [
+    {
+      "file": "prepare-first-failure.log",
+      "sha256": "c8e3d6dc06c0ba4334ca4ef522a5bc5a3d74bc92f8abf15c573c62898ff82c2b"
+    },
+    {
+      "file": "deadline-first-failure.log",
+      "sha256": "76bec90e42720d515052ec7cfbc611b65bb19e4c99f8ea1edbcf8e0a86b44bda"
+    },
+    {
+      "file": "node-integrated.log",
+      "sha256": "472342946e83be107b7b7d005f17292fec03ff3ea57c3dd8deffeb4d8c46c59c"
+    },
+    {
+      "file": "node-final.log",
+      "sha256": "211b31183738afe8ca2f8b597bb027787cbbdbda31debd7ad6ddccbdfcb19c97"
+    },
+    {
+      "file": "python-final.log",
+      "sha256": "7a557e12e2c2922053147e3082d47905080d38451425c0e3c73de839c2f6995a"
+    },
+    {
+      "file": "node-acceptance.log",
+      "sha256": "f587fd642d600529443bb3764ca3c8d4693c6184192383991d496b3544aada6e"
+    },
+    {
+      "file": "python-acceptance.log",
+      "sha256": "228a8b03901af9be6b39300e3383a06b5a9daa32fb19187f498f43c1833b05fc"
+    },
+    {
+      "file": "prepare-acceptance.log",
+      "sha256": "3a24c360f8c6ad6de7c3a1eee0280e57fa36777621d281ef676b88baceda83e0"
+    },
+    {
+      "file": "prepare-optimized-final.log",
+      "sha256": "ec7cefb6eefca0b1b9f01ca5d9921a876591bfded0d14254d9bb0719d9d82b83"
+    },
+    {
+      "file": "identity-corrected.log",
+      "sha256": "9b6946c0da1ca5e8c38b944bb2eb8dd8fdd0b8782420e082a0108f019de4b707"
+    }
+  ],
+  "supplementary_archive": {
+    "file": "ultrabrain-prepare-local-logs.zip",
+    "sha256": "e66300ebe653feca83a568334af4c191e1739bed8a07828a450fc6d7711009c2",
+    "location": "conversation attachment; full local logs, not committed to repository"
+  }
+}

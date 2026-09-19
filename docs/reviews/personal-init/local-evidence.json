@@ -1,0 +1,65 @@
+{
+  "format": 1,
+  "base_commit": "491bf6fd702d8b88d30d65acb23b259a99242fcb",
+  "application_snapshot": "6aae8a01f0d5f27dedf64e0687af9cb3b02e29ea",
+  "review": "implementation self-review, not independent review",
+  "independent_review": "PENDING",
+  "candidate_ci": "PENDING at record creation",
+  "node": {
+    "tests": 615,
+    "passed": 615,
+    "failed": 0,
+    "skipped": 0
+  },
+  "python": {
+    "tests": 577,
+    "passed": 577,
+    "failed": 0
+  },
+  "init_python_tests": 31,
+  "deploy_account_tests": 4,
+  "logs": [
+    {
+      "file": "first-failure-cli.log",
+      "sha256": "12f0688e4bb2d4b01f818ea107109fbf601083c0984d41b9cd1c2437fca000ec"
+    },
+    {
+      "file": "init-focused-final.log",
+      "sha256": "e5d3e3c44c046a6424cff6b7460e5a68e0e4f455841572fce5ec7cc0839790be"
+    },
+    {
+      "file": "init-focused-first.log",
+      "sha256": "d57df6f8111164018a39fe3a722c17a13801727bd9696c8db0fbfb242888979c"
+    },
+    {
+      "file": "node-all-final.log",
+      "sha256": "ff74e6cde5ec590e41de7f4ac6dc46d2065fbff5f1146cd8eb9f3de39878424b"
+    },
+    {
+      "file": "python-all-final.log",
+      "sha256": "81c44e2cee3c4c5f602215ea833d7f632b0025a94d2061dfeebc4bb23b4cc277"
+    },
+    {
+      "file": "python-all-first-failure.log",
+      "sha256": "f1151bb4e4280f70c7140bef15f2268f99f242edb6f91674f4befde9f86e373c"
+    },
+    {
+      "file": "self-review-first-failure.log",
+      "sha256": "00a4a5ec922860a2f6a6e37ce648f66a5b9bcd037db3b413b604052171f2476e"
+    }
+  ],
+  "files": {
+    "scripts/personal-init.py": "4fd1f4b9ecda5ae081a363325586c5bed201d911",
+    "scripts/personal-deploy.py": "df757eea53dabc2ca8d81d3a100f95a0f86517c5",
+    "src/cli.mjs": "6285f5327515bd56e00a8f3f20139258aa990c6e",
+    "test/personal-init-cli.test.mjs": "19c61331198114da0f74de7598decd89aa8fd7bf",
+    "test/personal-init-integration.mjs": "110577c96a58102b0d04a39469668255600845f2",
+    "test/test_personal_init.py": "51dbd7892b72dd2ae0003cea6e110d19a10263b3",
+    "test/test_personal_deploy_cli_boundary.py": "93b21b4b18dc171201acf8aeaa920c8abc613009",
+    ".github/workflows/personal-services.yml": "c1d43d1c723f3bce5235b8dfadacd98928f96e5f",
+    "docs/PERSONAL-INIT.md": "a43f6be9aff3b0615ff9fb945e0c5ee1f5a731f4",
+    "docs/reviews/personal-init/README.md": "86dc0aaef5b6cc3d1d55b2dbe77a2f324d4e471a",
+    "docs/reviews/personal-init/first-failures.txt": "b9cd5a2979dac964853399653facefd4db615b9b"
+  },
+  "log_storage": "First failures in repository; complete logs delivered as supplementary archive, no secrets."
+}

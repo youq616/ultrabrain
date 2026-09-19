@@ -22,6 +22,7 @@ const definitions=[
  ['ultra_agent_list','agents',false,{limit:num('1..100'),offset:num('Live page offset')},'List only this principal registered client labels.'],
  ['ultra_memory_commit','commit',true,{agent_id:str('Registered label owned by this principal',true),event_id:str('Immutable request id',true),consent:{type:'boolean',required:true},
    summary:str('Optional experience candidate instead of a memories array'),memories:{type:'array',items:{type:'object'},description:'1..16 typed items: type, content, confidence(optional caller estimate), importance, provenance, visibility(private/source), project_id'}},'Atomically store explicitly consented candidate memories. No automatic confirmation or model call.'],
+ ['ultra_memory_read','read',false,{memory_id:str('Full UUID of one currently authorized entry; not an ownership grant',true)},'Read one complete current entry by ID. Owned candidates/archives remain inspectable; others require current active source sharing. Not a historical snapshot or permission to update.'],
  ['ultra_memory_search','search',false,query,'Search authorized personal entries. Private by default; source-shared active entries require explicit sharing.'],
  ['ultra_personal_context','context',false,query,'Return bounded active personal context for current source/principal and optional project. Not semantic ranking or truth certification.'],
  ['ultra_memory_profile','profile',false,{limit:num('1..100'),budget_bytes:num('512..131072 UTF-8 bytes')},'Read explicitly active identity, preference, environment and goal entries.'],

@@ -7,9 +7,12 @@ const [command, ...rest] = args;
 try {
   if (!command || ['help','--help','-h'].includes(command)) {
     console.log(`ultrabrain 0.14.0-alpha.1 — Linux / managed PostgreSQL
+  personal-setup check|prepare                Verify database identity and prepare credentials; no service start
+  personal-identity [--home PATH --source SOURCE]  Read-only managed database identity; no service start
+  personal-init status|create-token          Offline console credential bootstrap; no service start
   personal-status [--expect-worker]           Read user-unit state; not application readiness
   personal-ready --bun PATH --expected-current SHA --expected-instance UUID   Read-only authenticated console/database readiness
-  personal-activate plan|apply|status|recover   Start an installed console; recover by observation
+  personal-activate prepare|plan|apply|status|recover   Prepare verified identity or explicitly activate
   personal-deploy plan|apply|status|rollback|recover   Install stopped personal units; never activate
   personal-services [--output PATH --expected-plan SHA]   Plan personal user services; no activation
   preflight --mode install|runtime            Offline, read-only installation checks
@@ -40,6 +43,11 @@ Upstream-dependent features require their original providers/configuration.`);
     // Activation uses the distribution's dbus-python and an isolated interpreter.
     const python = command === 'personal-activate' && process.platform === 'linux' ? '/usr/bin/python3' : 'python3';
     const p = spawnSync(python, [...(['personal-status','personal-deploy','personal-ready','personal-activate'].includes(command) ? ['-I','-B'] : command === 'preflight' ? ['-B'] : []), `${ROOT}/scripts/${script}`, ...rest], { stdio: 'inherit' });
+    if (p.error) throw p.error;
+    process.exitCode = p.status ?? 1;
+  } else if (['personal-init','personal-identity','personal-setup'].includes(command)) {
+    const python = process.platform === 'linux' ? '/usr/bin/python3' : 'python3';
+    const p = spawnSync(python, ['-I','-B', `${ROOT}/scripts/${command}.py`, ...rest], {stdio:'inherit'});
     if (p.error) throw p.error;
     process.exitCode = p.status ?? 1;
   } else if (command === 'personal-ui') {

@@ -7,7 +7,7 @@ import {CaptureOutbox} from '../../../src/capture-outbox.mjs';
 import {automaticCapture,claudeCapture,captureCode} from '../../../src/automatic-capture.mjs';
 import {serveProxy} from './proxy.mjs';
 import {clientProfile} from '../../../src/client-kit.mjs';
-import {readClientProfile,matchingWorkspace} from '../../../src/client-profile-file.mjs';
+import {readClientProfile,matchingWorkspace,clientProfileAuthorization} from '../../../src/client-profile-file.mjs';
 import {resolve,dirname,parse} from 'node:path';
 import {connectClient} from './runtime.mjs';
 import {claudeContext,captureRequest} from '../../../src/client-kit.mjs';
@@ -78,7 +78,7 @@ export async function main(args=process.argv.slice(2)) {
     if(command==='claude-hook'){event=await readBounded(process.stdin);requireThat(['SessionStart','UserPromptSubmit'].includes(event?.hook_event_name),'unsupported_hook','Unsupported hook');
       matchingWorkspace(profile,event.cwd);}
     if(args[0]==='capture'){payload=await readBounded(process.stdin);captureRequest(payload,profile);}
-    connection=await connectClient(input,{signal:controller.signal});let output;
+    connection=await connectClient(input,{signal:controller.signal,...(command==='mcp'?{authorize:clientProfileAuthorization(resolve(args[2]),input)}:{})});let output;
     if(args[0]==='mcp'){clearTimeout(deadline);await serveProxy(connection);return;}
     if(hook)output=claudeContext(event.hook_event_name,await connection.context());
     else if(args[0]==='probe')output=await connection.probe();

@@ -33,3 +33,18 @@ export function matchingWorkspace(profile,value) {
   const norm=p=>{const result=realpathSync(p);return process.platform==='win32'?result.toLowerCase():result;};
   requireThat(norm(profile.workspace)===norm(value),'workspace_mismatch','Workspace differs from trusted profile');
 }
+
+/** A long-lived proxy never adopts new permissions/destinations in place.
+ * Latch an OBSERVED change or read failure until restart. This does not watch for
+ * transient edits restored between checks or isolate malicious same-UID code.
+ */
+export function clientProfileAuthorization(path,expectedInput) {
+  const expected=JSON.stringify(expectedInput);let revoked=false;
+  return ()=>{
+    if(!revoked) {
+      try{revoked=JSON.stringify(readClientProfile(path).input)!==expected;}
+      catch{revoked=true;}
+    }
+    requireThat(!revoked,'client_authorization_revoked','Trusted profile changed or is unavailable; restart the client');
+  };
+}

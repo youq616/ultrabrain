@@ -33,6 +33,12 @@ jobs:
           key: native-ubuntu24-v1-${{ hashFiles('upstreams.lock.json', 'scripts/build-postgres.sh') }}
       - name: Initialize only synthetic installation
         run: bash scripts/bootstrap-linux.sh
+      - name: First-run verified database identity before credential initialization
+        run: bun test/personal-identity-integration.mjs
+      - name: Fresh offline credential bootstrap and authenticated console compatibility
+        run: bun test/personal-init-integration.mjs
+      - name: Verify setup composition before deployment and explicit activation
+        run: bun src/cli.mjs personal-setup check --home "$ULTRABRAIN_HOME" --source default
       - name: Harden system unit search directories only on this disposable runner
         # The hosted ubuntu24/20260907.300 image makes /usr/share recursively 0777.
         # Keep the production refusal; restore safe directory ancestry in this fixture.

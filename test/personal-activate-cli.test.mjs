@@ -12,7 +12,7 @@ const SECRET='ACTIVATION_SYNTHETIC_NEVER_PRINT';
 const current='a'.repeat(64),plan='b'.repeat(64),pending='c'.repeat(64);
 const options=['--bun',process.execPath,'--expected-current',current,
  '--expected-instance','00000000-0000-4000-8000-000000000001'];
-const valid=[['plan',...options],['apply',...options,'--expected-plan',plan],
+const valid=[['prepare',...options.slice(0,-2)],['plan',...options],['apply',...options,'--expected-plan',plan],
  ['status'],['recover','--expected-pending',pending]];
 
 function fixture(t){
@@ -93,4 +93,17 @@ test('ordinary Linux service account remains a mandatory activation boundary',t=
   if(process.platform!=='linux'||typeof process.getuid==='function'&&process.getuid()===0)
    assert.equal(value.error,'ordinary_linux_account_required');
  }
+});
+
+// The preparation command never accepts a supplied instance or an apply guard.
+test('preparation rejects caller identity and mutation options before inspection',t=>{
+ const f=fixture(t),prepare=['prepare',...options.slice(0,-2)];
+ for(const extra of [['--expected-instance',options.at(-1)],['--expected-plan',plan],
+   ['--expected-pending',pending],['--allow-model-call'],['--token',SECRET]])
+  assert.equal(call([...prepare,...extra],f).error,'invalid_arguments');
+});
+test('preparation on an absent installation is read-only and keeps errors redacted',t=>{
+ const f=fixture(t);call(['prepare',...options.slice(0,-2),'--home',f.home],f);
+ assert.equal(existsSync(join(f.home,'personal-console-token')),false);
+ assert.equal(existsSync(join(f.home,'personal-deployment')),false);
 });

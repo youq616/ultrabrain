@@ -744,8 +744,7 @@ def main(argv=None):
     commands = parser.add_subparsers(dest='action', required=True, parser_class=SafeParser)
     for action in ('plan', 'apply', 'status', 'rollback', 'recover'):
         sub = commands.add_parser(action)
-        sub.add_argument('--home', default=os.environ.get('ULTRABRAIN_HOME',
-                         str(Path(pwd.getpwuid(os.geteuid()).pw_dir)/'.local/share/ultrabrain')))
+        sub.add_argument('--home')
         if action in ('plan', 'apply'):
             sub.add_argument('--export', required=True)
             sub.add_argument('--expected-plan', required=True)
@@ -765,6 +764,12 @@ def main(argv=None):
         args = parser.parse_args(argv)
         need(sys.platform == 'linux' and os.getuid() == os.geteuid() and os.geteuid() != 0,
              'ordinary_linux_account_required')
+        # Resolve the account default only after platform/UID admission, inside
+        # the redacted error boundary, and only when the caller needs it.
+        if args.home is None:
+            args.home = os.environ.get('ULTRABRAIN_HOME')
+            if args.home is None:
+                args.home = str(Path(pwd.getpwuid(os.geteuid()).pw_dir)/'.local/share/ultrabrain')
         context = Context(args.home)
         if args.action in ('plan', 'apply'):
             value = SERVICES.plan(ROOT, args.home, args.bun, source=args.source, port=args.port,

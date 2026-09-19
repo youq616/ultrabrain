@@ -1,0 +1,193 @@
+{
+  "format": 1,
+  "base": "feb7d69e93c61c98047fb1d7267d4120a4b88355",
+  "base_tree": "327cb910897ca852a74ebfa294478af237f73691",
+  "review": "implementation self-review; separate final review PENDING",
+  "results": {
+    "node": {
+      "tests": 779,
+      "passed": 779,
+      "failed": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "python": {
+      "tests": 683,
+      "passed": 683
+    },
+    "read_lookup_focused": {
+      "tests": 44,
+      "passed": 44
+    },
+    "baseline_feature_absent": {
+      "tests": 44,
+      "failed": 44
+    },
+    "new_real_ci": "pending at candidate creation"
+  },
+  "source_files": [
+    {
+      "path": ".github/workflows/client-portability.yml",
+      "git_blob": "3a77b18766a1d5b256dc5782b6be51623392d6ba"
+    },
+    {
+      "path": ".github/workflows/personal-recall-preview.yml",
+      "git_blob": "136c29960127f5184ea400d0e04e6d0490830a16"
+    },
+    {
+      "path": ".github/workflows/task-context.yml",
+      "git_blob": "bfa9ffcba956bd20bfcd00fcbc851c720d830d40"
+    },
+    {
+      "path": "packages/ultrabrain-client/src/runtime.mjs",
+      "git_blob": "a7932eb5d6d18f546ff49a7219115a4b5844a5e3"
+    },
+    {
+      "path": "src/personal-console.mjs",
+      "git_blob": "745ede45803a3ec632659a927fd8d203a2d83013"
+    },
+    {
+      "path": "src/personal-memory-store.mjs",
+      "git_blob": "ac7d4d2c35aa2b58eeefae3813261a22ed5d998f"
+    },
+    {
+      "path": "src/personal-plugin.mjs",
+      "git_blob": "9174b4b746235796fca5a665dc0d9d1f1c99d78b"
+    },
+    {
+      "path": "test/client-proxy-lifecycle-integration.mjs",
+      "git_blob": "88aff1df7d78c04594efe6d43fbc00af9c4cfe3e"
+    },
+    {
+      "path": "test/client-request-authorization.test.mjs",
+      "git_blob": "00032a0c0251dbd4ad7f542f287037930ffa8862"
+    },
+    {
+      "path": "test/personal-core.test.mjs",
+      "git_blob": "45194ccba98ea33be9676fc9c01200ec75139081"
+    },
+    {
+      "path": "test/personal-integration.mjs",
+      "git_blob": "74c6e7ea5893851de2f57a965b0b15194bd771f4"
+    },
+    {
+      "path": "test/personal-memory-lookup-browser.py",
+      "git_blob": "4e5225b45417199bcce7e453a86552843b5bf036"
+    },
+    {
+      "path": "test/personal-memory-lookup.test.mjs",
+      "git_blob": "4935473c94b245812965913a1beaded0851bcf3c"
+    },
+    {
+      "path": "test/personal-memory-read-integration.mjs",
+      "git_blob": "0e356aff02f232e4136e4871ce2446d42eed8ad3"
+    },
+    {
+      "path": "test/personal-memory-read.test.mjs",
+      "git_blob": "bb39fb8d603afdebe7caf97071b0da00db51fd88"
+    },
+    {
+      "path": "test/personal-recall-browser-fixture.mjs",
+      "git_blob": "8e30557e923cc3b1451c4db9adb099c3db017dea"
+    },
+    {
+      "path": "test/personal-recall-browser.py",
+      "git_blob": "c8fcbc64af2ea8ee007a0e913fafd8f92f34f9a3"
+    },
+    {
+      "path": "web/personal/app.js",
+      "git_blob": "1d66e155116714e1d14af80e14192d817179c286"
+    },
+    {
+      "path": "web/personal/index.html",
+      "git_blob": "97e9603644e56f4e3f5265998680e147cd865105"
+    }
+  ],
+  "logs": [
+    {
+      "file": "lookup-baseline-confirmed.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "lookup-baseline-confirmed.log",
+      "sha256": "3c91003a1c888616c0eda27893a3ebe09b2f79cecc1b7591d2a767b34efabca7"
+    },
+    {
+      "file": "lookup-before.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "lookup-before.log",
+      "sha256": "1de24f390f23440472c4ccf39795a33e9e98501af1afb52a84b5cedea8543bbf"
+    },
+    {
+      "file": "lookup-final-focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "lookup-final-focused.log",
+      "sha256": "d9c15169c10bc6a173a23c07b8384d3162bbe814f84c8ba4c795e338f0f27c4c"
+    },
+    {
+      "file": "lookup-first-implementation.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "lookup-first-implementation.log",
+      "sha256": "b61df77e22d071cbae9f6754d4ebb414383b46a724c5492f77bbff4b3d3b4487"
+    },
+    {
+      "file": "lookup-focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "lookup-focused.log",
+      "sha256": "e6d4401573f4eefe55721464f282f154dec75e10ef6bc20aca6c995fcb5b3816"
+    },
+    {
+      "file": "node-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-final.log",
+      "sha256": "c6e139f6b6d3361b67943b42fcf945a54680a6d4f936b4ea9361d0f7f76cf586"
+    },
+    {
+      "file": "node-interrupted.log",
+      "sha256": "a2e30a4a308c355e5a22645ee0b834d8ce7e1f56e21a6640af7e843e881f70b3"
+    },
+    {
+      "file": "node-interrupted.txt",
+      "sha256": "3b0a1b17663dfd81c23fb53e48a9fc402d7bdcadeaa22d1f56929c9b4c94d10f"
+    },
+    {
+      "file": "node-pre-audit.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-pre-audit.log",
+      "sha256": "231f771c418ad1b53058503d1123febcd91345670704f1367237eacb6c9be9bd"
+    },
+    {
+      "file": "python-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-final.log",
+      "sha256": "14d3b4aefe0d4390bed097be735891a6a85ed67ee28a3e0b96ff3929c2462750"
+    },
+    {
+      "file": "python-pre-audit.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-pre-audit.log",
+      "sha256": "24f5ae87d85aa55fb52d899ad07cfa93039d9217df77b8c617bb1961cb1720cc"
+    }
+  ],
+  "first_failure": {
+    "file": "first-failure.log.gz",
+    "git_blob": "e581f908bbbfa3a4ee10a8e48acb1dd36b72f0be",
+    "uncompressed_sha256": "3c91003a1c888616c0eda27893a3ebe09b2f79cecc1b7591d2a767b34efabca7"
+  }
+}
