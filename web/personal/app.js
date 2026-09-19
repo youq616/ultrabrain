@@ -6,12 +6,16 @@ const views={candidate:'待确认记忆',active:'当前记忆',archived:'已归�
 let sourceId='',token='',view='candidate',offset=0,nextOffset=null,current=null,editing=null,pending=null,busy=false,loadVersion=0,documentOriginal=null,documentEpoch=0;
 let recallEpoch=0,recallController=null;
 let lookupEpoch=0,lookupController=null;
+let draftConfidence=null,comparison=null,comparisonEpoch=0,comparisonController=null;
 function message(text,error=false){$('message').textContent=text;$('message').dataset.error=String(error);}
 function element(tag,text,cls){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;}
 function controls(){
   for(const b of document.querySelectorAll('[data-write],#save,#cancel-edit'))b.disabled=busy||!!pending;
   $('queue-personal').disabled=busy||!!pending||!!editing;$('retry').disabled=busy;$('pending-panel').hidden=!pending;$('logout').disabled=busy||!!pending;
   $('pending-id').textContent=pending?'事件编号：'+(pending.input.event_id??pending.input.job_id??''):'';
+  $('compare-current').disabled=busy||!!pending||!!comparisonController||!editableMemory(editing)||view==='recall';
+  $('comparison-adopt').disabled=busy||!!pending||!comparison?.canAdopt||!$('comparison-consent').checked;
+  $('comparison-cancel').disabled=!comparison&&!comparisonController;
 }
 async function api(operation,input={},signal){
   let response;try{response=await fetch('/api/call',{method:'POST',credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({operation,input}),signal:AbortSignal.any([AbortSignal.timeout(operation==='consolidate'?150000:20000),signal].filter(Boolean))});}
@@ -21,11 +25,11 @@ async function api(operation,input={},signal){
   return result.result;
 }
 function download(value,name){const u=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)+'\n'],{type:'application/json'}));const link=element('a');link.href=u;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
-function resetEditor(){editing=null;$('editor-title').textContent='新建候选记忆';$('memory-form').reset();$('provenance').value='用户在个人管理台明确输入';$('cancel-edit').hidden=true;}
-function edit(row){if(pending||busy)return;editing=row;$('editor-title').textContent='修改记忆 · r'+row.revision;for(const [field,value]of Object.entries({type:row.type,content:row.content,importance:row.importance,visibility:row.visibility,provenance:row.provenance,project:row.project_id??''}))$(field).value=value;$('consent').checked=false;$('cancel-edit').hidden=false;$('content').focus();controls();}
+function resetEditor(){invalidateComparison();editing=null;draftConfidence=null;$('editor-title').textContent='新建候选记忆';$('memory-form').reset();$('provenance').value='用户在个人管理台明确输入';$('cancel-edit').hidden=true;}
+function edit(row){if(pending||busy)return;invalidateComparison();editing=row;draftConfidence=row.confidence??null;$('editor-title').textContent='修改记忆 · r'+row.revision;for(const [field,value]of Object.entries({type:row.type,content:row.content,importance:row.importance,visibility:row.visibility,provenance:row.provenance,project:row.project_id??''}))$(field).value=value;$('consent').checked=false;$('cancel-edit').hidden=false;$('content').focus();controls();}
 function memoryAuthorization(){
   const session=token,source=sourceId;
-  const selection=()=>JSON.stringify([editing?.id??null,editing?.revision??null,...['type','content','importance','visibility','provenance','project'].map(id=>$(id).value)]);
+  const selection=()=>JSON.stringify([editing?.id??null,editing?.revision??null,draftConfidence,...['type','content','importance','visibility','provenance','project'].map(id=>$(id).value)]);
   const snapshot=selection();
   return ()=>{
     if(!token||token!==session||sourceId!==source||!$('consent').checked||selection()!==snapshot)
@@ -42,10 +46,10 @@ async function submitPending(){
   }catch(e){
     if(e.unknown){pending.delivery_unconfirmed=true;message('尚未取得可靠确认：'+e.message+'。请重试同一请求，不要更换事件编号。',true);}
     else if(pending.delivery_unconfirmed)message('本次重试已停止：'+e.message+'。此前提交仍未确认；待确认请求和事件编号已保留。重新核对原内容与授权后才可重试。',true);
-    else {pending=null;message('请求被拒绝：'+e.message+'。版本冲突时请刷新并重新核对；不要覆盖他人的更改。',true);}
+    else {pending=null;message('请求被拒绝：'+e.message+'。草稿已保留；版本冲突时可点击“读取当前版本对照”，不要直接覆盖他人的更改。',true);}
   }finally{busy=false;controls();}
 }
-function mutate(operation,input,authorize){if(busy||pending){message('请先处理尚未确认的请求。',true);return;}authorize?.();pending={operation,authorize,input:{...input,...(['commit','capture','update','review','document_import','document_queue','document_archive'].includes(operation)?{event_id:crypto.randomUUID()}: {})}};submitPending();}
+function mutate(operation,input,authorize){if(busy||pending){message('请先处理尚未确认的请求。',true);return;}authorize?.();invalidateComparison();pending={operation,authorize,input:{...input,...(['commit','capture','update','review','document_import','document_queue','document_archive'].includes(operation)?{event_id:crypto.randomUUID()}: {})}};submitPending();}
 const formatSize=n=>n<1024?n+' B':(n/1024).toFixed(1)+' KiB';
 const sha16=v=>v?String(v).slice(0,16)+'…':'';
 function base64ToBytes(value){const raw=atob(value);const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return bytes;}
@@ -223,6 +227,80 @@ async function previewRecall(){
   }
 }
 
+// A comparison never changes an expected revision on its own. Adoption is a second,
+// explicit local decision, followed by the existing separate consented CAS save.
+function editableMemory(row){return row?.owned_by_caller===true&&row.origin_kind==='agent';}
+function memoryDraft(){
+  return {type:$('type').value,content:$('content').value,importance:$('importance').value,visibility:$('visibility').value,
+    provenance:$('provenance').value,project_id:$('project').value||null,confidence:editing?draftConfidence:null};
+}
+function comparisonFields(row){
+  return {memory_id:row.id,revision:row.revision,status:row.status,type:row.type,content:row.content,
+    importance:row.importance,visibility:row.visibility,project_id:row.project_id??null,
+    provenance:row.provenance,confidence:row.confidence??null,derivation_current:row.derivation_current};
+}
+function invalidateComparison(){
+  comparisonEpoch++;comparisonController?.abort();comparisonController=null;comparison=null;
+  $('comparison-panel').hidden=true;$('comparison-consent').checked=false;
+  $('comparison-adopt').disabled=true;$('comparison-cancel').disabled=true;
+  for(const id of ['comparison-original','comparison-latest','comparison-draft','comparison-note'])$(id).textContent='';
+}
+async function compareCurrentMemory(){
+  if(busy||pending||!editableMemory(editing)||view==='recall'){
+    message('只有当前拥有的普通记忆可对照。请先处理尚未确认的提交；对照不代替原事件重试。',true);return;
+  }
+  invalidateComparison();
+  const epoch=comparisonEpoch,session=token,source=sourceId,base=editing,baseJSON=JSON.stringify(base),navigation=loadVersion,selectedView=view;
+  const draft=memoryDraft(),draftJSON=JSON.stringify(draft),controller=new AbortController();
+  comparisonController=controller;$('consent').checked=false;$('comparison-panel').hidden=false;controls();
+  const allowed=()=>{
+    if(!session||token!==session||sourceId!==source||epoch!==comparisonEpoch||controller.signal.aborted||busy||pending||
+      selectedView!==view||navigation!==loadVersion||editing!==base||JSON.stringify(editing)!==baseJSON||JSON.stringify(memoryDraft())!==draftJSON)
+      throw new Error('memory_comparison_changed');
+  };
+  try{
+    allowed();
+    if(!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(base.id)||!Number.isSafeInteger(base.revision)||base.revision<1||
+      new TextEncoder().encode(draftJSON).length>524288)throw new Error('invalid_comparison_input');
+    message('正在只读核对当前版本；仅发送记忆 ID，不发送草稿、不保存或调用模型。');
+    const result=await api('memory_read',{memory_id:base.id},controller.signal);allowed();
+    await verifyLookup(result,base.id,allowed);allowed();
+    const latest=result.memory;
+    if(!editableMemory(latest))throw new Error('memory_not_editable');
+    if(latest.revision<base.revision)throw new Error('memory_revision_regressed');
+    if(latest.revision===base.revision&&JSON.stringify(comparisonFields(latest))!==JSON.stringify(comparisonFields(base)))
+      throw new Error('memory_same_revision_changed');
+    comparison={latest,draft,allowed,canAdopt:latest.revision>base.revision&&latest.revision<2147483647};
+    // Plain text only. Include ALL editable metadata, not just content, so preserving
+    // a draft's visibility/project/confidence cannot silently overwrite unseen changes.
+    $('comparison-original').textContent=JSON.stringify(comparisonFields(base),null,2);
+    $('comparison-latest').textContent=JSON.stringify(comparisonFields(latest),null,2);
+    $('comparison-draft').textContent=JSON.stringify(draft,null,2);
+    $('comparison-note').textContent=(latest.revision===base.revision?'读取时版本未变化；没有可采用的新版本。':
+      comparison.canAdopt?'新版本为 r'+latest.revision+'。采用仅更新本地保存基准，不保存、不合并正文；草稿中所有字段均保留。':
+      '当前版本已达可编辑上限，不能采用后保存。')+
+      (latest.status==='archived'?' 这条记忆已归档；以后明确保存会回到候选，不会自动启用。':'')+
+      ' 读取之后仍可能变化；最终保存继续检查版本。';
+    message('对照已返回。先核对三个区域的内容、项目、可见性、来源和可信度估计，再决定是否采用新版本；没有请求写入。');
+  }catch(error){
+    if(epoch===comparisonEpoch){invalidateComparison();message('未能完成对照：'+error.message+'。原编辑基准与草稿未被替换；没有请求写入。',true);}
+  }finally{if(epoch===comparisonEpoch)comparisonController=null;controls();}
+}
+function adoptComparedVersion(){
+  const selected=comparison;
+  try{
+    if(!selected?.canAdopt||!$('comparison-consent').checked)throw new Error('comparison_confirmation_required');
+    selected.allowed();
+    if(!confirm('保留草稿的全部字段，并将保存基准改为本次核对的 r'+selected.latest.revision+'？不会自动合并他人的内容。仍需重新同意保存，之后才能写入候选。'))return;
+    selected.allowed();
+    if(!$('comparison-consent').checked)throw new Error('comparison_confirmation_required');
+    editing=selected.latest;draftConfidence=selected.draft.confidence;
+    $('editor-title').textContent='修改记忆 · r'+editing.revision;$('consent').checked=false;
+    invalidateComparison();controls();
+    message('已采用本次核对版本作为本地保存基准，草稿内容和元数据均保留。尚未保存；请再次核对并明确同意后保存候选。');
+  }catch(error){invalidateComparison();controls();message('未采用新版本：'+error.message+'。原基准与草稿未被替换。',true);}
+}
+
 // An explicit exact read bridges a recall citation to the existing CAS editor.
 // Never edit the cached preview row; read again under the current server identity.
 function invalidateLookup(clearInput=false){
@@ -326,7 +404,7 @@ function render(result){
   controls();
 }
 async function load(){
-  const request=++loadVersion;invalidateRecall();invalidateLookup();current=null;$('results').replaceChildren();$('export').disabled=true;for(const b of document.querySelectorAll('[data-view]'))b.setAttribute('aria-current',b.dataset.view===view?'page':'false');
+  const request=++loadVersion;invalidateRecall();invalidateLookup();invalidateComparison();controls();current=null;$('results').replaceChildren();$('export').disabled=true;for(const b of document.querySelectorAll('[data-view]'))b.setAttribute('aria-current',b.dataset.view===view?'page':'false');
   $('view-title').textContent=views[view];$('search-form').hidden=['profile','recall','lookup','agents','documents','jobs'].includes(view);
   documentEpoch++;$('document-panel').hidden=view!=='documents';$('document-original').hidden=true;documentOriginal=null;
   $('workspace').dataset.preview=String(view==='recall');
@@ -344,7 +422,7 @@ async function load(){
   catch(e){if(request===loadVersion)message('读取失败：'+e.message,true);}
 }
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('token').value.trim();$('token').value='';try{const info=await api('info');sourceId=info.source_id;$('scope').textContent='数据源：'+info.source_id+' · Linux 本机所有者（与同账号 stdio 共享）';$('login').hidden=true;$('workspace').hidden=false;$('logout').hidden=false;message('已连接。');await load();}catch(e){token='';message('连接失败：'+e.message,true);}});
-$('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateRecall(true);invalidateLookup(true);token='';sourceId='';documentEpoch++;documentOriginal=null;$('document-original-text').textContent='';$('document-original').hidden=true;$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
+$('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateRecall(true);invalidateLookup(true);invalidateComparison();draftConfidence=null;token='';sourceId='';documentEpoch++;documentOriginal=null;$('document-original-text').textContent='';$('document-original').hidden=true;$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
 for(const b of document.querySelectorAll('[data-view]'))b.addEventListener('click',()=>{view=b.dataset.view;offset=0;load();});
 $('refresh').addEventListener('click',()=>load());$('search-form').addEventListener('submit',e=>{e.preventDefault();offset=0;load();});
 $('prev').addEventListener('click',()=>{offset=Math.max(0,offset-20);load();});$('next').addEventListener('click',()=>{if(nextOffset!==null){offset=nextOffset;load();}});
@@ -359,11 +437,16 @@ $('document-file').addEventListener('change',()=>{
 $('document-import').addEventListener('click',importSelectedDocument);
 $('memory-form').addEventListener('submit',e=>{
   e.preventDefault();if(!$('consent').checked){message('保存前必须明确同意采集。',true);return;}
-  const memory={type:$('type').value,content:$('content').value,importance:$('importance').value,visibility:$('visibility').value,provenance:$('provenance').value,project_id:$('project').value||null,confidence:editing?.confidence??null};
+  const memory=memoryDraft();
   if(memory.visibility==='source'&&!confirm('激活后，同一数据源其他身份可读取这条内容。确认选择共享？'))return;
   if(editing)mutate('update',{memory_id:editing.id,expected_revision:editing.revision,event_id:crypto.randomUUID(),memory},memoryAuthorization());
   else mutate('commit',{agent_id:'personal-console',consent:true,memories:[memory]},memoryAuthorization());
 });
+$('compare-current').addEventListener('click',compareCurrentMemory);
+$('comparison-adopt').addEventListener('click',adoptComparedVersion);
+$('comparison-consent').addEventListener('change',controls);
+$('comparison-cancel').addEventListener('click',()=>{invalidateComparison();controls();message('对照已清除，原编辑基准与草稿仍保留；已发送的只读查询不能撤回。');});
+for(const event of ['input','change'])$('memory-form').addEventListener(event,()=>{invalidateComparison();controls();});
 $('lookup-form').addEventListener('submit',e=>{e.preventDefault();return lookupMemory();});
 $('lookup-id').addEventListener('input',()=>invalidateLookup());
 $('lookup-cancel').addEventListener('click',()=>{invalidateLookup();message('本地核对结果已清除；没有删除记录或撤回已发送的查询。');});

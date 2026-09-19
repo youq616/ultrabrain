@@ -40,13 +40,14 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/recall-browser-venv"
           "$RUNNER_TEMP/recall-browser-venv/bin/pip" install playwright==1.57.0
           "$RUNNER_TEMP/recall-browser-venv/bin/python" -m playwright install --with-deps chromium
-      - name: Chromium read-only preview snapshots and explicit exact-ID correction lifecycle
+      - name: Chromium read-only previews, exact-ID corrections and explicit conflict comparison
         env:
           ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
           ULTRABRAIN_BROWSER_REPORT: ${{ runner.temp }}/personal-recall-browser-report.json
           ULTRABRAIN_BROWSER_SCREENSHOT: ${{ runner.temp }}/personal-recall-preview.png
           ULTRABRAIN_LOOKUP_REPORT: ${{ runner.temp }}/personal-memory-lookup-report.json
           ULTRABRAIN_LOOKUP_SCREENSHOT: ${{ runner.temp }}/personal-memory-lookup.png
+          ULTRABRAIN_COMPARISON_SCREENSHOT: ${{ runner.temp }}/personal-memory-comparison.png
         run: bun test/personal-recall-browser-fixture.mjs
       - uses: actions/upload-artifact@v4
         with:
@@ -56,6 +57,7 @@ jobs:
             ${{ runner.temp }}/personal-recall-preview.png
             ${{ runner.temp }}/personal-memory-lookup-report.json
             ${{ runner.temp }}/personal-memory-lookup.png
+            ${{ runner.temp }}/personal-memory-comparison.png
           if-no-files-found: error
           retention-days: 14
       - name: Stop only the disposable database

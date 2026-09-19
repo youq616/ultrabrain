@@ -50,8 +50,8 @@ try{
  const stop=setTimeout(()=>correction.kill('SIGKILL'),120000);
  try{const code=await new Promise((done,fail)=>{correction.once('error',fail);correction.once('close',done);});assert.equal(code,0,'Exact-lookup Chromium lifecycle failed');}
  finally{clearTimeout(stop);}
- const [final]=await engine.executeRaw('SELECT content,status,revision FROM ultrabrain.personal_memories WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid',[source,store.actor,memoryId]);
- assert.deepEqual(final,{content:'LOOKUP_CONCURRENT',status:'candidate',revision:6});
+ const [final]=await engine.executeRaw('SELECT content,status,revision,confidence FROM ultrabrain.personal_memories WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid',[source,store.actor,memoryId]);
+ assert.deepEqual({...final,confidence:Number(final.confidence)},{content:'LOOKUP_MANUAL_MERGE',status:'candidate',revision:8,confidence:0.4});
  assert.equal((await snapshot()).personal_consolidations,before.personal_consolidations);
- console.log('PASS exact lookup browser final database state: explicit corrections retained, stale overwrite refused, no consolidation jobs');
+ console.log('PASS exact lookup browser final database state: manual reconciliation retained, repeated stale overwrite refused, no consolidation jobs');
 }finally{await ui?.close();await engine.disconnect();}

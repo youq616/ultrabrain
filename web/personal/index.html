@@ -29,7 +29,17 @@
 <label>项目标识（可留空，留空表示全局）<input id="project" maxlength="96" pattern="[A-Za-z0-9_-]+" placeholder="ultrabrain"></label>
 <p class="note">排队整理会先保存一份私有原文，模型另行明确运行。编辑已有记录时不能排队新原文。</p><p class="note">共享记忆只有明确激活后才对同源其他身份可读。Agent 名称不是身份认证。</p>
 <label class="checkbox"><input id="consent" type="checkbox">我同意保存上述内容，并已排除不应保存的秘密。</label>
-<div class="row"><button type="submit" id="save">保存候选</button><button type="button" id="queue-personal" data-write="true">将内容作为原文排队整理</button><button type="button" id="cancel-edit" hidden>取消编辑</button></div></form></section></div>
+<div class="row"><button type="submit" id="save">保存候选</button><button type="button" id="queue-personal" data-write="true">将内容作为原文排队整理</button><button type="button" id="cancel-edit" hidden>取消编辑</button><button type="button" id="compare-current" disabled>读取当前版本对照</button></div></form>
+<section id="comparison-panel" hidden aria-label="记忆版本与草稿对照"><h3>人工核对版本差异</h3>
+<p class="note">这里只读查询，不保存草稿。请逐项核对内容、项目、可见性、来源、重要性和可信度估计。采用新基准会保留草稿全部字段，不自动合并他人改动。修改草稿会清除本次对照；完成修改后可再次读取。</p>
+<h4>开始编辑时的版本</h4><pre id="comparison-original"></pre>
+<h4>数据库本次读取的版本</h4><pre id="comparison-latest"></pre>
+<h4>我的待保存草稿（全部字段）</h4><pre id="comparison-draft"></pre>
+<p class="note" id="comparison-note" role="status"></p>
+<label class="checkbox"><input id="comparison-consent" type="checkbox">我已逐项核对以上三个区域，确认保留草稿全部字段，并采用本次读取版本作为新的保存基准。</label>
+<div class="row"><button type="button" id="comparison-adopt" disabled>采用新基准，保留草稿</button><button type="button" id="comparison-cancel" disabled>取消／清除对照</button></div>
+<p class="note">采用不是保存。仍需重新勾选表单的保存同意；保存成功后回到候选，启用还需明确确认。读取后如再次发生修改，旧版本保存仍会被拒绝。未确认提交必须先处理原事件，不能通过对照绕过。</p>
+</section></section></div>
 <section id="pending-panel" class="panel warning" hidden><h2>有一次提交尚未确认</h2><p>不要重新生成内容或新的事件编号。下面的重试会使用相同请求。刷新或关闭页面会丢失内存中的待确认请求；可以先将其保存到本机。</p><p id="pending-id"></p><div class="row"><button id="retry">重试原请求</button><button id="save-pending">保存待确认请求</button></div></section>
 <section id="document-panel" class="panel" hidden><h2>导入个人文本文件</h2>
 <p class="note">只导入你在这个表单里明确选择的 UTF-8 文本文件（TXT / MD / JSON / CSV / LOG，≤128 KiB）。文件按原始字节保存，不会自动执行或解析其中内容，也不会自动排队整理。超过上限或编码非法的文件会被整体拒绝，不会截断保存。JSON/CSV 仅作为不可信文本保存。</p>

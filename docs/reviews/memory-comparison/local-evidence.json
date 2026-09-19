@@ -1,0 +1,110 @@
+{
+  "format": 1,
+  "base": "33c88d08c10f8a529bbd2693aa5cd0e197e04c23",
+  "base_tree": "454841172f38fc51e8c023139c1b89db61182e1e",
+  "local_results": {
+    "node": {
+      "tests": 825,
+      "pass": 825,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "python": {
+      "tests": 683,
+      "pass": 683
+    },
+    "comparison_focused": 44,
+    "feature_absent_baseline_failures": 39
+  },
+  "ci": "pending at creation",
+  "independent_review": "pending at creation; implementation self-review is not a separate reviewer",
+  "source_files": [
+    {
+      "path": "web/personal/app.js",
+      "git_blob": "31f4544cdd3c26bd7d6804a2da12a6005990d8ef"
+    },
+    {
+      "path": "web/personal/index.html",
+      "git_blob": "d2f12642a709ce2dd1acf7468feaea8dde63012d"
+    },
+    {
+      "path": "web/personal/style.css",
+      "git_blob": "408560568be037b489c0ccf8e08a04258cf98bfa"
+    },
+    {
+      "path": "test/personal-memory-compare.test.mjs",
+      "git_blob": "d0822fd541a5aaad0bc8b24658220480dd71cf14"
+    },
+    {
+      "path": "test/personal-memory-lookup-browser.py",
+      "git_blob": "7a82f7c35a2e4a44777d064ddb12b9e131ab2408"
+    },
+    {
+      "path": "test/personal-recall-browser-fixture.mjs",
+      "git_blob": "4d2e956dd78c553b7f494e6452cc228715259697"
+    },
+    {
+      "path": ".github/workflows/client-portability.yml",
+      "git_blob": "0a5653544f81af92b8912ce488bffe90bf0ae086"
+    },
+    {
+      "path": ".github/workflows/personal-recall-preview.yml",
+      "git_blob": "bb18b5cea52bb29b6d7bc19412f8ea123d12813d"
+    }
+  ],
+  "logs": [
+    {
+      "file": "compare-first-failure.log",
+      "sha256": "0321caa112865e2ffe747ed2a095eacd121bd122091f58afc567e9daf7990bb7"
+    },
+    {
+      "file": "compare-first-failure.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "compare-implementation.log",
+      "sha256": "1e861f132c92855ea59b36463958ba6c85d91a26097fe86084ae4569de5ca754"
+    },
+    {
+      "file": "compare-implementation.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "compare-final-focused.log",
+      "sha256": "5fea48279eb712e33da51f138c870303e0c93805a895077e220affef9f126436"
+    },
+    {
+      "file": "compare-final-focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-final.log",
+      "sha256": "e62e30ff5f29c16a2c35ddc5e89114df585c7d3c9e3f015e3fd066995e1a142b"
+    },
+    {
+      "file": "node-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-interrupted.log",
+      "sha256": "c4c1d5498b4a7ffaa960898d9a63f264dd727c11c5b8db319a0f024277beec2c"
+    },
+    {
+      "file": "python-interrupted.txt",
+      "sha256": "c86715e8cafd1902d4bb7a5541c7e1e0c19412f382ab8e38df5d9df9737004d2"
+    },
+    {
+      "file": "python-final.log",
+      "sha256": "325e248b70f7ecd8f28f3a7946b7a350de3a4bdd62d163712c992c8337526d64"
+    },
+    {
+      "file": "python-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    }
+  ],
+  "first_failure": {
+    "file": "first-failure.log.gz",
+    "uncompressed_sha256": "0321caa112865e2ffe747ed2a095eacd121bd122091f58afc567e9daf7990bb7"
+  }
+}
