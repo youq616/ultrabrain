@@ -33,6 +33,8 @@ jobs:
           key: native-ubuntu24-v1-${{ hashFiles('upstreams.lock.json', 'scripts/build-postgres.sh') }}
       - name: Initialize only synthetic installation
         run: bash scripts/bootstrap-linux.sh
+      - name: First-run verified database identity before credential initialization
+        run: bun test/personal-identity-integration.mjs
       - name: Fresh offline credential bootstrap and authenticated console compatibility
         run: bun test/personal-init-integration.mjs
       - name: Harden system unit search directories only on this disposable runner

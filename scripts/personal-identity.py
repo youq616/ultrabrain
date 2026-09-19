@@ -11,6 +11,7 @@ sys.dont_write_bytecode = True
 from contextlib import AbstractContextManager
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import pwd
@@ -66,6 +67,17 @@ def remaining(deadline):
     value = deadline - time.monotonic()
     need(value > 0, 'identity_timeout')
     return value
+
+
+def observation_deadline(caller=None):
+    """Never extend a containing operation's monotonic deadline."""
+    if caller is not None:
+        need(type(caller) in (int, float) and math.isfinite(caller), 'invalid_identity_deadline')
+    deadline = time.monotonic()+10
+    if caller is not None:
+        deadline = min(deadline, caller)
+    remaining(deadline)
+    return deadline
 
 
 def platform_check():
@@ -220,12 +232,12 @@ def socket_snapshot(directory, port):
     return FS.metadata(value)
 
 
-def observe(home, source='default', *, root=ROOT):
+def observe(home, source='default', *, root=ROOT, deadline=None):
     platform_check()
+    deadline = observation_deadline(deadline)
     home = selection(home, source)
     root = FS.absolute(root)
     need(home != root and root not in home.parents and home not in root.parents, 'home_overlaps_repository')
-    deadline = time.monotonic()+10
     pins = PREFLIGHT.check_pins(root)
     with PREFLIGHT.PrivateHome(home) as view:
         need(not view.missing, 'not_installed')

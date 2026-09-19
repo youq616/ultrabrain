@@ -1,4 +1,5 @@
 /** One explicitly selected file. No scan, URL fetch, transcript discovery or implicit consent. */
+import {ensureOwnedAgent} from './client-agent.mjs';
 import {constants,lstatSync,openSync,fstatSync,readSync,closeSync} from 'node:fs';
 import {basename,resolve,dirname,parse} from 'node:path';
 import {requireThat} from './core.mjs';
@@ -56,23 +57,7 @@ export async function deliverDocumentImport(file,profile,{checkIdentity,invoke,s
     requireThat(!signal?.aborted,'aborted','Document import cancelled during authorization');
   };
   allowed();await checkIdentity();allowed();
-  // Read owned registration without replacing its metadata. A missing label may be created;
-  // an existing coding-agent/capabilities/workspace tuple must never be reset to defaults.
-  let offset=0,found=false,complete=false;
-  for(let page=0;page<16;page++) {
-    allowed();const result=await invoke('ultra_agent_list',{limit:100,offset});allowed();
-    requireThat(result?.source_id===profile.source&&Array.isArray(result.agents)&&result.agents.length<=100&&
-      result.agents.every(agent=>agent&&typeof agent.agent_id==='string'&&/^[A-Za-z0-9_-]{1,96}$/.test(agent.agent_id)),
-      'mcp_contract_changed','Invalid owned Agent listing');
-    found=result.agents.some(agent=>agent.agent_id===request.agent_id);
-    if(found){complete=true;break;}
-    if(result.next_offset===null){complete=true;break;}
-    requireThat(Number.isSafeInteger(result.next_offset)&&result.next_offset===offset+result.agents.length&&result.next_offset>offset,
-      'mcp_contract_changed','Invalid Agent listing cursor');
-    offset=result.next_offset;
-  }
-  requireThat(complete,'agent_lookup_limit','Owned Agent lookup exceeded bounded window; no metadata was changed');
-  if(!found){await checkIdentity();allowed();await invoke('ultra_agent_register',{agent_id:request.agent_id,agent_type:'custom'});}
+  await ensureOwnedAgent(request.agent_id,profile,{checkIdentity,invoke,assertAuthorized:allowed});
   await checkIdentity();allowed();
   const receipt=await invoke('ultra_personal_document_import',request);
   requireThat(receipt?.source_id===profile.source&&receipt.event_id===request.event_id&&receipt.storage==='stored'&&

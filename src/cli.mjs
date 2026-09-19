@@ -11,7 +11,7 @@ try {
   personal-init status|create-token          Offline console credential bootstrap; no service start
   personal-status [--expect-worker]           Read user-unit state; not application readiness
   personal-ready --bun PATH --expected-current SHA --expected-instance UUID   Read-only authenticated console/database readiness
-  personal-activate plan|apply|status|recover   Start an installed console; recover by observation
+  personal-activate prepare|plan|apply|status|recover   Prepare verified identity or explicitly activate
   personal-deploy plan|apply|status|rollback|recover   Install stopped personal units; never activate
   personal-services [--output PATH --expected-plan SHA]   Plan personal user services; no activation
   preflight --mode install|runtime            Offline, read-only installation checks
