@@ -2,9 +2,10 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const labels={identity:'身份',preference:'偏好',environment:'环境',project:'项目',decision:'决策',skill:'技能',error:'错误经验',goal:'目标',experience:'经验'};
-const views={candidate:'待确认记忆',active:'当前记忆',archived:'已归档',profile:'个人偏好',recall:'任务召回预览',documents:'导入文档',agents:'已登记 Agent',jobs:'整理任务'};
+const views={candidate:'待确认记忆',active:'当前记忆',archived:'已归档',profile:'个人偏好',recall:'任务召回预览',lookup:'按 ID 核对',documents:'导入文档',agents:'已登记 Agent',jobs:'整理任务'};
 let sourceId='',token='',view='candidate',offset=0,nextOffset=null,current=null,editing=null,pending=null,busy=false,loadVersion=0,documentOriginal=null,documentEpoch=0;
 let recallEpoch=0,recallController=null;
+let lookupEpoch=0,lookupController=null;
 function message(text,error=false){$('message').textContent=text;$('message').dataset.error=String(error);}
 function element(tag,text,cls){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;}
 function controls(){
@@ -222,6 +223,70 @@ async function previewRecall(){
   }
 }
 
+// An explicit exact read bridges a recall citation to the existing CAS editor.
+// Never edit the cached preview row; read again under the current server identity.
+function invalidateLookup(clearInput=false){
+  lookupEpoch++;lookupController?.abort();lookupController=null;
+  $('lookup-submit').disabled=false;$('lookup-cancel').disabled=true;
+  if(clearInput)$('lookup-id').value='';
+  if(view==='lookup'){
+    current=null;nextOffset=null;$('results').replaceChildren();$('export').disabled=true;
+    $('prev').disabled=true;$('next').disabled=true;
+    $('coverage').textContent='尚未核对记录。请明确读取 ID；标识符不赋予读取或修改权限。';
+  }
+}
+async function verifyLookup(result,id,allowed){
+  const valid=c=>{if(!c)throw new Error('memory_read_contract_changed');};
+  valid(result&&Object.keys(result).every(k=>['source_id','memory','trust','read_only','coverage'].includes(k))&&
+    result.source_id===sourceId&&result.trust==='untrusted-memory-data'&&result.read_only===true&&
+    new TextEncoder().encode(JSON.stringify(result)).length<=1048576);
+  const row=result.memory;
+  valid(row&&row.id===id&&Object.hasOwn(labels,row.type)&&['agent','document_fragment'].includes(row.origin_kind)&&
+    ['active','candidate','archived'].includes(row.status)&&Number.isSafeInteger(row.revision)&&row.revision>0&&
+    typeof row.owned_by_caller==='boolean'&&['private','source'].includes(row.visibility)&&
+    (row.owned_by_caller||(row.visibility==='source'&&row.status==='active'&&row.derivation_current===true))&&
+    typeof row.derivation_current==='boolean'&&['low','normal','high'].includes(row.importance)&&
+    (row.confidence===null||typeof row.confidence==='number'&&Number.isFinite(row.confidence)&&row.confidence>=0&&row.confidence<=1)&&
+    (row.project_id==null||typeof row.project_id==='string'&&/^[A-Za-z0-9_-]{1,96}$/.test(row.project_id))&&
+    typeof row.content==='string'&&row.content.isWellFormed()&&!row.content.includes('\0')&&
+    row.content.trim()&&new TextEncoder().encode(row.content).length<=65536&&
+    typeof row.provenance==='string'&&row.provenance.isWellFormed()&&new TextEncoder().encode(row.provenance).length<=2048&&
+    typeof row.content_hash==='string'&&/^[a-f0-9]{64}$/.test(row.content_hash));
+  allowed();const hash=await sha256Hex(new TextEncoder().encode(row.content));allowed();valid(hash===row.content_hash);
+}
+async function lookupMemory(){
+  if(busy||pending){message('请先处理尚未确认的写入，再核对记录。',true);return;}
+  const id=$('lookup-id').value,session=token,source=sourceId,epoch=++lookupEpoch;
+  lookupController?.abort();const controller=new AbortController();lookupController=controller;
+  current=null;nextOffset=null;$('results').replaceChildren();$('export').disabled=true;
+  $('prev').disabled=true;$('next').disabled=true;$('lookup-submit').disabled=true;$('lookup-cancel').disabled=false;
+  const allowed=()=>{
+    if(!session||session!==token||source!==sourceId||view!=='lookup'||epoch!==lookupEpoch||controller.signal.aborted||$('lookup-id').value!==id)
+      throw new Error('memory_lookup_changed');
+  };
+  try{
+    allowed();if(!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(id))throw new Error('full_memory_uuid_required');
+    message('正在按 ID 读取当前可见版本；没有请求修改记忆。');
+    const result=await api('memory_read',{memory_id:id},controller.signal);allowed();
+    await verifyLookup(result,id,allowed);allowed();render({memories:[result.memory]});current=result;
+    $('coverage').textContent='本次读取版本 r'+result.memory.revision+' · '+result.memory.status+' · 项目 '+(result.memory.project_id??'全局')+
+      '。这是读取时的记录，不保证此后未改变；保存仍按版本检查，不自动覆盖。';
+    message('记录已核对。编辑会填入本次读取版本，保存后回到待确认；共享或文件片段不能在这里修改。');
+  }catch(error){
+    if(epoch===lookupEpoch&&view==='lookup'&&session===token){
+      current=null;$('results').replaceChildren();$('export').disabled=true;
+      message('未能核对记录：'+error.message+'。记录不存在或当前不可见时，不显示缓存内容；未请求写入。',true);
+    }
+  }finally{
+    if(epoch===lookupEpoch){lookupController=null;$('lookup-submit').disabled=false;$('lookup-cancel').disabled=current===null;}
+  }
+}
+async function openMemoryLookup(id){
+  if(busy||pending){message('请先处理尚未确认的写入，再核对记录。',true);return;}
+  view='lookup';offset=0;$('lookup-id').value=id;await load();
+  return lookupMemory();
+}
+
 function render(result){
   current=result;$('results').replaceChildren();
   const rows=view==='jobs'?result.jobs:view==='agents'?result.agents:result.memories;
@@ -239,8 +304,13 @@ function render(result){
     }else if(view==='agents'){
       card.append(element('strong',row.agent_id),element('p',row.agent_type+' · r'+row.revision,'meta'),element('p',(row.capabilities??[]).join(' / ')||'未声明能力','meta'),element('p','名称和能力是客户端自述，不是软件身份认证。','note'));
     }else{
-      if(view==='recall')card.append(element('strong','召回顺序 #'+(result.memories.indexOf(row)+1)));
-      card.append(element('p','记忆 ID：'+row.id+(view==='recall'?' · 内容 SHA-256：'+row.content_hash:''),'meta'));
+      if(view==='recall'){
+        card.append(element('strong','召回顺序 #'+(result.memories.indexOf(row)+1)));
+        const inspect=element('button','核对最新记录');inspect.dataset.read='true';
+        inspect.addEventListener('click',()=>openMemoryLookup(row.id));card.append(inspect);
+      }
+      if(view==='lookup')card.append(element('strong','当前状态：'+row.status));
+      card.append(element('p','记忆 ID：'+row.id+(['recall','lookup'].includes(view)?' · 内容 SHA-256：'+row.content_hash:''),'meta'));
       card.append(element('span',labels[row.type]??row.type,'badge'),element('span',row.owned_by_caller?'自己拥有':'同源共享','badge'),element('p',row.content,'memory-content'));
       card.append(element('p','r'+row.revision+' · '+(row.project_id??'全局')+' · '+row.visibility+' · 可信度估计：'+(row.confidence??'未知'),'meta'),element('p','来源：'+row.provenance,'meta'));
       if(row.derivation)card.append(element('p','原文引用：'+row.derivation.quote,'memory-content'),element('p',row.derivation_current?'来源版本仍匹配；引用不代表真实性证明。':'来源已修改或归档；重新核对前不能激活。','note'));
@@ -251,17 +321,17 @@ function render(result){
     }$('results').append(card);
   }
   nextOffset=Number.isInteger(result.next_offset)?result.next_offset:null;
-  $('prev').disabled=offset===0||['profile','recall'].includes(view);$('next').disabled=nextOffset===null||['profile','recall'].includes(view);$('export').disabled=false;
+  $('prev').disabled=offset===0||['profile','recall','lookup'].includes(view);$('next').disabled=nextOffset===null||['profile','recall','lookup'].includes(view);$('export').disabled=false;
   $('coverage').textContent='当前源和身份下的有限窗口；可能随并发修改变化。'+(result.dropped?'有 '+result.dropped+' 条因大小或数量限制未展示。':'')+(view==='profile'?'这里只展示已启用的全局身份、偏好、环境和目标。':'');
   controls();
 }
 async function load(){
-  const request=++loadVersion;invalidateRecall();current=null;$('results').replaceChildren();$('export').disabled=true;for(const b of document.querySelectorAll('[data-view]'))b.setAttribute('aria-current',b.dataset.view===view?'page':'false');
-  $('view-title').textContent=views[view];$('search-form').hidden=['profile','recall','agents','documents','jobs'].includes(view);
+  const request=++loadVersion;invalidateRecall();invalidateLookup();current=null;$('results').replaceChildren();$('export').disabled=true;for(const b of document.querySelectorAll('[data-view]'))b.setAttribute('aria-current',b.dataset.view===view?'page':'false');
+  $('view-title').textContent=views[view];$('search-form').hidden=['profile','recall','lookup','agents','documents','jobs'].includes(view);
   documentEpoch++;$('document-panel').hidden=view!=='documents';$('document-original').hidden=true;documentOriginal=null;
   $('workspace').dataset.preview=String(view==='recall');
-  $('recall-panel').hidden=view!=='recall';$('memory-panel').hidden=view==='recall';
-  if(view==='recall')return; // Navigation/refresh never transmits the task.
+  $('recall-panel').hidden=view!=='recall';$('lookup-panel').hidden=view!=='lookup';$('memory-panel').hidden=view==='recall';
+  if(['recall','lookup'].includes(view))return; // Navigation/refresh never starts these explicit reads.
   try{
     if(view==='documents'){
       const data=await api('document_list',{status:'any',limit:20,offset});
@@ -274,7 +344,7 @@ async function load(){
   catch(e){if(request===loadVersion)message('读取失败：'+e.message,true);}
 }
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('token').value.trim();$('token').value='';try{const info=await api('info');sourceId=info.source_id;$('scope').textContent='数据源：'+info.source_id+' · Linux 本机所有者（与同账号 stdio 共享）';$('login').hidden=true;$('workspace').hidden=false;$('logout').hidden=false;message('已连接。');await load();}catch(e){token='';message('连接失败：'+e.message,true);}});
-$('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateRecall(true);token='';sourceId='';documentEpoch++;documentOriginal=null;$('document-original-text').textContent='';$('document-original').hidden=true;$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
+$('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateRecall(true);invalidateLookup(true);token='';sourceId='';documentEpoch++;documentOriginal=null;$('document-original-text').textContent='';$('document-original').hidden=true;$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
 for(const b of document.querySelectorAll('[data-view]'))b.addEventListener('click',()=>{view=b.dataset.view;offset=0;load();});
 $('refresh').addEventListener('click',()=>load());$('search-form').addEventListener('submit',e=>{e.preventDefault();offset=0;load();});
 $('prev').addEventListener('click',()=>{offset=Math.max(0,offset-20);load();});$('next').addEventListener('click',()=>{if(nextOffset!==null){offset=nextOffset;load();}});
@@ -294,6 +364,9 @@ $('memory-form').addEventListener('submit',e=>{
   if(editing)mutate('update',{memory_id:editing.id,expected_revision:editing.revision,event_id:crypto.randomUUID(),memory},memoryAuthorization());
   else mutate('commit',{agent_id:'personal-console',consent:true,memories:[memory]},memoryAuthorization());
 });
+$('lookup-form').addEventListener('submit',e=>{e.preventDefault();return lookupMemory();});
+$('lookup-id').addEventListener('input',()=>invalidateLookup());
+$('lookup-cancel').addEventListener('click',()=>{invalidateLookup();message('本地核对结果已清除；没有删除记录或撤回已发送的查询。');});
 $('recall-form').addEventListener('submit',e=>{e.preventDefault();return previewRecall();});
 for(const id of ['recall-task','recall-project','recall-limit','recall-budget'])$(id).addEventListener('input',()=>invalidateRecall());
 $('recall-consent').addEventListener('change',()=>{if(!$('recall-consent').checked)invalidateRecall();});

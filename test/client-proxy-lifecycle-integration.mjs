@@ -63,6 +63,7 @@ try{
   const receipt=await call(c,'ultra_memory_commit',{agent_id:'fixture',event_id:'commit',consent:true,
    memories:[{type:'preference',content:'SYNTHETIC_PRIVATE_ORIGINAL taskneedle 保留配置文件',provenance:'Explicit synthetic user action'}]});
   memory=receipt.entries[0];assert.equal(memory.status,'candidate');
+  const exact=await call(c,'ultra_memory_read',{memory_id:memory.id});assert.equal(exact.memory.status,'candidate');assert.equal(exact.memory.id,memory.id);pass();
   assert.equal((await call(c,'ultra_personal_context',{task:'taskneedle'})).memories.length,0);pass();
   const approved=await call(c,'ultra_personal_review',{memory_id:memory.id,expected_revision:1,event_id:'approve',status:'active'});
   assert.equal(approved.revision,2);let context=await call(c,'ultra_personal_context',{task:'taskneedle'});
@@ -70,6 +71,7 @@ try{
   const edited=await call(c,'ultra_personal_update',{memory_id:memory.id,expected_revision:2,event_id:'correct',
    memory:{type:'preference',content:'SYNTHETIC_PRIVATE_CORRECTED taskneedle 只备份配置，不自动删除',provenance:'Explicit synthetic correction'}});
   assert.equal(edited.status,'candidate');assert.equal(edited.revision,3);
+  const corrected=await call(c,'ultra_memory_read',{memory_id:memory.id});assert.equal(corrected.memory.revision,3);assert.ok(corrected.memory.content.includes('CORRECTED'));pass();
   assert.equal((await call(c,'ultra_personal_context',{})).memories.length,0);pass();
   const before=await snapshot(),stale=await c.callTool({name:'ultra_personal_review',arguments:{memory_id:memory.id,expected_revision:2,event_id:'stale',status:'active'}});
   assert.equal(stale.isError,true);assert.equal(JSON.parse(stale.content[0].text).error,'revision_conflict');assert.deepEqual(await snapshot(),before);pass();
@@ -84,6 +86,7 @@ try{
   save({...profile,allow_capture:false});revoked(await c.callTool({name:'ultra_personal_capture',arguments:{agent_id:'fixture',event_id:'must-not-write',consent:true,transcript:'SYNTHETIC_PRIVATE_FORBIDDEN'}}),{write:true});
   await assert.rejects(c.listTools());pass();save();
   revoked(await c.callTool({name:'ultra_personal_context',arguments:{}}));
+  revoked(await c.callTool({name:'ultra_memory_read',arguments:{memory_id:memory.id}}));
   assert.deepEqual(await snapshot(),before);pass();
  });
  // Deletion revokes the original connection; restored profile requires restart.
@@ -114,6 +117,7 @@ try{
  save();await withProxy(async c=>{
   await call(c,'ultra_personal_review',{memory_id:memory.id,expected_revision:4,event_id:'archive',status:'archived'});
   assert.equal((await call(c,'ultra_personal_context',{task:'taskneedle'})).memories.length,0);
+  assert.equal((await call(c,'ultra_memory_read',{memory_id:memory.id})).memory.status,'archived');pass();
   const history=await call(c,'ultra_memory_search',{status:'archived'});assert.ok(history.memories.some(m=>m.id===memory.id));pass();
   const jobs=await call(c,'ultra_personal_jobs',{});assert.ok(jobs.jobs.every(j=>j.state==='queued'&&j.attempts===0));pass();
  });

@@ -13,13 +13,13 @@ import {PersonalMemoryStore} from './personal-memory-store.mjs';
 import {PersonalDocumentStore} from './personal-documents.mjs';
 import {createPersonalReadiness} from './personal-readiness.mjs';
 const WEB=fileURLToPath(new URL('../web/personal/',import.meta.url));
-const METHODS=Object.freeze({capture:'capture',jobs:'job_status',consolidate:'job_process',cancel_job:'job_cancel',search:'search',profile:'profile',context:'context',agents:'agents',register:'register',commit:'commit',review:'review',update:'update',
+const METHODS=Object.freeze({capture:'capture',jobs:'job_status',consolidate:'job_process',cancel_job:'job_cancel',memory_read:'read',search:'search',profile:'profile',context:'context',agents:'agents',register:'register',commit:'commit',review:'review',update:'update',
   document_import:'documentImport',document_list:'documentList',document_read:'documentRead',document_queue:'documentQueue',document_archive:'documentArchive'});
 const WRITES=new Set(['register','commit','review','update','capture','consolidate','cancel_job','document_import','document_queue','document_archive']);
 const DOCUMENT_METHODS=new Set(['documentImport','documentList','documentRead','documentQueue','documentArchive']);
 const ASSETS=new Map([['/',['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']]]);
 const SAFE_CODES=new Set(['invalid_params','not_found','revision_conflict','conflict','agent_not_registered','capture_disabled','permission_denied','queue_full','model_consent_required','stale_source','invalid_personal_model',
-  'invalid_label','unsupported_format','file_too_large','invalid_utf8','fingerprint_mismatch','document_bound','document_corrupt','fragment_not_processable','fragment_boundary']);
+  'memory_read_too_large','invalid_label','unsupported_format','file_too_large','invalid_utf8','fingerprint_mismatch','document_bound','document_corrupt','fragment_not_processable','fragment_boundary']);
 export function consoleOptions(args) {
   const out={source:'default',port:3132};
   for(let i=0;i<args.length;i+=2) {

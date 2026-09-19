@@ -65,11 +65,40 @@ with sync_playwright() as p:
     assert result['dropped'] >= 1
     assert page.locator('#results img').count() == 0
     assert page.evaluate('typeof window.previewInjected') == 'undefined'
-    assert page.locator('#results button').count() == 0
+    assert page.locator('#results [data-write]').count() == 0
+    assert page.locator('#results [data-read]').count() == 1
     expect(page.locator('#prev')).to_be_disabled()
     expect(page.locator('#next')).to_be_disabled()
     expect(page.locator('#coverage')).to_contain_text('6000 UTF-8 字节')
     passed()
+
+    # Actual recall-to-ID read, fresh revision in editor, no write or implicit query.
+    remembered_id = result['memories'][0]['id']
+    page.locator('#results [data-read]').click()
+    expect(page.locator('#message')).to_contain_text('记录已核对')
+    expect(page.locator('#lookup-panel')).to_be_visible()
+    expect(page.locator('#lookup-id')).to_have_value(remembered_id)
+    expect(page.locator('#results')).to_contain_text('PREVIEW_GLOBAL')
+    assert calls[-1] == {'operation': 'memory_read', 'input': {'memory_id': remembered_id}}
+    before_lookup = len(calls)
+    page.locator('#results button', has_text='编辑').click()
+    assert 'PREVIEW_GLOBAL' in page.locator('#content').input_value()
+    expect(page.locator('#consent')).not_to_be_checked()
+    assert len(calls) == before_lookup
+    page.locator('#cancel-edit').click()
+    page.locator('#lookup-cancel').click()
+    expect(page.locator('#results article')).to_have_count(0)
+    expect(page.locator('#export')).to_be_disabled()
+    assert len(calls) == before_lookup
+    passed()
+    page.locator('#lookup-id').fill('11111111-1111-4111-8111-111111111111')
+    page.locator('#lookup-submit').click()
+    expect(page.locator('#message')).to_contain_text('not_found')
+    expect(page.locator('#results article')).to_have_count(0)
+    expect(page.locator('#export')).to_be_disabled()
+    passed()
+    page.locator('[data-view="recall"]').click()
+    result = preview()
 
     with page.expect_download() as item:
         page.locator('#export').click()
@@ -195,7 +224,7 @@ with sync_playwright() as p:
     page.locator('#logout').click()
     assert page.evaluate('localStorage.length') == 0
     assert page.evaluate('sessionStorage.length') == 0
-    assert set(c['operation'] for c in calls) <= {'info', 'search', 'agents', 'context'}
+    assert set(c['operation'] for c in calls) <= {'info', 'search', 'agents', 'context', 'memory_read'}
     assert not errors, 'Unexpected browser JavaScript error (raw content omitted)'
     passed()
     version = browser.version

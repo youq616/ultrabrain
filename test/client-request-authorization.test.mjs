@@ -84,3 +84,9 @@ test('catalog cancellation propagates into the current page and prevents the nex
  state.onList=async options=>{assert.ok(options.signal);controller.abort();return {tools:[],nextCursor:'next'};};
  try{await assert.rejects(c.catalog(controller.signal),{code:'aborted'});assert.equal(state.calls.length,1);assert.equal(state.calls[0].signal.aborted,true);}finally{await c.close();}
 });
+
+test('exact memory reads are available with readonly client permission and frozen IDs',async()=>{
+ reset();const c=await connectClient({...input,allow_capture:false,allow_documents:false});state.calls=[];
+ try{await c.callAllowed('ultra_memory_read',{memory_id:'11111111-1111-4111-8111-111111111111'});
+ assert.deepEqual(state.calls.map(x=>x.name),['ultra_identity','ultra_memory_read']);}finally{await c.close();}
+});

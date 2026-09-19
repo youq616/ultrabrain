@@ -15,7 +15,7 @@ function decoded(r) {
   if(r.isError)throw new UltraError(['permission_denied','capture_disabled','conflict','revision_conflict','agent_not_registered','not_found'].includes(value?.error)?value.error:'mcp_rejected','Memory request rejected');
   requireThat(!r._meta?.brain_hot_memory,'mcp_contract_changed','Unexpected ungoverned metadata');return value;
 }
-export const READ_TOOLS=Object.freeze(['ultra_identity','ultra_personal_context','ultra_memory_profile','ultra_memory_search','ultra_agent_list','ultra_personal_jobs','ultra_personal_document_list','ultra_personal_document_read']);
+export const READ_TOOLS=Object.freeze(['ultra_identity','ultra_personal_context','ultra_memory_read','ultra_memory_profile','ultra_memory_search','ultra_agent_list','ultra_personal_jobs','ultra_personal_document_list','ultra_personal_document_read']);
 export const WRITE_TOOLS=Object.freeze(['ultra_agent_register','ultra_memory_commit','ultra_personal_capture','ultra_personal_review','ultra_personal_update','ultra_personal_cancel','ultra_personal_document_import','ultra_personal_document_queue','ultra_personal_document_archive']);
 export const clientAllowsTool=(profile,name)=>READ_TOOLS.includes(name)||(WRITE_TOOLS.includes(name)&&(name.startsWith('ultra_personal_document_')?profile.allowDocuments:(name==='ultra_agent_register'?(profile.allowCapture||profile.allowDocuments):profile.allowCapture)));
 export async function connectClient(input,{signal,authorize=()=>{}}={}) {

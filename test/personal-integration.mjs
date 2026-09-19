@@ -106,6 +106,7 @@ try {
   const wire=await rpc(stdio,'ultra_memory_commit',{agent_id:'claude-code',event_id:'stdio-event',consent:true,summary:'Synthetic local experience'});
   await rpc(stdio,'ultra_personal_review',{memory_id:wire.entries[0].id,expected_revision:1,event_id:'stdio-review',status:'active'});
   assert.ok((await rpc(stdio,'ultra_personal_context')).memories.some(x=>x.id===wire.entries[0].id));pass();
+  assert.equal((await rpc(stdio,'ultra_memory_read',{memory_id:wire.entries[0].id})).memory.revision,2);pass();
   // Actual two HTTP token identities; sharing is explicit and private entries stay private.
   const socket=createServer();socket.listen(0,'127.0.0.1');await once(socket,'listening');const port=socket.address().port;await new Promise(r=>socket.close(r));
   const server=spawn(process.execPath,[ROOT+'/src/cli.mjs','mcp','--http','--bind','127.0.0.1','--port',String(port),'--suppress-bootstrap-token'],
@@ -127,9 +128,12 @@ try {
   await rpc(http[0],'ultra_personal_cancel',{job_id:queuedHttp.job_id});pass();
   const secret=await rpc(http[0],'ultra_memory_commit',{agent_id:'same-label',event_id:'private-wire',consent:true,memories:[sample]});
   assert.ok(!(await rpc(http[1],'ultra_memory_search',{status:'candidate'})).memories.some(x=>x.id===secret.entries[0].id));pass();
+  assert.equal((await rpc(http[0],'ultra_memory_read',{memory_id:secret.entries[0].id})).memory.status,'candidate');
+  await assert.rejects(rpc(http[1],'ultra_memory_read',{memory_id:secret.entries[0].id}),{code:'not_found'});pass();
   const share=await rpc(http[0],'ultra_memory_commit',{agent_id:'same-label',event_id:'shared-wire',consent:true,memories:[{...sample,visibility:'source'}]});
   await rpc(http[0],'ultra_personal_review',{memory_id:share.entries[0].id,event_id:'wire-activate',expected_revision:1,status:'active'});
   assert.ok((await rpc(http[1],'ultra_memory_profile')).memories.some(x=>x.id===share.entries[0].id));pass();
+  assert.equal((await rpc(http[1],'ultra_memory_read',{memory_id:share.entries[0].id})).memory.owned_by_caller,false);pass();
   await engine.executeRaw('UPDATE access_tokens SET revoked_at=now() WHERE name=$1',[tokenNames[0]]);
   await assert.rejects(rpc(http[0],'ultra_memory_commit',{agent_id:'same-label',event_id:'revoked',consent:true,summary:'must not be stored'}));pass();
   console.log(`PASS ${checks} personal core checks: PostgreSQL SQL/identity/CAS/replay/rollback, legacy preservation, real stdio and authenticated HTTP`);

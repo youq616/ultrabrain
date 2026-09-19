@@ -37,4 +37,21 @@ try{
  finally{clearTimeout(timer);}
  assert.deepEqual(await snapshot(),before,'Preview must not mutate memory, events, agents, documents or jobs');
  console.log('PASS task-preview database snapshots unchanged; actual console/Chromium/PostgreSQL, no model calls');
+ // Separate AFTER the read-only snapshot assertion: explicit correction lifecycle
+ // fixture writes. Do not present this second phase as a no-write preview.
+ const selected=await store.commit({agent_id:'preview-fixture',event_id:'lookup-browser',consent:true,memories:[{
+   type:'preference',importance:'high',content:'LOOKUP_BEFORE',provenance:'Synthetic exact-lookup browser fixture'}]});
+ const memoryId=selected.entries[0].id;
+ await store.review({memory_id:memoryId,expected_revision:1,event_id:'lookup-browser-active',status:'active'});
+ const correction=spawn(process.env.ULTRABRAIN_BROWSER_PYTHON??'python3',[ROOT+'/test/personal-memory-lookup-browser.py'],{
+  env:{...process.env,ULTRABRAIN_BROWSER_ORIGIN:ui.origin,ULTRABRAIN_BROWSER_TOKEN:token,ULTRABRAIN_BROWSER_MEMORY_ID:memoryId,
+   ULTRABRAIN_BROWSER_REPORT:process.env.ULTRABRAIN_LOOKUP_REPORT,ULTRABRAIN_BROWSER_SCREENSHOT:process.env.ULTRABRAIN_LOOKUP_SCREENSHOT},
+  cwd:ROOT,stdio:['ignore','inherit','inherit']});
+ const stop=setTimeout(()=>correction.kill('SIGKILL'),120000);
+ try{const code=await new Promise((done,fail)=>{correction.once('error',fail);correction.once('close',done);});assert.equal(code,0,'Exact-lookup Chromium lifecycle failed');}
+ finally{clearTimeout(stop);}
+ const [final]=await engine.executeRaw('SELECT content,status,revision FROM ultrabrain.personal_memories WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid',[source,store.actor,memoryId]);
+ assert.deepEqual(final,{content:'LOOKUP_CONCURRENT',status:'candidate',revision:6});
+ assert.equal((await snapshot()).personal_consolidations,before.personal_consolidations);
+ console.log('PASS exact lookup browser final database state: explicit corrections retained, stale overwrite refused, no consolidation jobs');
 }finally{await ui?.close();await engine.disconnect();}
