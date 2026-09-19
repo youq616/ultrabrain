@@ -1,0 +1,42 @@
+[
+  {
+    "file": "first-unit.log",
+    "sha256": "d3ee64bf2c3f8f7365d546e226d7046eee6618bd0a201c40ade1f56982428c1d",
+    "bytes": 350410
+  },
+  {
+    "file": "candidate-unit.log",
+    "sha256": "c771d5eb40e6e2a7901b634eb3b0759ca8c96c454936257936f449bf38e4196f",
+    "bytes": 351571
+  },
+  {
+    "file": "candidate-native.log",
+    "sha256": "cb331cec1411fcfcad7f560b98c161e47e3b0fc4ca74a6085f094897af7e7e21",
+    "bytes": 87775
+  },
+  {
+    "file": "candidate-services.log",
+    "sha256": "d0f43996516387b09ea067c1f999dec642265e68f6f35acf30edbf6476394fe8",
+    "bytes": 55313
+  },
+  {
+    "file": "candidate-n8n.log",
+    "sha256": "5e125892dd60b16ab554c8b822fdc0557d4f54431ffcaee4e69db673727afaba",
+    "bytes": 120738
+  },
+  {
+    "file": "main-unit.log",
+    "sha256": "d7db0dd3531770688a8692101fd39cf94391e6f4a4e22525b56444a9916e155f",
+    "bytes": 350518
+  },
+  {
+    "file": "main-n8n.log",
+    "sha256": "30b88ca990cda377b6e065ead8eaf84776812cac9b02dede7cdaf3bc3bddb68f",
+    "bytes": 119665
+  },
+  {
+    "file": "main-services.log",
+    "sha256": "1c8066198485443be97c629727c6f87c43392adf1f2f4aec20f6e0f2bc584325",
+    "bytes": 54246
+  }
+]

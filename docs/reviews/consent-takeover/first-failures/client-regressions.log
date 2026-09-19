@@ -1,0 +1,383 @@
+✔ normal capture checks identity and authorization before each write (2.355164ms)
+✔ revocation during registration prevents subsequent plaintext transmission (0.600205ms)
+✔ abort during identity check 1 prevents the following write (0.530032ms)
+✔ abort during identity check 2 prevents the following write (0.369214ms)
+✔ readonly profiles and project overrides fail before network (0.271911ms)
+✔ request bytes cannot mutate during asynchronous checks (0.324538ms)
+✔ async authorization is rejected rather than treated as a successful assertion (0.225553ms)
+✔ an explicit matching project preserves the canonical payload (0.389325ms)
+✖ boolean revocation before prevents any later capture write (1.05107ms)
+✖ boolean revocation first_identity prevents any later capture write (0.35294ms)
+✖ boolean revocation registration prevents any later capture write (0.607486ms)
+✖ boolean revocation last_identity prevents any later capture write (0.294564ms)
+✖ a rejected asynchronous authorization is handled without any write or unhandled rejection (8.283025ms)
+✔ enqueue snapshots consented bytes before waiting for another writer (25.338048ms)
+✔ a cancellation during connection cannot submit queued plaintext (13.526873ms)
+✔ inherited consent cannot authorize a journal record (2.669002ms)
+✖ enqueue rejects false authorization before persisting raw input (3.172629ms)
+✖ flush rejects false authorization before consuming retries or connecting (5.385813ms)
+✖ enqueue rejects async false authorization before persisting raw input (4.25798ms)
+✖ flush rejects async false authorization before consuming retries or connecting (16.002569ms)
+✖ enqueue rejects async rejection authorization before persisting raw input (1.282742ms)
+✖ flush rejects async rejection authorization before consuming retries or connecting (6.054258ms)
+✖ enqueue rejects non-function authorization before persisting raw input (1.903798ms)
+✖ flush rejects non-function authorization before consuming retries or connecting (2.572945ms)
+✖ boolean revocation while waiting for the writer lock prevents plaintext persistence (16.863048ms)
+✖ boolean revocation during connect retains the unchanged event without sending it (2.725249ms)
+✖ queued last-mile registration rechecks boolean revocation before plaintext (2.701794ms)
+✔ queued last-mile registration rechecks asynchronous revocation before plaintext (7.275104ms)
+✔ confirmed receipt after transmission removes the event even when consent was subsequently revoked (3.111479ms)
+ℹ Error: Test "enqueue rejects async rejection authorization before persisting raw input" at test/capture-hardening.test.mjs:42:2 generated asynchronous activity after the test ended. This activity created the error "Error: synthetic denial" and would have caused the test to fail, but instead triggered an unhandledRejection event.
+ℹ Error: Test "flush rejects async rejection authorization before consuming retries or connecting" at test/capture-hardening.test.mjs:46:2 generated asynchronous activity after the test ended. This activity created the error "Error: synthetic denial" and would have caused the test to fail, but instead triggered an unhandledRejection event.
+✔ documents require their own opt-in, independent of conversation capture (2.399238ms)
+✔ delivery cannot manufacture missing consent undefined (0.451216ms)
+✔ delivery cannot manufacture missing consent false (0.275506ms)
+✔ fingerprint, canonical encoding and declared metadata are checked before network (1.187462ms)
+✔ the selected original and consent are frozen before asynchronous work (0.478005ms)
+✔ revocation while registering prevents the later document write (0.389224ms)
+✔ cancellation or asynchronous authorization is not permission (0.494419ms)
+✔ receipt mismatch is unconfirmed {"event_id":"wrong"} (0.395674ms)
+✔ receipt mismatch is unconfirmed {"source_id":"foreign"} (0.370296ms)
+✔ receipt mismatch is unconfirmed {"project_id":"other"} (0.40688ms)
+✔ receipt mismatch is unconfirmed {"content_sha256":"0000000000000000000000000000000000000000000000000000000000000000"} (0.282577ms)
+✔ planner preserves exact large Chinese, BOM, CRLF and emoji bytes (8.632531ms)
+✔ non-processable originals are never silently re-encoded for queueing (3.650213ms)
+✔ selected path replacement is detected before descriptor reads (1.833975ms)
+✔ parent directory symlinks and Windows junctions are refused (0.536492ms)
+✔ existing Agent metadata is left untouched even across a paged listing (0.590872ms)
+✔ malformed Agent listing never authorizes default registration {"source_id":"foreign","agents":[],"next_offset":null} (0.212243ms)
+✔ malformed Agent listing never authorizes default registration {"source_id":"default","agents":[],"next_offset":0} (0.159866ms)
+✔ truncated Agent lookup fails closed rather than overwriting an unknown existing label (0.613044ms)
+✔ permission revoked during Agent lookup prevents all writes (0.241196ms)
+✖ boolean document revocation before prevents subsequent writes (1.031171ms)
+✖ boolean document revocation identity prevents subsequent writes (1.008968ms)
+✖ boolean document revocation lookup prevents subsequent writes (0.433239ms)
+✖ boolean document revocation registration prevents subsequent writes (0.272131ms)
+✖ boolean document revocation final_identity prevents subsequent writes (0.248456ms)
+✔ rejected asynchronous document authorization never leaks a rejection or sends a request (22.156085ms)
+ℹ tests 55
+ℹ suites 0
+ℹ pass 34
+ℹ fail 21
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 222.233166
+
+✖ failing tests:
+
+test at test/capture-delivery.test.mjs:37:78
+✖ boolean revocation before prevents any later capture write (1.05107ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-delivery.test.mjs:39:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'capture_disabled' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/capture-delivery.test.mjs:37:78
+✖ boolean revocation first_identity prevents any later capture write (0.35294ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-delivery.test.mjs:39:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'capture_disabled' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/capture-delivery.test.mjs:37:78
+✖ boolean revocation registration prevents any later capture write (0.607486ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-delivery.test.mjs:39:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'capture_disabled' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/capture-delivery.test.mjs:37:78
+✖ boolean revocation last_identity prevents any later capture write (0.294564ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-delivery.test.mjs:39:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'capture_disabled' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/capture-delivery.test.mjs:45:1
+✖ a rejected asynchronous authorization is handled without any write or unhandled rejection (8.283025ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-delivery.test.mjs:47:59)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/capture-hardening.test.mjs:42:2
+✖ enqueue rejects false authorization before persisting raw input (3.172629ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-hardening.test.mjs:43:22)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'capture_disabled' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/capture-hardening.test.mjs:46:2
+✖ flush rejects false authorization before consuming retries or connecting (5.385813ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-hardening.test.mjs:49:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'capture_disabled' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/capture-hardening.test.mjs:42:2
+✖ enqueue rejects async false authorization before persisting raw input (4.25798ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-hardening.test.mjs:43:22)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'invalid_params' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/capture-hardening.test.mjs:46:2
+✖ flush rejects async false authorization before consuming retries or connecting (16.002569ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-hardening.test.mjs:49:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'invalid_params' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/capture-hardening.test.mjs:42:2
+✖ enqueue rejects async rejection authorization before persisting raw input (1.282742ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-hardening.test.mjs:43:22)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'invalid_params' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/capture-hardening.test.mjs:46:2
+✖ flush rejects async rejection authorization before consuming retries or connecting (6.054258ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-hardening.test.mjs:49:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'invalid_params' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/capture-hardening.test.mjs:42:2
+✖ enqueue rejects non-function authorization before persisting raw input (1.903798ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + Comparison {}
+  - Comparison {
+  -   code: 'invalid_params'
+  - }
+  
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-hardening.test.mjs:43:22)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: TypeError: authorize is not a function
+        at file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/capture-outbox.mjs:127:7
+        at #queue (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/capture-outbox.mjs:99:101),
+    expected: { code: 'invalid_params' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/capture-hardening.test.mjs:46:2
+✖ flush rejects non-function authorization before consuming retries or connecting (2.572945ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-hardening.test.mjs:49:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'invalid_params' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/capture-hardening.test.mjs:53:1
+✖ boolean revocation while waiting for the writer lock prevents plaintext persistence (16.863048ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-hardening.test.mjs:58:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'capture_disabled' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/capture-hardening.test.mjs:60:1
+✖ boolean revocation during connect retains the unchanged event without sending it (2.725249ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-hardening.test.mjs:63:42)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/capture-hardening.test.mjs:67:40
+✖ queued last-mile registration rechecks boolean revocation before plaintext (2.701794ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'ultra_agent_register',
+  +   'ultra_personal_capture'
+    ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/capture-hardening.test.mjs:72:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'ultra_agent_register', 'ultra_personal_capture' ],
+    expected: [ 'ultra_agent_register' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/client-document-boundaries.test.mjs:87:82
+✖ boolean document revocation before prevents subsequent writes (1.031171ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/client-document-boundaries.test.mjs:89:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'capture_disabled' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/client-document-boundaries.test.mjs:87:82
+✖ boolean document revocation identity prevents subsequent writes (1.008968ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/client-document-boundaries.test.mjs:89:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'capture_disabled' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/client-document-boundaries.test.mjs:87:82
+✖ boolean document revocation lookup prevents subsequent writes (0.433239ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/client-document-boundaries.test.mjs:89:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'capture_disabled' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/client-document-boundaries.test.mjs:87:82
+✖ boolean document revocation registration prevents subsequent writes (0.272131ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/client-document-boundaries.test.mjs:89:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'capture_disabled' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/client-document-boundaries.test.mjs:87:82
+✖ boolean document revocation final_identity prevents subsequent writes (0.248456ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/client-document-boundaries.test.mjs:89:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'capture_disabled' },
+    operator: 'rejects',
+    diff: 'simple'
+  }

@@ -1,0 +1,5 @@
+{"reviewed_commit":"77b4ecf649124fc169e4c838b5202d96211e933e","reviewer":"/root/audit_clients","scope":"synthetic local functions; no network, user services or private data"}
+{"case":"direct_false_authorization","writes":["ultra_agent_register","ultra_personal_capture"]}
+{"case":"document_false_authorization","writes":["ultra_agent_list","ultra_agent_register","ultra_personal_document_import"]}
+{"case":"queue_false_authorization","stored":{"storage":"client_journal","event_id":"audit","state":"pending","replayed":false,"durability":"file-and-directory-fsync"},"pending":1}
+{"case":"flush_async_false_authorization","transmitted":1,"delivered":{"storage":"client_journal","delivered":1,"retained":0,"blocked":0,"skipped":0,"last_error":null,"remaining_pending":0,"remaining_blocked":0}}

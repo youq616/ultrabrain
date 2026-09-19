@@ -1,0 +1,189 @@
+✖ profile disabled while admission waits sends no provider request (4.284508ms)
+✖ profile model changed while admission waits sends no provider request (0.695826ms)
+✖ profile revision changed while admission waits sends no provider request (0.703908ms)
+✖ admission invokes the freshly configured provider after the wait (1.47777ms)
+✖ abort during the final model configuration check sends no provider request (0.717759ms)
+✖ native provider closure rejects a profile disabled after configuration (0.303047ms)
+✖ native provider closure rejects a profile model changed after configuration (0.152575ms)
+✖ native provider closure rejects a profile revision changed after configuration (0.120397ms)
+✖ native provider closure rejects revocation during gateway loading (0.21683ms)
+✖ native provider closure checks cancellation and still admits an unchanged live profile (0.216329ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 0
+ℹ fail 10
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 115.330685
+
+✖ failing tests:
+
+test at test/personal-consolidation-admission.test.mjs:54:3
+✖ profile disabled while admission waits sends no provider request (4.284508ms)
+  AssertionError [ERR_ASSERTION]: A revoked or changed profile must be checked after admission awaits
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:59:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:54:3
+✖ profile model changed while admission waits sends no provider request (0.695826ms)
+  AssertionError [ERR_ASSERTION]: A revoked or changed profile must be checked after admission awaits
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:59:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:54:3
+✖ profile revision changed while admission waits sends no provider request (0.703908ms)
+  AssertionError [ERR_ASSERTION]: A revoked or changed profile must be checked after admission awaits
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:59:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:66:1
+✖ admission invokes the freshly configured provider after the wait (1.47777ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   'earlier'
+  -   'fresh'
+    ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:75:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'earlier' ],
+    expected: [ 'fresh' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:80:1
+✖ abort during the final model configuration check sends no provider request (0.717759ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:89:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:111:3
+✖ native provider closure rejects a profile disabled after configuration (0.303047ms)
+  Error [UltraError]: Pinned native file missing: src/core/config.ts
+      at requireThat (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/core.mjs:7:25)
+      at loadNative (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/adapters/gbrain.mjs:38:3)
+      at configuredPersonalModel (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/adapters/personal-model.mjs:6:22)
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:113:21)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    code: 'upstream_file_missing'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:111:3
+✖ native provider closure rejects a profile model changed after configuration (0.152575ms)
+  Error [UltraError]: Pinned native file missing: src/core/config.ts
+      at requireThat (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/core.mjs:7:25)
+      at loadNative (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/adapters/gbrain.mjs:38:3)
+      at configuredPersonalModel (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/adapters/personal-model.mjs:6:22)
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:113:21)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    code: 'upstream_file_missing'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:111:3
+✖ native provider closure rejects a profile revision changed after configuration (0.120397ms)
+  Error [UltraError]: Pinned native file missing: src/core/config.ts
+      at requireThat (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/core.mjs:7:25)
+      at loadNative (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/adapters/gbrain.mjs:38:3)
+      at configuredPersonalModel (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/adapters/personal-model.mjs:6:22)
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:113:21)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    code: 'upstream_file_missing'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:119:1
+✖ native provider closure rejects revocation during gateway loading (0.21683ms)
+  Error [UltraError]: Pinned native file missing: src/core/config.ts
+      at requireThat (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/core.mjs:7:25)
+      at loadNative (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/adapters/gbrain.mjs:38:3)
+      at configuredPersonalModel (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/adapters/personal-model.mjs:6:22)
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:121:21)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    code: 'upstream_file_missing'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:126:1
+✖ native provider closure checks cancellation and still admits an unchanged live profile (0.216329ms)
+  Error [UltraError]: Pinned native file missing: src/core/config.ts
+      at requireThat (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/core.mjs:7:25)
+      at loadNative (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/adapters/gbrain.mjs:38:3)
+      at configuredPersonalModel (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/src/adapters/personal-model.mjs:6:22)
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:127:45)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    code: 'upstream_file_missing'
+  }

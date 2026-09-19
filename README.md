@@ -2,7 +2,16 @@
 
 Linux-first agent memory, built around GBrain's PostgreSQL-native business engine and OpenViking-inspired hierarchical context retrieval.
 
-## 当前接手状态（2026-09-18）
+## 当前接手状态（2026-09-19）
+
+本轮接手审核与授权修复已通过 [PR #14](https://github.com/youq616/ultrabrain/pull/14) 合入 `6aae8a01f0d5f27dedf64e0687af9cb3b02e29ea`。修复 SDK/队列忽略显式授权拒绝、管理台等待期间撤回授权后仍发送，以及模型准入等待期间配置或租约过期的问题。未确认请求保留原事件，已发送内容不可由撤回授权取消。最终候选 `a9678135d28c6f3094db4e2d42f4077206fcd49b` 获两个独立代理 PASS；候选 47 个 CI jobs 全成功，612 Node / 542 Python、15 条历史升级、25 项真实 Chromium 管理台交互，以及真实 PostgreSQL/MCP/n8n 检查通过。详见 [本轮验收与首次失败](docs/reviews/consent-takeover/README.md)。
+
+合并后的 main 应用提交再次通过 7 个工作流、24 个 jobs；[主线全量 CI](https://github.com/youq616/ultrabrain/actions/runs/35421538617) 中 612 Node / 542 Python、真实 n8n CLI 等均成功。此次随后更新仅归档文档，测试结果归属于上述应用提交。
+
+下一阶段优先打通首次安装到一个客户端成功提交、确认和召回的流程，并修复已有 Agent 登记元数据导致采集被拒的问题；随后完成实际客户端/模型验收与文件能力。完整审核发现、优先级和验收标准见 [接手优化计划](docs/TAKEOVER-2026-09-19.md)。个人 V1 仍未整体验收；本轮未部署用户主机，也未将合成模型响应当作真实记忆质量证明。
+
+### 前一阶段（2026-09-18）
+
 
 受管控制台激活与中断恢复已通过 [PR #13](https://github.com/youq616/ultrabrain/pull/13) 合入 `17bf51a2e998718665082a0245b5b49369ac6ec6`。新增 `personal-activate plan|apply|status|recover`，只启动已安装、当前停止的 console-only 配置，并通过共享 pending 和持久化记录处理中断；恢复只观察，不补发启动。完整候选 `88e05f3f84d1cd1ac2e3fdf2f22237c84c6cb3c4` 获独立整阶段 PASS 及补充恢复审核 PASS；47 个候选 CI jobs 和 24 个 main 合并后 jobs 全部成功，563 Node / 542 Python、18 项新真实激活检查通过。用法见 [控制台激活与恢复](docs/PERSONAL-ACTIVATE.md)，完整身份、范围、首次失败与原文证据见 [本阶段验收](docs/reviews/personal-activate/README.md)。
 

@@ -1,0 +1,64 @@
+✖ lease expiry during the final model configuration check prevents admission and output commit (3.947472ms)
+✖ abort during the final lease query sends no provider request (0.948281ms)
+✖ native provider guard catches revocation during the final lease query (1.236397ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 0
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 90.903517
+
+✖ failing tests:
+
+test at test/personal-consolidation-admission.test.mjs:97:1
+✖ lease expiry during the final model configuration check prevents admission and output commit (3.947472ms)
+  AssertionError [ERR_ASSERTION]: A previously live lease can expire while final configuration awaits
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:105:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:112:1
+✖ abort during the final lease query sends no provider request (0.948281ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:118:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:165:1
+✖ native provider guard catches revocation during the final lease query (1.236397ms)
+  AssertionError [ERR_ASSERTION]: No gateway call after opt-in changes during the final SQL await
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:172:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

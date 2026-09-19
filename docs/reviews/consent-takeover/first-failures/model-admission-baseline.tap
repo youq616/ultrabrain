@@ -1,0 +1,104 @@
+✖ profile disabled while admission waits sends no provider request (4.6582ms)
+✖ profile model changed while admission waits sends no provider request (0.849223ms)
+✖ profile revision changed while admission waits sends no provider request (0.816234ms)
+✖ admission invokes the freshly configured provider after the wait (1.704133ms)
+✖ abort during the final model configuration check sends no provider request (0.8539ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 101.317787
+
+✖ failing tests:
+
+test at test/personal-consolidation-admission.test.mjs:54:3
+✖ profile disabled while admission waits sends no provider request (4.6582ms)
+  AssertionError [ERR_ASSERTION]: A revoked or changed profile must be checked after admission awaits
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:59:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:54:3
+✖ profile model changed while admission waits sends no provider request (0.849223ms)
+  AssertionError [ERR_ASSERTION]: A revoked or changed profile must be checked after admission awaits
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:59:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:54:3
+✖ profile revision changed while admission waits sends no provider request (0.816234ms)
+  AssertionError [ERR_ASSERTION]: A revoked or changed profile must be checked after admission awaits
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:59:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:66:1
+✖ admission invokes the freshly configured provider after the wait (1.704133ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   'earlier'
+  -   'fresh'
+    ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:75:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'earlier' ],
+    expected: [ 'fresh' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/personal-consolidation-admission.test.mjs:80:1
+✖ abort during the final model configuration check sends no provider request (0.8539ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/97afa6ee0b0d/ultrabrain/test/personal-consolidation-admission.test.mjs:89:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

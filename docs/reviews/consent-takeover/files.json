@@ -1,0 +1,107 @@
+[
+  {
+    "path": "review-client-final.md",
+    "sha256": "367f25c80afb8d27b4d9eb9b8095a0f60a55e023a753fa70275d6a0c62fbce73",
+    "bytes": 9201
+  },
+  {
+    "path": "review-server-final.md",
+    "sha256": "81526ee7b9afbe530179127721ef15c6c3474097133779a3919de196b9a1d5da",
+    "bytes": 7627
+  },
+  {
+    "path": "first-failures/review-client-initial.md",
+    "sha256": "6208111b419d3c9042fc8207cbd42ff186b55e04783b7f0650941943ccdafb86",
+    "bytes": 6038
+  },
+  {
+    "path": "first-failures/review-server-initial.md",
+    "sha256": "d155e34a0ddc939c882bb69f6a8280136ce6e7b1e7e2f34ad0f2eeaedd94e0bb",
+    "bytes": 5341
+  },
+  {
+    "path": "first-failures/server-lease-repro.mjs",
+    "sha256": "9b667848f60828e7bf803a9864cb47576dca9e2724f3d9fdc787df8308d77aac",
+    "bytes": 2894
+  },
+  {
+    "path": "first-failures/server-lease-repro-output.json",
+    "sha256": "4647b7785a9ad26c6351b44b28554c793cd8acd15f2eb036e581a97d945a6fe1",
+    "bytes": 173
+  },
+  {
+    "path": "first-failures/lease-correction-baseline.log",
+    "sha256": "01e35ad5f6a59e28ab857890c4750ad7e84292db920d19d359de1269a4073a79",
+    "bytes": 2471
+  },
+  {
+    "path": "first-failures/model-admission-baseline.tap",
+    "sha256": "d8bcb20f677ddabb1fdc6f1db1aa98848ff23c023a1c6e2dee3c5ff3614fcbf8",
+    "bytes": 4043
+  },
+  {
+    "path": "first-failures/model-first-run.tap",
+    "sha256": "e672205d6e073c7db03444fa32e75f50a8b74256deb0c0a0387901f80e3654e0",
+    "bytes": 10077
+  },
+  {
+    "path": "first-failures/client-regressions.log",
+    "sha256": "1279fe5c2c1cf2c05fce3220ecf22bf2eefdb2af5d7368f8ac08a7536b65ac6d",
+    "bytes": 19725
+  },
+  {
+    "path": "first-failures/client-repro.log",
+    "sha256": "3e7ac17d1b78b7abbde072268302a4ef6a946d73eea88e5ed4ff3f44dcb349f1",
+    "bytes": 792
+  },
+  {
+    "path": "first-failures/client-repro.mjs",
+    "sha256": "8a0b2fb51407267dd926816817b8bf1cf11a807557f301e2d9ae43b03bde790a",
+    "bytes": 2755
+  },
+  {
+    "path": "first-failures/local-baseline-node.log",
+    "sha256": "a158897e9379b151956106cc663913e8c7d9bd0575a98e70dbd4030d8a85a9f8",
+    "bytes": 53116
+  },
+  {
+    "path": "first-failures/console-repro.mjs",
+    "sha256": "597e3441b05f93d232b2b6009c100ef468213e1a9d08b1473728e08b6892edbb",
+    "bytes": 1292
+  },
+  {
+    "path": "first-failures/console-repro.log",
+    "sha256": "2fd443006ada1fecfa3da0da608d942eff3c718dc91313287137c0bb6fb5f2bd",
+    "bytes": 76
+  },
+  {
+    "path": "client-final-tests.log",
+    "sha256": "c92c4c583270f06191d5453d0cf66226571f9f3366de12540aa5cd633f47e544",
+    "bytes": 16788
+  },
+  {
+    "path": "client-independent-probes.mjs",
+    "sha256": "0e82f1150f99658b36a3941d9ff6cd1f03c5647f81fa792761b79dfdbbaaff45",
+    "bytes": 8245
+  },
+  {
+    "path": "server-final-tests.log",
+    "sha256": "30c2b60327ee021dfd85010e1dc4137f83bd07ae97889da647c4c3af5f808426",
+    "bytes": 13174
+  },
+  {
+    "path": "server-lease-fixed.mjs",
+    "sha256": "be49ec9d85a172a993c5c356b41cd2b62370b292039f0dc7d898e12c1d3638d6",
+    "bytes": 2971
+  },
+  {
+    "path": "implementation-focused-tests.log",
+    "sha256": "e626a7cb1917db10c1068ff3b3719eb924a283aceb2aa2f8e7e812341ee3077d",
+    "bytes": 13184
+  },
+  {
+    "path": "client-implementation-audit.md",
+    "sha256": "b5b52e7c32fd2202db32c02c0f130ef3134599e4850ec7f170f257eda6941c31",
+    "bytes": 7101
+  }
+]
