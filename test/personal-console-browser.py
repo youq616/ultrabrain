@@ -39,6 +39,37 @@ with sync_playwright() as p:
     expect(page.locator('#message')).to_contain_text('必须明确同意')
     expect(page.locator('#results article')).to_have_count(0)
     passed()
+    # A registration response can arrive after the user withdrew consent or edited
+    # the selected content. Neither save nor queue may transmit the stale text.
+    for button, operation in [('#save', 'commit'), ('#queue-personal', 'capture')]:
+        for change in ['consent', 'content']:
+            writes = []
+            def change_before_send(route):
+                body = route.request.post_data_json
+                if body.get('operation') == 'register':
+                    response = route.fetch()
+                    if change == 'consent':
+                        page.evaluate("document.getElementById('consent').checked=false")
+                    else:
+                        page.evaluate("document.getElementById('content').value='Changed while registration waited'")
+                    route.fulfill(response=response)
+                else:
+                    if body.get('operation') == operation:
+                        writes.append(body)
+                    route.continue_()
+            page.locator('#content').fill(malicious)
+            page.locator('#consent').check()
+            page.evaluate("document.getElementById('message').textContent=''")
+            page.route('**/api/call', change_before_send)
+            page.locator(button).click()
+            expect(page.locator('#message')).to_contain_text('memory_consent_or_selection_changed')
+            expect(page.locator('#pending-panel')).to_be_hidden()
+            assert writes == [], 'Revoked or changed content reached the personal write API'
+            page.unroute('**/api/call', change_before_send)
+            page.locator('#refresh').click()
+            expect(page.locator('#results article')).to_have_count(0)
+            passed()
+    page.locator('#content').fill(malicious)
     page.locator('#consent').check()
     page.locator('#save').click()
     expect(page.locator('#results article')).to_have_count(1)
@@ -116,6 +147,13 @@ with sync_playwright() as p:
     page.locator('#save').click()
     expect(page.locator('#pending-panel')).to_be_visible()
     expect(page.locator('#save')).to_be_disabled()
+    page.locator('#consent').uncheck()
+    page.locator('#retry').click()
+    expect(page.locator('#message')).to_contain_text('此前提交仍未确认')
+    expect(page.locator('#pending-panel')).to_be_visible()
+    assert len(attempts) == 1, 'Consent withdrawal must stop retries without discarding the unknown event'
+    passed()
+    page.locator('#consent').check()
     page.locator('#retry').click()
     expect(page.locator('#pending-panel')).to_be_hidden()
     expect(page.locator('#results article')).to_have_count(1)

@@ -18,6 +18,15 @@ const safeCodes=new Set([...terminal,'mcp_rejected','missing_credentials','outbo
 const codeOf=e=>safeCodes.has(e?.code)?e.code:'delivery_unconfirmed';
 const canonical=x=>Array.isArray(x)?x.map(canonical):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,canonical(x[k])])):x;
 const digest=x=>sha256(JSON.stringify(canonical(x)));
+function assertAuthorization(authorize) {
+  requireThat(typeof authorize==='function','invalid_params','Synchronous authorization assertion required');
+  const result=authorize();
+  if(result&&typeof result.then==='function'){
+    Promise.resolve(result).catch(()=>{});
+    requireThat(false,'invalid_params','Authorization assertion must be synchronous');
+  }
+  requireThat(result!==false,'capture_disabled','Capture authorization declined');
+}
 function privateStat(st,kind) {
   requireThat(!st.isSymbolicLink()&&(kind==='dir'?st.isDirectory():st.isFile()),'insecure_outbox','Regular private outbox paths required');
   if(typeof process.getuid==='function')requireThat(st.uid===process.getuid()&&!(st.mode&0o077),'insecure_outbox','Outbox must be owner-only');
@@ -123,8 +132,9 @@ export class CaptureOutbox {
     // Consent is checked BEFORE creating a new raw-text record, independent of the network.
     const snapshot=structuredClone(payload);
     const normalized=captureRequest(snapshot,this.profile);
+    assertAuthorization(authorize);
     return this.#queue(()=>{
-      authorize();
+      assertAuthorization(authorize);
       const name=sha256(normalized.event_id)+'.entry',requestHash=digest(normalized);
       if(exists(this.#path(name))){const old=this.#record(name);requireThat(old.request_sha256===requestHash,'conflict','Event already exists with different content');return {storage:'client_journal',event_id:normalized.event_id,state:old.state,replayed:true,durability:this.durability};}
       const names=this.#names();let total=0;
@@ -166,6 +176,7 @@ export class CaptureOutbox {
   async flush(connect,{limit=4,retryBlocked=false,eventId,signal,authorize=()=>{}}={}) {
     requireThat(this.profile.allowCapture,'capture_disabled','Enable capture explicitly before delivery');
     integer(limit,4,1,16);requireThat(typeof retryBlocked==='boolean','invalid_params','retryBlocked must be boolean');
+    const allowed=()=>assertAuthorization(authorize);allowed();
     const release=await this.#acquire('.delivery.lock',0);let connection;
     const report={storage:'client_journal',delivered:0,retained:0,blocked:0,skipped:0,last_error:null};
     try {
@@ -173,6 +184,7 @@ export class CaptureOutbox {
       for(const name of names){
         if(report.delivered+report.retained+report.blocked>=limit||signal?.aborted)break;
         const r=await this.#queue(()=>{
+          allowed(); // A lock wait cannot spend retries under a revoked authorization.
           if(!exists(this.#path(name)))return null;const x=this.#record(name);
           if(x.state==='blocked'&&!retryBlocked||!retryBlocked&&x.next_attempt_at>Date.now())return null;
           if(retryBlocked&&(x.state==='blocked'||x.attempts>=MAX_ATTEMPTS)){x.attempts=0;x.state='pending';}
@@ -184,10 +196,10 @@ export class CaptureOutbox {
         if(!r){report.skipped++;continue;}
         try {
           requireThat(!signal?.aborted,'aborted','Delivery cancelled');
-          authorize();connection??=await connect(this.input,{signal});clientIdentity(connection.identity,this.profile);
+          allowed();connection??=await connect(this.input,{signal});clientIdentity(connection.identity,this.profile);
           // capture() rechecks actual server identity before both register and capture calls.
-          authorize();requireThat(!signal?.aborted,'aborted','Delivery cancelled before submission');
-          const receipt=await connection.capture(captureRequest(r.payload,{...this.profile,allowCapture:true}),{authorize});
+          allowed();requireThat(!signal?.aborted,'aborted','Delivery cancelled before submission');
+          const receipt=await connection.capture(captureRequest(r.payload,{...this.profile,allowCapture:true}),{authorize:allowed});
           requireThat(receipt?.source_id===this.profile.source&&receipt.event_id===r.payload.event_id&&receipt.storage==='journaled'&&UUID.test(receipt.job_id??''),
             'mcp_contract_changed','No matching server journal acknowledgement');
           await this.#queue(()=>{const current=this.#record(name);requireThat(current.request_sha256===r.request_sha256,'outbox_corrupt','Journal changed during delivery');unlinkSync(this.#path(name));syncDirectory(this.directory);});

@@ -21,6 +21,15 @@ async function api(operation,input={}){
 function download(value,name){const u=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)+'\n'],{type:'application/json'}));const link=element('a');link.href=u;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
 function resetEditor(){editing=null;$('editor-title').textContent='新建候选记忆';$('memory-form').reset();$('provenance').value='用户在个人管理台明确输入';$('cancel-edit').hidden=true;}
 function edit(row){if(pending||busy)return;editing=row;$('editor-title').textContent='修改记忆 · r'+row.revision;for(const [field,value]of Object.entries({type:row.type,content:row.content,importance:row.importance,visibility:row.visibility,provenance:row.provenance,project:row.project_id??''}))$(field).value=value;$('consent').checked=false;$('cancel-edit').hidden=false;$('content').focus();controls();}
+function memoryAuthorization(){
+  const session=token,source=sourceId;
+  const selection=()=>JSON.stringify([editing?.id??null,editing?.revision??null,...['type','content','importance','visibility','provenance','project'].map(id=>$(id).value)]);
+  const snapshot=selection();
+  return ()=>{
+    if(!token||token!==session||sourceId!==source||!$('consent').checked||selection()!==snapshot)
+      throw new Error('memory_consent_or_selection_changed');
+  };
+}
 async function submitPending(){
   if(!pending||busy)return;busy=true;controls();
   try{
@@ -29,8 +38,9 @@ async function submitPending(){
     pending.authorize?.();
     const operation=pending.operation;const result=await api(operation,pending.input);pending=null;resetEditor();message((operation==='consolidate'?'整理请求已返回，请在整理任务中查看实际状态。':'操作已确认。')+(result.state==='needs_model'?'尚未配置个人整理模型，未发送原文。':'')+(result.review_required?'该记忆需要明确确认后才进入当前上下文。':''));await load();
   }catch(e){
-    if(!e.unknown){pending=null;message('请求被拒绝：'+e.message+'。版本冲突时请刷新并重新核对；不要覆盖他人的更改。',true);}
-    else message('尚未取得可靠确认：'+e.message+'。请重试同一请求，不要更换事件编号。',true);
+    if(e.unknown){pending.delivery_unconfirmed=true;message('尚未取得可靠确认：'+e.message+'。请重试同一请求，不要更换事件编号。',true);}
+    else if(pending.delivery_unconfirmed)message('本次重试已停止：'+e.message+'。此前提交仍未确认；待确认请求和事件编号已保留。重新核对原内容与授权后才可重试。',true);
+    else {pending=null;message('请求被拒绝：'+e.message+'。版本冲突时请刷新并重新核对；不要覆盖他人的更改。',true);}
   }finally{busy=false;controls();}
 }
 function mutate(operation,input,authorize){if(busy||pending){message('请先处理尚未确认的请求。',true);return;}authorize?.();pending={operation,authorize,input:{...input,...(['commit','capture','update','review','document_import','document_queue','document_archive'].includes(operation)?{event_id:crypto.randomUUID()}: {})}};submitPending();}
@@ -190,7 +200,7 @@ $('refresh').addEventListener('click',()=>load());$('search-form').addEventListe
 $('prev').addEventListener('click',()=>{offset=Math.max(0,offset-20);load();});$('next').addEventListener('click',()=>{if(nextOffset!==null){offset=nextOffset;load();}});
 $('export').addEventListener('click',()=>{if(current)download({format:1,exported_at:new Date().toISOString(),scope:'visible page only, not a full backup',complete:false,view,result:current},'ultrabrain-personal-page.json');});
 $('cancel-edit').addEventListener('click',()=>{resetEditor();controls();});
-$('queue-personal').addEventListener('click',()=>{if(editing||busy||pending)return;if(!$('consent').checked){message('排队前必须明确同意保存原文。',true);return;}if(!$('content').value.trim()){message('请填写要整理的原文。',true);return;}mutate('capture',{agent_id:'personal-console',transcript:$('content').value,project_id:$('project').value||null,consent:true});});
+$('queue-personal').addEventListener('click',()=>{if(editing||busy||pending)return;if(!$('consent').checked){message('排队前必须明确同意保存原文。',true);return;}if(!$('content').value.trim()){message('请填写要整理的原文。',true);return;}mutate('capture',{agent_id:'personal-console',transcript:$('content').value,project_id:$('project').value||null,consent:true},memoryAuthorization());});
 $('document-file').addEventListener('change',()=>{
   $('document-consent').checked=false;
   const file=$('document-file').files?.[0];
@@ -201,8 +211,8 @@ $('memory-form').addEventListener('submit',e=>{
   e.preventDefault();if(!$('consent').checked){message('保存前必须明确同意采集。',true);return;}
   const memory={type:$('type').value,content:$('content').value,importance:$('importance').value,visibility:$('visibility').value,provenance:$('provenance').value,project_id:$('project').value||null,confidence:editing?.confidence??null};
   if(memory.visibility==='source'&&!confirm('激活后，同一数据源其他身份可读取这条内容。确认选择共享？'))return;
-  if(editing)mutate('update',{memory_id:editing.id,expected_revision:editing.revision,event_id:crypto.randomUUID(),memory});
-  else mutate('commit',{agent_id:'personal-console',consent:true,memories:[memory]});
+  if(editing)mutate('update',{memory_id:editing.id,expected_revision:editing.revision,event_id:crypto.randomUUID(),memory},memoryAuthorization());
+  else mutate('commit',{agent_id:'personal-console',consent:true,memories:[memory]},memoryAuthorization());
 });
 $('retry').addEventListener('click',submitPending);$('save-pending').addEventListener('click',()=>{if(pending)download({format:1,warning:'Contains consented memory text; protect this local file. The request is not confirmed.',...pending},'ultrabrain-unconfirmed-request.json');});
 window.addEventListener('beforeunload',e=>{if(pending){e.preventDefault();e.returnValue='';}});
