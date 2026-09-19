@@ -7,6 +7,7 @@ const [command, ...rest] = args;
 try {
   if (!command || ['help','--help','-h'].includes(command)) {
     console.log(`ultrabrain 0.14.0-alpha.1 — Linux / managed PostgreSQL
+  personal-init status|create-token          Offline console credential bootstrap; no service start
   personal-status [--expect-worker]           Read user-unit state; not application readiness
   personal-ready --bun PATH --expected-current SHA --expected-instance UUID   Read-only authenticated console/database readiness
   personal-activate plan|apply|status|recover   Start an installed console; recover by observation
@@ -40,6 +41,11 @@ Upstream-dependent features require their original providers/configuration.`);
     // Activation uses the distribution's dbus-python and an isolated interpreter.
     const python = command === 'personal-activate' && process.platform === 'linux' ? '/usr/bin/python3' : 'python3';
     const p = spawnSync(python, [...(['personal-status','personal-deploy','personal-ready','personal-activate'].includes(command) ? ['-I','-B'] : command === 'preflight' ? ['-B'] : []), `${ROOT}/scripts/${script}`, ...rest], { stdio: 'inherit' });
+    if (p.error) throw p.error;
+    process.exitCode = p.status ?? 1;
+  } else if (command === 'personal-init') {
+    const python = process.platform === 'linux' ? '/usr/bin/python3' : 'python3';
+    const p = spawnSync(python, ['-I','-B', `${ROOT}/scripts/personal-init.py`, ...rest], {stdio:'inherit'});
     if (p.error) throw p.error;
     process.exitCode = p.status ?? 1;
   } else if (command === 'personal-ui') {

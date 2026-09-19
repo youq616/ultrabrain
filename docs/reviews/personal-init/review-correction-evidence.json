@@ -1,0 +1,66 @@
+{
+  "format": 1,
+  "base_commit": "b24f1c4d2dd9a8bf2a2b84a45c55d6f7515b665b",
+  "reviewer": {
+    "login": "chatgpt-codex-connector[bot]",
+    "user_id": 199175422,
+    "github_review_id": 5255138559,
+    "github_comment_id": 4052688941,
+    "state": "COMMENTED",
+    "internal_session_id": null,
+    "tests_reported": null,
+    "finding": "P2: status must report token_recovery_required for missing deployed credentials"
+  },
+  "source_blobs": {
+    "scripts/personal-init.py": "cd4603383b53e1d7e81d30b2e4a7baefc167b8ee",
+    "test/test_personal_init_recovery_status.py": "21ca3ec0f9b5a9cc8785995bc3f0f6040827d9f1",
+    "test/personal-init-integration.mjs": "399f396766d6ff29df72a8c13b2507cb9c2ce865",
+    "docs/PERSONAL-INIT.md": "1bea741e4966a0c71827ce8c706b6d4696c0fe77"
+  },
+  "local_logs": [
+    {
+      "file": "reviewer-first-failure.log",
+      "sha256": "b2b1a06c9082f69fd21b5693c7f84f6a9978590eea8a7b1cfa2a6e843ec62570"
+    },
+    {
+      "file": "reviewer-correction-focused.log",
+      "sha256": "6bd149361024c5e3239ad18f8534a5f323ef7c3f5badcc093f8f250c4f30302c"
+    },
+    {
+      "file": "python-reviewed-final.log",
+      "sha256": "c53aaa35415e8e9d68638ae7dee3e3b37f82257922f52c5039c63b9d979428d3"
+    },
+    {
+      "file": "node-reviewed-final.log",
+      "sha256": "7549eef5f4cc2bfe108d3d4ebdbc556e3b7bc1e9e5fb561e504a78098230de69"
+    },
+    {
+      "file": "optimized-reviewed-interrupted.log",
+      "sha256": "402594f4cd3596039486c6adb434c126e82b5c37d1e5f0154e5375560296a103"
+    },
+    {
+      "file": "optimized-reviewed-final.log",
+      "sha256": "1720be74bc67939156eabd1c8b0819a1fe1151c4841c365b3588cb284d9fe03f"
+    }
+  ],
+  "results": {
+    "focused_test_methods": 5,
+    "before_fix_failed_assertions_including_subtests": 10,
+    "node_full": {
+      "pass": 615,
+      "fail": 0,
+      "skipped": 0
+    },
+    "python_full": {
+      "pass": 594,
+      "fail": 0
+    },
+    "optimized_initializer": {
+      "pass": 48,
+      "fail": 0
+    },
+    "interrupted_optimized_attempt": "not counted as passed; separate final execution completed"
+  },
+  "candidate_ci": "pending at commit time",
+  "independent_review": "corrected final commit requires new review"
+}
