@@ -1,0 +1,40 @@
+name: Personal database identity
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: personal-identity-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  managed-identity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      ULTRABRAIN_HOME: /home/runner/ultrabrain-personal-services-test
+      ULTRABRAIN_TEST_ALLOW_WRITE: '1'
+      ULTRABRAIN_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Build prerequisites on disposable runner
+        run: sudo apt-get update && sudo apt-get install -y build-essential bison flex libssl-dev zlib1g-dev pkg-config
+      - run: install -d -m 0700 "$ULTRABRAIN_HOME"
+      - uses: actions/cache@v4
+        with:
+          path: /home/runner/ultrabrain-personal-services-test/runtime
+          key: native-ubuntu24-v1-${{ hashFiles('upstreams.lock.json', 'scripts/build-postgres.sh') }}
+      - name: Explicit disposable database bootstrap
+        run: bash scripts/bootstrap-linux.sh
+      - name: Public identity CLI with real Unix socket, SCRAM, PostgreSQL and process binding
+        run: bun test/personal-identity-integration.mjs
+      - name: Stop only this disposable database
+        if: always()
+        run: bun src/cli.mjs db stop
+      # No credentials, private configs, database dumps or service journals uploaded.
