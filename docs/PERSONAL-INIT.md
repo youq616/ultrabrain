@@ -14,7 +14,7 @@ bun src/cli.mjs personal-init create-token --home "$ULTRABRAIN_HOME"
 /usr/bin/python3 -I -B scripts/personal-init.py status --home "$ULTRABRAIN_HOME"
 ```
 
-`status` 在缺少令牌时返回退出码 1、`token_creation: "absent"`、`credential_ready: false`，但不创建任何文件。`create-token` 是明确的创建请求：固定目标为 `$ULTRABRAIN_HOME/personal-console-token`，输出只给相对文件名，不给令牌内容、令牌哈希、数据库密码或模型密钥。已有合法令牌返回 `existing`，保持原字节、权限与 inode，不自动轮换。
+`status` 在缺少令牌且没有部署/激活历史时返回退出码 1、`token_creation: "absent"`、`credential_ready: false`，但不创建任何文件。`create-token` 是明确的创建请求：固定目标为 `$ULTRABRAIN_HOME/personal-console-token`，输出只给相对文件名，不给令牌内容、令牌哈希、数据库密码或模型密钥。已有合法令牌返回 `existing`，保持原字节、权限与 inode，不自动轮换。
 
 已有令牌的原始字节必须为 **64 个小写十六进制字符，可选一个末尾 LF 换行**，与后续激活计划的验证一致。前后空格、制表符、CRLF、多重换行及其他包裹空白均拒绝；不会通过裁剪、重写或轮换令牌来掩盖格式问题。显式 `--home` 或 `ULTRABRAIN_HOME` 不依赖默认账号目录查询；隐式默认目录只在平台/UID 校验通过后、确实需要时求值，失败仍返回脱敏错误。
 
@@ -30,7 +30,7 @@ bun src/cli.mjs personal-init create-token --home "$ULTRABRAIN_HOME"
 
 初始化进程之间使用安装目录 inode 的非阻塞 flock，没有额外锁文件。冲突明确返回 `initialization_busy`，进程退出后内核释放锁。它**不**锁住运行中的控制台、部署器或其他同账号操作者；也不提供同 UID 对抗性隔离或原子目录快照。操作应在协作维护窗口进行。并发非协作写入会尽力检测后拒绝，而不是宣称能阻止所有竞争。
 
-缺少令牌且已有 `personal-deployment` 或 `personal-activation` 路径时，返回 `token_recovery_required`；空目录、损坏记录和链接也不按“首次运行”处理。防止把部署后丢失的凭据自动解释为新安装。初始化器不读取或修复这些记录，也不取代部署/激活的共享日志与锁。
+缺少令牌且已有 `personal-deployment` 或 `personal-activation` 路径时，`status` 和 `create-token` 均返回 `token_recovery_required`；空目录、损坏记录和链接也不按“首次运行”处理。防止把部署后丢失的凭据自动解释为新安装。初始化器不读取或修复这些记录，也不取代部署/激活的共享日志与锁。
 
 ## 失败和恢复边界
 

@@ -94,8 +94,11 @@ def initialize(action, home, *, root=ROOT):
             need(False, 'initialization_busy')
         pins = installation(view, root)
         present, created = token_present(view), False
-        if not present and action == 'create-token':
+        if not present:
+            # Status must distinguish a lost deployed credential from first run,
+            # without generating a secret or creating any filesystem state.
             require_fresh_setup(view)
+        if not present and action == 'create-token':
             view.unchanged()
             need(PREFLIGHT.check_pins(root) == pins, 'source_lock_changed')
             # Generate before acquiring a pathname. Never truncate, chmod, replace

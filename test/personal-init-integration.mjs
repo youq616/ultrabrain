@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
-import {readFileSync,writeFileSync,existsSync,lstatSync} from 'node:fs';
+import {readFileSync,writeFileSync,existsSync,lstatSync,mkdirSync,rmdirSync,renameSync} from 'node:fs';
 import {join} from 'node:path';
 import {homedir} from 'node:os';
 import {createHash} from 'node:crypto';
@@ -53,6 +53,21 @@ try {
    assert.equal(lstatSync(tokenFile).ino,ino);pass();
   }
  }finally{writeFileSync(tokenFile,raw);}
+ // Only this disposable fixture moves its own generated credential. Existing
+ // deployment/activation history must mean recovery, even for read-only status.
+ const history=join(HOME,'personal-activation'),held=join(HOME,'personal-init-test-held-token');
+ assert.equal(existsSync(history),false);assert.equal(existsSync(held),false);
+ renameSync(tokenFile,held);
+ try {
+  mkdirSync(history,{mode:0o700});
+  try {
+   for(const action of ['status','create-token']){
+    const r=invoke(action,1,{rejected:true});
+    assert.equal(r.value.error,'token_recovery_required');assert.equal(r.value.token_creation,'not_proven');
+    assert.equal(existsSync(tokenFile),false);assert.ok(readFileSync(held).equals(raw));pass();
+   }
+  }finally{rmdirSync(history);}
+ }finally{renameSync(held,tokenFile);}
  assert.deepEqual(snapshot(),before,'Offline initialization must not change managed configuration or database process identity');pass();
  assert.equal(consoleToken(tokenFile),token);assert.ok(readFileSync(tokenFile).equals(raw));pass();
  engine=await connect();
