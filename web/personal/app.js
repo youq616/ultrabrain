@@ -218,7 +218,7 @@ async function previewRecall(){
       message(submitted?'预览未确认：'+error.message+'。查询可能已到达服务器；没有请求写入记忆或调用模型。':'未发送预览：'+error.message+'。请核对任务、范围及授权。',true);
     }
   }finally{
-    if(epoch===recallEpoch){recallController=null;$('recall-submit').disabled=false;$('recall-cancel').disabled=true;}
+    if(epoch===recallEpoch){recallController=null;$('recall-submit').disabled=false;$('recall-cancel').disabled=current===null;}
   }
 }
 

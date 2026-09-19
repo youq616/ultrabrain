@@ -80,6 +80,18 @@ with sync_playwright() as p:
     assert 'QUERY_PRIVATE_MARKER' not in raw and token not in raw
     passed()
 
+    # A completed preview must remain explicitly clearable without another read.
+    before = len([c for c in calls if c['operation'] == 'context'])
+    expect(page.locator('#recall-cancel')).to_be_enabled()
+    page.locator('#recall-cancel').click()
+    expect(page.locator('#results article')).to_have_count(0)
+    expect(page.locator('#export')).to_be_disabled()
+    expect(page.locator('#recall-cancel')).to_be_disabled()
+    expect(page.locator('#recall-consent')).not_to_be_checked()
+    expect(page.locator('#recall-task')).to_have_value('Docker QUERY_PRIVATE_MARKER')
+    assert len([c for c in calls if c['operation'] == 'context']) == before
+    passed()
+
     page.locator('#recall-project').fill('project-a')
     expect(page.locator('#recall-consent')).not_to_be_checked()
     expect(page.locator('#export')).to_be_disabled()

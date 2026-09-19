@@ -111,3 +111,13 @@ for(const field of ['task','token'])test('unexpected reflected '+field+' cannot 
  const f=fixture(async body=>envelope(body.input,{[field]:'PRIVATE_REFLECTION'}));await f.submit();
  assert.equal(f.run('current'),null);assert.equal(f.get('export').disabled,true);
 });
+
+for(const empty of [false,true])test('completed '+(empty?'empty ':'')+'preview can be cleared without another query',async()=>{
+ const f=fixture(async body=>envelope(body.input,empty?{memories:[]}:{}));await f.submit();
+ assert.equal(f.get('recall-cancel').disabled,false,'Keep cancellation available for completed results');
+ assert.notEqual(f.run('current'),null);const requests=f.calls.length;
+ f.click('recall-cancel');assert.equal(f.run('current'),null);assert.equal(f.get('results').children.length,0);
+ assert.equal(f.get('export').disabled,true);assert.equal(f.get('recall-cancel').disabled,true);
+ assert.equal(f.get('recall-consent').checked,false);assert.equal(f.get('recall-task').value,'configuration');
+ assert.equal(f.calls.length,requests,'Clearing a completed preview must be local only');
+});

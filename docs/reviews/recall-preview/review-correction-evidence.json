@@ -1,0 +1,88 @@
+{
+  "format": 1,
+  "reviewed_base": "a9e9d0d739a17f25d8474c346c0b6febce1aaaf1",
+  "review_id": 5256081227,
+  "review_comment_id": 4053511424,
+  "reviewer": "chatgpt-codex-connector[bot]",
+  "finding": "P2: completed previews had no usable cancel/clear control",
+  "before": {
+    "tests": 2,
+    "passed": 0,
+    "failed": 2
+  },
+  "after": {
+    "node": {
+      "tests": 734,
+      "passed": 734,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    "focused": {
+      "tests": 40,
+      "passed": 40
+    },
+    "python": {
+      "tests": 683,
+      "passed": 683
+    },
+    "browser": "17 checks defined; candidate CI pending",
+    "independent_final_review": "pending"
+  },
+  "files": [
+    {
+      "path": "web/personal/app.js",
+      "git_blob": "d501e0dcab3ccee9d1d21fc90888fde80e467fb8"
+    },
+    {
+      "path": "test/personal-recall-preview.test.mjs",
+      "git_blob": "2e5221780fef63fa79ee8d2272e94906ac4e082e"
+    },
+    {
+      "path": "test/personal-recall-browser.py",
+      "git_blob": "520175ae660c76c586b19dd99a64ad27365eb83e"
+    }
+  ],
+  "logs": [
+    {
+      "file": "reviewer-first-failure.log",
+      "sha256": "172fab34633a14339a93d46fd86cc64126b311d885a6cd9903b76df8ca6c9bba"
+    },
+    {
+      "file": "reviewer-first-failure.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "reviewer-focused.log",
+      "sha256": "88e761027cf14ea4d32b3a0e2f966631b9856a9b8773ef4fd7857aab3e4d8559"
+    },
+    {
+      "file": "reviewer-focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-reviewed.log",
+      "sha256": "e39c9bf0f516f272ccb154134c24283215459d94c03d7ffb5cacd5453b684204"
+    },
+    {
+      "file": "node-reviewed.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-reviewed-interrupted.log",
+      "sha256": "bf2b548e03b2c04ad8a64d5cdef240a4ebc8c6fd5563466183e2a1bc1bff83df"
+    },
+    {
+      "file": "python-reviewed-interrupted.txt",
+      "sha256": "1a8ef30b40119ef8edce3648dd94d2f15d2bb77863c3f5429e2d25c583a48c97"
+    },
+    {
+      "file": "python-reviewed.log",
+      "sha256": "a2ece5b8e868b5d7d0cc1c455c2ccee7b66d7b5ca53339b4fb45542778349c89"
+    },
+    {
+      "file": "python-reviewed.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    }
+  ]
+}
