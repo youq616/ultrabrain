@@ -75,8 +75,18 @@ try{
  // Recheck local authorization after asynchronous registration/identity calls, before plaintext transmission.
  const guarded=await connectClient(profile);let authorized=0;
  try {
+   await assert.rejects(guarded.capture({agent_id:'denied-before-register',event_id:'declined-before-register',transcript:'SYNTHETIC_DECLINED_INPUT',consent:true},
+     {authorize:()=>false}),{code:'capture_disabled'});
+   assert.equal((await engine.executeRaw('SELECT agent_id FROM ultrabrain.agent_registry WHERE source_id=$1 AND agent_id=$2',[source,'denied-before-register'])).length,0);
+   assert.equal(await count(),5);pass();
    await assert.rejects(guarded.capture({agent_id:'revoked-before-send',event_id:'must-not-send',transcript:'SYNTHETIC_REVOKED_INPUT',consent:true,project_id:profile.project_id},
-     {authorize:()=>{if(++authorized===2)throw new UltraError('capture_disabled','Synthetic revocation');}}),{code:'capture_disabled'});
+     {authorize:()=>{if(++authorized===3)throw new UltraError('capture_disabled','Synthetic revocation');}}),{code:'capture_disabled'});
+   assert.equal((await engine.executeRaw('SELECT agent_id FROM ultrabrain.agent_registry WHERE source_id=$1 AND agent_id=$2',[source,'revoked-before-send'])).length,1);
+   assert.equal(await count(),5);pass();
+   authorized=0;
+   await assert.rejects(guarded.capture({agent_id:'boolean-revoked',event_id:'boolean-must-not-send',transcript:'SYNTHETIC_REVOKED_INPUT',consent:true},
+     {authorize:()=>++authorized<3}),{code:'capture_disabled'});
+   assert.equal((await engine.executeRaw('SELECT agent_id FROM ultrabrain.agent_registry WHERE source_id=$1 AND agent_id=$2',[source,'boolean-revoked'])).length,1);
    assert.equal(await count(),5);pass();
  } finally {await guarded.close();}
 

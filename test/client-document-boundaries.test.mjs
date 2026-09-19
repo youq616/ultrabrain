@@ -84,3 +84,22 @@ test('permission revoked during Agent lookup prevents all writes',async()=>{
    assert.equal(name,'ultra_agent_list');allowed=false;return {source_id:'default',agents:[],next_offset:null};
  }}));
 });
+for(const when of ['before','identity','lookup','registration','final_identity'])test('boolean document revocation '+when+' prevents subsequent writes',async()=>{
+ let permitted=when!=='before',checks=0;const calls=[];
+ await assert.rejects(deliverDocumentImport(file(),profile,{authorize:()=>permitted,
+  checkIdentity:async()=>{checks++;if(when==='identity'||when==='final_identity'&&checks===3)permitted=false;},
+  invoke:async name=>{
+   calls.push(name);
+   if(name==='ultra_agent_list'){if(when==='lookup')permitted=false;return {source_id:'default',agents:[],next_offset:null};}
+   if(name==='ultra_agent_register'&&when==='registration')permitted=false;
+   return receipt();
+  }}),{code:'capture_disabled'});
+ assert.ok(!calls.includes('ultra_personal_document_import'));
+ if(['before','identity','lookup'].includes(when))assert.ok(!calls.includes('ultra_agent_register'));
+ if(when==='before')assert.equal(checks,0);
+});
+test('rejected asynchronous document authorization never leaks a rejection or sends a request',async()=>{
+ await assert.rejects(deliverDocumentImport(file(),profile,{authorize:async()=>{throw Error('synthetic denial');},
+  checkIdentity:()=>assert.fail('No network'),invoke:()=>assert.fail('No network')}),{code:'invalid_params'});
+ await new Promise(resolve=>setImmediate(resolve));
+});

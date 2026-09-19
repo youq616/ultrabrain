@@ -7,6 +7,7 @@ import {spawn} from 'node:child_process';
 import {randomBytes,createHash} from 'node:crypto';
 import {connect,ROOT} from '../src/runtime.mjs';
 import {PersonalMemoryStore} from '../src/personal-memory-store.mjs';
+import {connectClient} from '../packages/ultrabrain-client/src/runtime.mjs';
 import {Client} from '../vendor/gbrain/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js';
 import {StdioClientTransport} from '../vendor/gbrain/node_modules/@modelcontextprotocol/sdk/dist/esm/client/stdio.js';
 assert.equal(process.env.ULTRABRAIN_TEST_ALLOW_WRITE,'1');
@@ -36,6 +37,12 @@ try{
  const store=new PersonalMemoryStore({engine,sourceId:source,remote:false,transport:'stdio'});
  await store.register({agent_id:'document-cli',agent_type:'coding_agent',capabilities:['code','files'],workspace:'/synthetic/workspace'});
  const prior=(await store.agents()).agents[0];
+ const guarded=await connectClient(profile);
+ try {
+   await assert.rejects(guarded.importDocument({agent_id:'denied-document',event_id:'denied-document',consent:true,
+     label:'synthetic.md',content_base64:bytes.toString('base64'),content_sha256:hash},{authorize:()=>false}),{code:'capture_disabled'});
+   assert.equal(await count(),0);assert.deepEqual((await store.agents()).agents,[prior]);pass();
+ } finally {await guarded.close();}
  p=await run('document-import',{...input,consent:false});assert.equal(p.result.error,'capture_disabled');assert.equal(await count(),0);pass();
  p=await run('document-import',input);assert.equal(p.code,0);const document=p.result.result;assert.equal(document.content_sha256,hash);assert.equal(document.project_id,'file-project');assert.ok(!p.raw.includes(bytes.toString('utf8').slice(0,20)));pass();
  const after=(await store.agents()).agents[0];assert.deepEqual(after,prior,'Import must not mutate existing Agent metadata or revision');pass();

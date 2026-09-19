@@ -56,8 +56,8 @@ test('identity pin is checked before sending private payload',async t=>{
  assert.equal(r.blocked,1);assert.equal(r.last_error,'identity_mismatch');assert.equal(sent,false);
 });
 test('revocation after connect prevents payload submission',async t=>{
- const {q,input}=setup(t);await q.enqueue(item());let calls=0,sent=false;
- const r=await q.flush(async()=>connection(input,{capture:async()=>{sent=true;}}),{authorize:()=>{if(++calls>1){const e=Error();e.code='capture_disabled';throw e;}}});
+ const {q,input}=setup(t);await q.enqueue(item());let revoked=false,sent=false;
+ const r=await q.flush(async()=>{revoked=true;return connection(input,{capture:async()=>{sent=true;}});},{authorize:()=>{if(revoked){const e=Error();e.code='capture_disabled';throw e;}}});
  assert.equal(r.blocked,1);assert.equal(sent,false);
 });
 test('enqueue stays available while another drainer awaits the network',async t=>{

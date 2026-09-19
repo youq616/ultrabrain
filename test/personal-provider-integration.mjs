@@ -9,6 +9,7 @@ import {randomBytes} from 'node:crypto';
 import {connect,ROOT,HOME} from '../src/runtime.mjs';
 import {PersonalMemoryStore} from '../src/personal-memory-store.mjs';
 import {PersonalConsolidator} from '../src/personal-consolidation.mjs';
+import {configuredPersonalModel} from '../src/adapters/personal-model.mjs';
 assert.equal(process.env.ULTRABRAIN_TEST_ALLOW_WRITE,'1','Isolated test installation required');
 const engine=await connect(),source='provider-'+randomBytes(5).toString('hex');
 const store=new PersonalMemoryStore({engine,sourceId:source,remote:false,transport:'stdio'});
@@ -37,6 +38,16 @@ try {
   await new Promise(resolve=>mock.listen(0,'127.0.0.1',resolve));const endpoint=`http://127.0.0.1:${mock.address().port}/v1`;
   const cfg=JSON.parse(original);cfg.chat_model='ollama:ultrabrain-fixture';cfg.provider_base_urls={...cfg.provider_base_urls,ollama:endpoint};
   cfg.ultrabrain_personal_consolidation={enabled:true,model:'ollama:ultrabrain-fixture',revision:'wire-fixture-1',timeout_ms:5000};
+  writeFileSync(configFile,JSON.stringify(cfg)+'\n',{mode:0o600});
+  // Actual pinned native loadConfig must reread the file when a previously configured
+  // closure is invoked. Both changes must fail before the loopback provider receives text.
+  const binding=await configuredPersonalModel(),beforeRevocation=calls;
+  assert.equal(binding.profile.model,cfg.ultrabrain_personal_consolidation.model);
+  for(const changed of [{enabled:false},{...cfg.ultrabrain_personal_consolidation,revision:'wire-fixture-2'}]) {
+    writeFileSync(configFile,JSON.stringify({...cfg,ultrabrain_personal_consolidation:changed})+'\n',{mode:0o600});
+    assert.throws(()=>binding.generate({model:binding.profile.model,system:'Synthetic consent fixture',prompt:'Synthetic input only',maxTokens:16}),{code:'model_profile_changed'});
+    assert.equal(calls,beforeRevocation);checks++;
+  }
   writeFileSync(configFile,JSON.stringify(cfg)+'\n',{mode:0o600});
   const ran=await execute({...process.env,OLLAMA_BASE_URL:endpoint});
   assert.equal(ran.code,0,'Actual personal worker subprocess failed (raw diagnostics withheld)');

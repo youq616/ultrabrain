@@ -41,7 +41,7 @@ export class PersonalConsolidator {
    * Never hold a DB transaction while waiting for the external response. The nested settled
    * promise prevents rejection leaks if admission commit fails after invocation has started.
    */
-  async #dispatch(row,lease,request,generate,onInvoke) {
+  async #dispatch(row,lease,request,profileHash,onInvoke) {
     let invoked=false,admitted;
     try {
       admitted=await this.engine.transaction(async tx=>{
@@ -54,14 +54,28 @@ export class PersonalConsolidator {
           WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid FOR SHARE`,[this.source,this.actor,row.input_id]);
         requireThat(original&&original.status!=='archived'&&original.revision===row.input_revision&&
           original.content_hash===row.input_hash&&sha256(original.content)===row.input_hash,'stale_source','Source changed before provider admission');
+        // A config read before waiting for DB admission can become stale while the lock or
+        // source query is pending. Recheck the host opt-in here and use this fresh binding.
+        const current=await this.configure();
+        requireThat(current.profile&&personalProfileHash(current.profile)===profileHash,
+          'model_profile_changed','Personal model profile changed before provider admission');
+        // The configuration await can outlive an already aging lease. Recheck DB time
+        // after it; the held owner/job/source locks still fence cancellation and edits.
+        const [admission]=await tx.executeRaw(`SELECT state,lease_id,lease_until>clock_timestamp() AS live
+          FROM ultrabrain.personal_consolidations WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid`,
+          [this.source,this.actor,row.id]);
+        requireThat(admission?.state==='processing'&&admission.lease_id===lease&&admission.live,
+          'lease_lost','Job lease expired before provider admission');
         requireThat(!request.signal?.aborted,'personal_model_timeout','Cancelled before provider admission');
         personalPrincipal(this.ctx,true);
+        // The native generator synchronously rechecks host opt-in at gateway invocation;
+        // trusted host-injected generators must preserve that final boundary as well.
         // Invoke synchronously under the lock. Do not await the provider's returned promise here.
         // After this boundary an external request may still be pending; archive fences its output,
         // but cannot promise to undo SDK scheduling, remote processing or a charge already begun.
         invoked=true;onInvoke();
         let outcome;
-        try{outcome=Promise.resolve(generate(request)).then(value=>({value}),error=>({error}));}
+        try{outcome=Promise.resolve(current.generate(request)).then(value=>({value}),error=>({error}));}
         catch(error){outcome=Promise.resolve({error});}
         return {outcome};
       });
@@ -121,7 +135,7 @@ export class PersonalConsolidator {
         const current=await this.configure();
         requireThat(current.profile&&personalProfileHash(current.profile)===profileHash,'model_profile_changed','Personal model profile changed');
         generated=await generatePersonalCandidates(row.original.content,current.profile,
-          request=>this.#dispatch(row,lease,request,current.generate,()=>modelCalls++),{signal});
+          request=>this.#dispatch(row,lease,request,profileHash,()=>modelCalls++),{signal});
         const final=await this.configure();
         requireThat(final.profile&&personalProfileHash(final.profile)===profileHash,'model_profile_changed','Personal model profile changed during generation');
       }catch(e){

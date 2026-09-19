@@ -24,9 +24,10 @@ export async function deliverCapture(input,profile,{checkIdentity,invoke,signal,
       Promise.resolve(result).catch(()=>{}); // Do not leak an unsupported async assertion's rejection.
       requireThat(false,'invalid_params','Authorization assertion must be synchronous');
     }
+    requireThat(result!==false,'capture_disabled','Capture authorization declined');
     requireThat(!signal?.aborted,'aborted','Capture cancelled during authorization');
   };
-  await checkIdentity();
+  allowed();await checkIdentity();
   allowed();
   await invoke('ultra_agent_register',{agent_id:request.agent_id,agent_type:'custom'});
   await checkIdentity();

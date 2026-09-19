@@ -52,6 +52,7 @@ export async function deliverDocumentImport(file,profile,{checkIdentity,invoke,s
   const allowed=()=>{
     requireThat(!signal?.aborted,'aborted','Document import cancelled');const result=authorize();
     if(result&&typeof result.then==='function'){Promise.resolve(result).catch(()=>{});requireThat(false,'invalid_params','Authorization must be synchronous');}
+    requireThat(result!==false,'capture_disabled','Document import authorization declined');
     requireThat(!signal?.aborted,'aborted','Document import cancelled during authorization');
   };
   allowed();await checkIdentity();allowed();

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {connect} from '../src/runtime.mjs';
 import {sha256} from '../src/core.mjs';
-import {PersonalMemoryStore} from '../src/personal-memory-store.mjs';
+import {PersonalMemoryStore,lockPersonal} from '../src/personal-memory-store.mjs';
 import {PersonalDocumentStore} from '../src/personal-documents.mjs';
 import {PersonalConsolidator} from '../src/personal-consolidation.mjs';
 import {personalModelProfile} from '../src/personal-consolidation-core.mjs';
@@ -36,6 +36,57 @@ try {
    assert.equal(result.model_requests_attempted,0);assert.equal(await count(doc.job),0);pass();
    await worker.cancel({job_id:doc.job}); // clear synthetic expired/aborted records before next test
  }
+ // Revoke/change host opt-in while admission is waiting for a real PostgreSQL owner lock.
+ // The earlier profile read is valid; the later check must prevent any provider invocation.
+ for(const [action,nextProfile] of [
+   ['disable-profile',null],
+   ['change-model',personalModelProfile({enabled:true,model:'fixture:changed',revision:'dispatch-1',timeout_ms:10000})],
+   ['change-revision',personalModelProfile({enabled:true,model:'fixture:only',revision:'dispatch-2',timeout_ms:10000})],
+ ]) {
+   const doc=await create(action);
+   let current=profile,reads=0,calls=0,locks=0,holder,release,locked,admission;
+   const hold=new Promise(r=>release=r),hasLock=new Promise(r=>locked=r),atAdmission=new Promise(r=>admission=r);
+   const waitingCtx={...ctx,engine:{kind:'postgres',executeRaw:(...args)=>engine.executeRaw(...args),
+     transaction:fn=>engine.transaction(tx=>fn({executeRaw:async(sql,args)=>{
+       if(sql.includes('pg_advisory_xact_lock')&&++locks===2)admission();
+       return tx.executeRaw(sql,args);
+     }}))}};
+   const waitingWorker=new PersonalConsolidator(waitingCtx,async()=>{
+     if(++reads===2) {
+       holder=engine.transaction(async tx=>{await lockPersonal(tx,source,memories.actor);locked();await hold;});
+       await deadline(hasLock);
+     }
+     return {profile:current,generate:async()=>{calls++;return output;}};
+   });
+   const running=waitingWorker.process(jobInput(doc.job));
+   try {await deadline(atAdmission);current=nextProfile;}
+   finally {release();if(holder)await holder;}
+   const result=await deadline(running);
+   assert.equal(calls,0,'No provider invocation after '+action+' during DB admission');
+   assert.equal(result.model_requests_attempted,0);
+   assert.equal(result.results[0].error,'model_profile_changed');
+   assert.equal((await waitingWorker.status({job_id:doc.job})).jobs[0].state,'failed');
+   assert.equal(await count(doc.job),0);pass();
+ }
+ // Let actual database time expire a shortened fixture lease during the final config await.
+ // The mutation is test-only and uses the transaction already holding the job/source locks.
+ const late=await create('expiry-during-final-profile');
+ let admissionTx,transactions=0,configReads=0,lateCalls=0;
+ const lateCtx={...ctx,engine:{kind:'postgres',executeRaw:(...args)=>engine.executeRaw(...args),
+   transaction:fn=>engine.transaction(tx=>{if(++transactions===2)admissionTx=tx;return fn(tx);})}};
+ const lateWorker=new PersonalConsolidator(lateCtx,async()=>{
+   if(++configReads===3) {
+     assert.ok(admissionTx);
+     await admissionTx.executeRaw("UPDATE ultrabrain.personal_consolidations SET lease_until=clock_timestamp()+interval '100 milliseconds' WHERE id=$1::uuid",[late.job]);
+     await admissionTx.executeRaw('SELECT true AS waited FROM pg_sleep(0.2)');
+   }
+   return {profile,generate:async()=>{lateCalls++;return output;}};
+ });
+ const lateResult=await deadline(lateWorker.process(jobInput(late.job)));
+ assert.equal(lateCalls,0);assert.equal(lateResult.model_requests_attempted,0);
+ assert.equal(lateResult.results[0].state,'lease_lost');assert.equal(await count(late.job),0);
+ assert.equal((await lateWorker.status({job_id:late.job})).jobs[0].state,'processing');
+ await lateWorker.cancel({job_id:late.job});pass();
  // An already-started provider does not hold the DB lock for the model response.
  const live=await create('live');let entered,release;const ready=new Promise(r=>entered=r),hold=new Promise(r=>release=r);
  const worker=new PersonalConsolidator(ctx,()=>({profile,generate:async()=>{entered();await hold;return output;}}));
@@ -48,5 +99,5 @@ try {
  await assert.rejects(new PersonalConsolidator(faulty,()=>({profile,generate:async()=>{started=true;return output;}})).process(jobInput(uncertain.job)),{code:'personal_commit_unconfirmed'});
  assert.equal((await worker.status({job_id:uncertain.job})).jobs[0].state,'processing');assert.equal(await count(uncertain.job),0);pass();
  await worker.cancel({job_id:uncertain.job});
- console.log(`PASS ${checks} provider-admission checks: real PostgreSQL archive/cancel/source/expiry/abort barriers, unlocked provider wait and uncertain admission`);
+ console.log(`PASS ${checks} provider-admission checks: real PostgreSQL archive/cancel/source/expiry/abort/profile barriers, unlocked provider wait and uncertain admission`);
 }finally{await engine.disconnect();}
