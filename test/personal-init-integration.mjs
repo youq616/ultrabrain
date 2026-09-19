@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
-import {readFileSync,existsSync,lstatSync} from 'node:fs';
+import {readFileSync,writeFileSync,existsSync,lstatSync} from 'node:fs';
 import {join} from 'node:path';
 import {homedir} from 'node:os';
 import {createHash} from 'node:crypto';
@@ -18,13 +18,14 @@ const tokenFile=join(HOME,'personal-console-token');
 const files=['postgres/state.json','postgres/runtime.json','postgres/data/PG_VERSION','postgres/data/postmaster.pid','gbrain/.gbrain/config.json'];
 const sha=b=>createHash('sha256').update(b).digest('hex');
 function snapshot(){return files.map(name=>({name,sha:sha(readFileSync(join(HOME,name))),ino:lstatSync(join(HOME,name)).ino}));}
-function invoke(action,expected){
+function invoke(action,expected,{rejected=false}={}){
  const p=spawnSync(process.execPath,[join(ROOT,'src/cli.mjs'),'personal-init',action,'--home',HOME],
   {encoding:'utf8',timeout:10000,maxBuffer:16384,env:{...process.env,ULTRABRAIN_DEBUG:'1'}});
  assert.ifError(p.error);assert.equal(p.status,expected);assert.equal(p.stderr,'');
  const value=JSON.parse(p.stdout);
- for(const key of ['services_started','database_connected','model_called','configuration_changed','application_ready','instance_identity_verified','token_value_returned'])
+ for(const key of ['services_started','database_connected','model_called','configuration_changed','application_ready','token_value_returned'])
   assert.equal(value[key],false);
+ if(!rejected)assert.equal(value.instance_identity_verified,false);
  return {value,text:p.stdout};
 }
 try {
@@ -40,6 +41,18 @@ try {
   const r=invoke(action,0);assert.equal(r.value.token_creation,'existing');assert.ok(!r.text.includes(token));
   assert.ok(readFileSync(tokenFile).equals(raw),'Existing token bytes must be preserved');assert.equal(lstatSync(tokenFile).ino,ino);pass();
  }
+ // A credential that a permissive trim() reader accepts is still unusable by
+ // managed activation. Exercise both public entrypoints before opening any UI.
+ const wrapped=Buffer.from(token+'\r\n','ascii');
+ try {
+  writeFileSync(tokenFile,wrapped);
+  for(const action of ['status','create-token']){
+   const r=invoke(action,1,{rejected:true});
+   assert.equal(r.value.error,'invalid_console_token');assert.equal(r.value.token_creation,'not_proven');
+   assert.ok(!r.text.includes(token));assert.ok(readFileSync(tokenFile).equals(wrapped));
+   assert.equal(lstatSync(tokenFile).ino,ino);pass();
+  }
+ }finally{writeFileSync(tokenFile,raw);}
  assert.deepEqual(snapshot(),before,'Offline initialization must not change managed configuration or database process identity');pass();
  assert.equal(consoleToken(tokenFile),token);assert.ok(readFileSync(tokenFile).equals(raw));pass();
  engine=await connect();

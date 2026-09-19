@@ -54,8 +54,9 @@ def token_present(view):
         raw = view.read(TOKEN, 128)
     except FileNotFoundError:
         return False
-    # Match the existing console/readiness reader's ASCII whitespace tolerance.
-    need(re.fullmatch(rb'[a-f0-9]{64}', raw.strip()) is not None, 'invalid_console_token')
+    # Match the activation planner's raw-byte contract. Trimming would falsely
+    # certify whitespace-wrapped credentials that the next stage cannot use.
+    need(re.fullmatch(rb'[a-f0-9]{64}\n?', raw) is not None, 'invalid_console_token')
     return True
 
 
@@ -70,11 +71,15 @@ def require_fresh_setup(view):
         need(False, 'token_recovery_required')
 
 
-def initialize(action, home, *, root=ROOT):
-    need(action in ('status', 'create-token'), 'invalid_arguments')
+def require_platform():
     need(sys.platform == 'linux', 'server_requires_linux')
     need(0 < os.getuid() == os.geteuid(), 'use_ordinary_service_account')
     need(sys.version_info >= (3, 11), 'python_3_11_required')
+
+
+def initialize(action, home, *, root=ROOT):
+    need(action in ('status', 'create-token'), 'invalid_arguments')
+    require_platform()
     home, root = Path(home), Path(root)
     need(home.is_absolute() and '..' not in home.parts and
          not any(ord(c) < 32 or ord(c) == 127 for c in str(home)), 'absolute_home_required')
@@ -152,8 +157,12 @@ def main(argv=None):
         parser.add_argument('action', choices=('status', 'create-token'))
         parser.add_argument('--home')
         parsed = parser.parse_args(args)
-        home = parsed.home if parsed.home is not None else os.environ.get(
-            'ULTRABRAIN_HOME', str(Path.home()/'.local/share/ultrabrain'))
+        require_platform()
+        # dict.get evaluates its default eagerly. An explicit environment home
+        # must not depend on an unrelated account-home lookup succeeding.
+        home = parsed.home if parsed.home is not None else os.environ.get('ULTRABRAIN_HOME')
+        if home is None:
+            home = str(Path.home()/'.local/share/ultrabrain')
         result = initialize(parsed.action, home)
         print(json.dumps(result, sort_keys=True))
         return 0 if result['ok'] else 1

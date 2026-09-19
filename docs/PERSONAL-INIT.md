@@ -16,6 +16,8 @@ bun src/cli.mjs personal-init create-token --home "$ULTRABRAIN_HOME"
 
 `status` 在缺少令牌时返回退出码 1、`token_creation: "absent"`、`credential_ready: false`，但不创建任何文件。`create-token` 是明确的创建请求：固定目标为 `$ULTRABRAIN_HOME/personal-console-token`，输出只给相对文件名，不给令牌内容、令牌哈希、数据库密码或模型密钥。已有合法令牌返回 `existing`，保持原字节、权限与 inode，不自动轮换。
 
+已有令牌的原始字节必须为 **64 个小写十六进制字符，可选一个末尾 LF 换行**，与后续激活计划的验证一致。前后空格、制表符、CRLF、多重换行及其他包裹空白均拒绝；不会通过裁剪、重写或轮换令牌来掩盖格式问题。显式 `--home` 或 `ULTRABRAIN_HOME` 不依赖默认账号目录查询；隐式默认目录只在平台/UID 校验通过后、确实需要时求值，失败仍返回脱敏错误。
+
 推荐顺序：`bootstrap-linux.sh` → `personal-init create-token` → [个人服务计划](PERSONAL-SERVICES.md)与[部署](PERSONAL-DEPLOY.md) → [激活](PERSONAL-ACTIVATE.md) → [就绪检查](PERSONAL-READY.md)。后续部署、数据库启动和控制台激活仍各自需要原有显式操作及校验；本入口不会代为执行。成功初始化不提供可信实例 UUID；UUID 仍按 PERSONAL-READY.md 通过可信数据库/MCP 身份取得，不能猜测。令牌只在本机供操作者登录控制台，不发到聊天或提交到仓库。
 
 当前阶段的测试和审查状态见 [实现复查记录](reviews/personal-init/README.md) 及候选 PR；不以文档新增或命令存在宣告个人 V1 全部完成。
