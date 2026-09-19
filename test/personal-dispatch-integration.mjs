@@ -68,6 +68,25 @@ try {
    assert.equal((await waitingWorker.status({job_id:doc.job})).jobs[0].state,'failed');
    assert.equal(await count(doc.job),0);pass();
  }
+ // Let actual database time expire a shortened fixture lease during the final config await.
+ // The mutation is test-only and uses the transaction already holding the job/source locks.
+ const late=await create('expiry-during-final-profile');
+ let admissionTx,transactions=0,configReads=0,lateCalls=0;
+ const lateCtx={...ctx,engine:{kind:'postgres',executeRaw:(...args)=>engine.executeRaw(...args),
+   transaction:fn=>engine.transaction(tx=>{if(++transactions===2)admissionTx=tx;return fn(tx);})}};
+ const lateWorker=new PersonalConsolidator(lateCtx,async()=>{
+   if(++configReads===3) {
+     assert.ok(admissionTx);
+     await admissionTx.executeRaw("UPDATE ultrabrain.personal_consolidations SET lease_until=clock_timestamp()+interval '100 milliseconds' WHERE id=$1::uuid",[late.job]);
+     await admissionTx.executeRaw('SELECT true AS waited FROM pg_sleep(0.2)');
+   }
+   return {profile,generate:async()=>{lateCalls++;return output;}};
+ });
+ const lateResult=await deadline(lateWorker.process(jobInput(late.job)));
+ assert.equal(lateCalls,0);assert.equal(lateResult.model_requests_attempted,0);
+ assert.equal(lateResult.results[0].state,'lease_lost');assert.equal(await count(late.job),0);
+ assert.equal((await lateWorker.status({job_id:late.job})).jobs[0].state,'processing');
+ await lateWorker.cancel({job_id:late.job});pass();
  // An already-started provider does not hold the DB lock for the model response.
  const live=await create('live');let entered,release;const ready=new Promise(r=>entered=r),hold=new Promise(r=>release=r);
  const worker=new PersonalConsolidator(ctx,()=>({profile,generate:async()=>{entered();await hold;return output;}}));

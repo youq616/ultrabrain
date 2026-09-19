@@ -13,12 +13,12 @@ const output={text:'{"memories":[]}'};
 const processInput={expected_source:source,allow_model_call:true,job_id:'11111111-1111-1111-1111-111111111111'};
 
 /** Small SQL fixture for an owned queued job. Unexpected queries fail the test. */
-function admissionContext(beforeAdmission=()=>{}) {
+function admissionContext(beforeAdmission=()=>{}, {leaseLive=()=>true,beforeLeaseRead=()=>{}}={}) {
   const content='Synthetic consent regression input.';
   const original={content,content_hash:sha256(content),revision:1,status:'candidate',agent_id:'fixture',project_id:null};
   const job={id:processInput.job_id,input_id:'22222222-2222-2222-2222-222222222222',input_revision:1,
     input_hash:original.content_hash,state:'queued',attempts:0,profile_hash:null};
-  let transactions=0;
+  let transactions=0,leaseReads=0;
   const engine={kind:'postgres',executeRaw:async()=>{assert.fail('Unexpected nontransactional query');},
     transaction:async fn=>{
       const transaction=++transactions;
@@ -36,7 +36,10 @@ function admissionContext(beforeAdmission=()=>{}) {
           Object.assign(job,{state:'processing',attempts:job.attempts+1,profile_hash:args[1],lease_id:args[2]});
           return [];
         }
-        if(sql.includes('SELECT state,lease_id'))return [{state:job.state,lease_id:job.lease_id,live:true}];
+        if(sql.includes('SELECT state,lease_id')) {
+          if(sql.includes('AS live'))await beforeLeaseRead(++leaseReads);
+          return [{state:job.state,lease_id:job.lease_id,live:leaseLive()}];
+        }
         if(sql.includes('SET state=$2,result=')) {
           Object.assign(job,{state:args[1],result:args[2],error_code:args[3]});
           return [];
@@ -91,6 +94,32 @@ test('abort during the final model configuration check sends no provider request
   assert.equal(result.results[0].error,'personal_model_timeout');
 });
 
+test('lease expiry during the final model configuration check prevents admission and output commit',async()=>{
+  let live=true,reads=0,calls=0;
+  const {ctx,job}=admissionContext(undefined,{leaseLive:()=>live});
+  const worker=new PersonalConsolidator(ctx,async()=>{
+    if(++reads===3){await Promise.resolve();live=false;}
+    return {profile,generate:()=>{calls++;return output;}};
+  });
+  const result=await worker.process(processInput);
+  assert.equal(calls,0,'A previously live lease can expire while final configuration awaits');
+  assert.equal(result.model_requests_attempted,0);
+  assert.equal(result.results[0].state,'lease_lost');
+  assert.equal(job.state,'processing','Expired jobs retain explicit recovery semantics');
+  assert.equal(job.result??null,null);
+});
+
+test('abort during the final lease query sends no provider request',async()=>{
+  const controller=new AbortController();
+  let calls=0;
+  const {ctx}=admissionContext(undefined,{beforeLeaseRead:read=>{if(read===2)controller.abort();}});
+  const worker=new PersonalConsolidator(ctx,()=>({profile,generate:()=>{calls++;return output;}}));
+  const result=await worker.process(processInput,{signal:controller.signal});
+  assert.equal(calls,0);
+  assert.equal(result.model_requests_attempted,0);
+  assert.equal(result.results[0].error,'personal_model_timeout');
+});
+
 function nativeModules({duringGatewayLoad=()=>{}}={}) {
   const data={ultrabrain_personal_consolidation:{...configProfile}};
   let calls=0;
@@ -131,4 +160,16 @@ test('native provider closure checks cancellation and still admits an unchanged 
   assert.equal(fixture.calls(),0);
   assert.equal(model.generate(request),output);
   assert.equal(fixture.calls(),1);
+});
+
+test('native provider guard catches revocation during the final lease query',async()=>{
+  const fixture=nativeModules();
+  const {ctx}=admissionContext(undefined,{beforeLeaseRead:read=>{
+    if(read===2)fixture.data.ultrabrain_personal_consolidation={enabled:false};
+  }});
+  const worker=new PersonalConsolidator(ctx,()=>configuredPersonalModel(fixture.load));
+  const result=await worker.process(processInput);
+  assert.equal(fixture.calls(),0,'No gateway call after opt-in changes during the final SQL await');
+  assert.equal(result.results[0].state,'failed');
+  assert.equal(result.results[0].error,'model_profile_changed');
 });

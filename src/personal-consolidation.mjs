@@ -59,8 +59,17 @@ export class PersonalConsolidator {
         const current=await this.configure();
         requireThat(current.profile&&personalProfileHash(current.profile)===profileHash,
           'model_profile_changed','Personal model profile changed before provider admission');
+        // The configuration await can outlive an already aging lease. Recheck DB time
+        // after it; the held owner/job/source locks still fence cancellation and edits.
+        const [admission]=await tx.executeRaw(`SELECT state,lease_id,lease_until>clock_timestamp() AS live
+          FROM ultrabrain.personal_consolidations WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid`,
+          [this.source,this.actor,row.id]);
+        requireThat(admission?.state==='processing'&&admission.lease_id===lease&&admission.live,
+          'lease_lost','Job lease expired before provider admission');
         requireThat(!request.signal?.aborted,'personal_model_timeout','Cancelled before provider admission');
         personalPrincipal(this.ctx,true);
+        // The native generator synchronously rechecks host opt-in at gateway invocation;
+        // trusted host-injected generators must preserve that final boundary as well.
         // Invoke synchronously under the lock. Do not await the provider's returned promise here.
         // After this boundary an external request may still be pending; archive fences its output,
         // but cannot promise to undo SDK scheduling, remote processing or a charge already begun.
