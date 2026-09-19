@@ -1,6 +1,7 @@
 /** Actual client runtime with explicit SDK doubles; real SDK/DB coverage is separate. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {EXPECTED_PERSONAL_READ_TOOLS,EXPECTED_PERSONAL_CAPTURE_TOOLS} from './fixtures/personal-client-catalog.mjs';
 import {register} from 'node:module';
 import {state,reset,identity} from './fixtures/client-sdk-stub.mjs';
 register(new URL('./fixtures/client-sdk-loader.mjs',import.meta.url));
@@ -90,3 +91,12 @@ test('exact memory reads are available with readonly client permission and froze
  try{await c.callAllowed('ultra_memory_read',{memory_id:'11111111-1111-4111-8111-111111111111'});
  assert.deepEqual(state.calls.map(x=>x.name),['ultra_identity','ultra_memory_read']);}finally{await c.close();}
 });
+
+for(const [mode,capture,expected] of [['readonly',false,EXPECTED_PERSONAL_READ_TOOLS],['capture',true,EXPECTED_PERSONAL_CAPTURE_TOOLS]])
+ test('fixed '+mode+' proxy catalogue contains exactly the reviewed tool names',async()=>{
+  reset();const c=await connectClient({...input,allow_capture:capture,allow_documents:false});
+  state.onList=async()=>({tools:[...EXPECTED_PERSONAL_CAPTURE_TOOLS,'query','ultra_personal_consolidate',
+    'ultra_personal_document_import','ultra_personal_document_archive'].map(name=>({name}))});
+  try{assert.deepEqual((await c.catalog()).map(t=>t.name).sort(),[...expected].sort());}
+  finally{await c.close();}
+ });

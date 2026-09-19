@@ -1,0 +1,73 @@
+{
+  "format": 1,
+  "parent": "f5ebbca58e855dd01ee9d4227c9a151559b50dee",
+  "parent_tree": "6eb163c452fe05ecce7d900ddc60f3a04e80fbcf",
+  "failing_ci_run": 35454069257,
+  "full_log_read_job": 105926155375,
+  "failure": "outdated exact catalogue counts; observed read count 9 != 8; capture count 14 also found outdated by inspection",
+  "application_changed": false,
+  "files": [
+    {
+      "path": "test/fixtures/personal-client-catalog.mjs",
+      "git_blob": "49388f33a1f89324d58e184d9ce90574aa78f8d3"
+    },
+    {
+      "path": "test/client-kit-integration.mjs",
+      "git_blob": "25dac57084277a1f505511b3ecf6ab2f0ccee7f9"
+    },
+    {
+      "path": "test/client-request-authorization.test.mjs",
+      "git_blob": "a14da63993099d4c71140916b82cc7a940d40914"
+    },
+    {
+      "path": "docs/reviews/memory-lookup/ci-catalog-first-failure.log.gz",
+      "git_blob": "081f4126182d031ed3e8df35007508d8a16f2127",
+      "uncompressed_sha256": "922b4a6fff05b099a5e24f8ab10eebab2f18fc1c2eda8deff0e9bab3640e6c7a"
+    }
+  ],
+  "results": {
+    "node": {
+      "tests": 781,
+      "pass": 781,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "python": {
+      "tests": 683,
+      "pass": 683
+    },
+    "client_request_focused": {
+      "tests": 23,
+      "pass": 23
+    },
+    "final_ci": "pending at creation",
+    "independent_final_review": "pending at creation"
+  },
+  "logs": [
+    {
+      "file": "catalog-focused.log",
+      "sha256": "7deb721dde56b819eee704bd8e04639570b37e089bc8df1038187ca965df4fe7"
+    },
+    {
+      "file": "catalog-focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-catalog-final.log",
+      "sha256": "a4a6cbdb1ba1f66a42f3b14539e7877ae3ba0b1f41873dc151f1ec8eef2615b7"
+    },
+    {
+      "file": "node-catalog-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-catalog-final.log",
+      "sha256": "0b0e6580412c9c6c950c558e71e965dc32f6073b8eeaa7f872b413b1453fdd15"
+    },
+    {
+      "file": "python-catalog-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    }
+  ]
+}
