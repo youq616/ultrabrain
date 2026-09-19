@@ -87,3 +87,7 @@ await memory.learnPersonalMemories({
 测试包含纯安全边界测试、真实 PostgreSQL/API/AgentMemory 联调和 Chromium 界面交互。浏览器用临时 profile 与合成内容，不读取用户浏览器或真实聊天。CI 的 Playwright 固定为 1.57.0，真实模型效果和用户部署均另行验收。
 
 0.11 新增原文入队与整理任务视图，个人模型独立授权、周期 Worker 和来源失效规则见 PERSONAL-CONSOLIDATION.md。
+
+## 显式任务召回预览（开发候选）
+
+管理台的「任务召回预览」复用已认证的只读 context 接口，允许明确输入任务、项目与字节预算，查看实际返回的完整记忆/ID/版本/来源。不会自动发送输入、不调用模型、不新增记忆；修改条件、取消或锁定后旧结果失效。只代表本机所有者视角。详见 [使用范围与数据边界](PERSONAL-RECALL-PREVIEW.md)，以相应提交的实际 CI 和独立审核为验收依据。

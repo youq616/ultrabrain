@@ -1,0 +1,97 @@
+{
+  "format": 1,
+  "base": "485823df3956769da51560c69c5c9095bb21cf1b",
+  "base_tree": "6cae3e24262fb29d9567ca1ef56ff752b16ae8b8",
+  "review": "implementation self-review; independent final review pending",
+  "results": {
+    "node": {
+      "tests": 732,
+      "passed": 732,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    "python": {
+      "tests": 683,
+      "passed": 683
+    },
+    "local_chromium": "navigation blocked by environment policy; no browser assertion passed",
+    "new_ci": "pending at commit creation"
+  },
+  "files": [
+    {
+      "path": "web/personal/app.js",
+      "git_blob": "4d3a91675fe5a8bd4b0cbf79f97f24450ed24626"
+    },
+    {
+      "path": "web/personal/index.html",
+      "git_blob": "c29019109840a7608c69069edb234011c6e11425"
+    },
+    {
+      "path": "web/personal/style.css",
+      "git_blob": "f1de84a961b8428496977f81f3f920e11884dccf"
+    },
+    {
+      "path": "test/personal-recall-preview.test.mjs",
+      "git_blob": "79d47af0ac2ffbfaa2a0e8fa6911de28abcd06b4"
+    },
+    {
+      "path": "test/personal-recall-browser.py",
+      "git_blob": "29340da8cd6cf4162a99af58d76aade76022064a"
+    },
+    {
+      "path": "test/personal-recall-browser-fixture.mjs",
+      "git_blob": "b72073aefe27c389fd4d232be98b07059b319da5"
+    },
+    {
+      "path": ".github/workflows/personal-recall-preview.yml",
+      "git_blob": "a7ba8cdd8cd3c9bbb1ef9e5407571108be9c7e53"
+    }
+  ],
+  "logs": [
+    {
+      "file": "chromium-mock.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "chromium-mock.log",
+      "sha256": "404a88ae1b22d4815ab1d18f8af207e302e23e7bd81d9740af37599f2d409c9b"
+    },
+    {
+      "file": "feature-before.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "feature-before.log",
+      "sha256": "a95c6bfe68588370c7af9bcbff83fcc836d5339d35e038628fe51c0c0d6dee59"
+    },
+    {
+      "file": "feature-first-implementation.log",
+      "sha256": "871b9bda9029f6750a52068c82b0e488c722b29a22df9970d191f196ea08d49e"
+    },
+    {
+      "file": "focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "focused.log",
+      "sha256": "888826c72104d408aacb93c29c885065ac58bce6245898e9edd18c7cca8eba63"
+    },
+    {
+      "file": "node-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-final.log",
+      "sha256": "124ae32940a5bf4555af8732d633e6f415b4db75e7b65bf70f7eb988d49f8d62"
+    },
+    {
+      "file": "python-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-final.log",
+      "sha256": "464b256ee24099c322bb9414bf530fd7321ee961ba5e9727f2142c8fed03cb35"
+    }
+  ]
+}

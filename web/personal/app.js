@@ -2,8 +2,9 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const labels={identity:'身份',preference:'偏好',environment:'环境',project:'项目',decision:'决策',skill:'技能',error:'错误经验',goal:'目标',experience:'经验'};
-const views={candidate:'待确认记忆',active:'当前记忆',archived:'已归档',profile:'个人偏好',documents:'导入文档',agents:'已登记 Agent',jobs:'整理任务'};
+const views={candidate:'待确认记忆',active:'当前记忆',archived:'已归档',profile:'个人偏好',recall:'任务召回预览',documents:'导入文档',agents:'已登记 Agent',jobs:'整理任务'};
 let sourceId='',token='',view='candidate',offset=0,nextOffset=null,current=null,editing=null,pending=null,busy=false,loadVersion=0,documentOriginal=null,documentEpoch=0;
+let recallEpoch=0,recallController=null;
 function message(text,error=false){$('message').textContent=text;$('message').dataset.error=String(error);}
 function element(tag,text,cls){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;}
 function controls(){
@@ -11,8 +12,8 @@ function controls(){
   $('queue-personal').disabled=busy||!!pending||!!editing;$('retry').disabled=busy;$('pending-panel').hidden=!pending;$('logout').disabled=busy||!!pending;
   $('pending-id').textContent=pending?'事件编号：'+(pending.input.event_id??pending.input.job_id??''):'';
 }
-async function api(operation,input={}){
-  let response;try{response=await fetch('/api/call',{method:'POST',credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({operation,input}),signal:AbortSignal.timeout(operation==='consolidate'?150000:20000)});}
+async function api(operation,input={},signal){
+  let response;try{response=await fetch('/api/call',{method:'POST',credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({operation,input}),signal:AbortSignal.any([AbortSignal.timeout(operation==='consolidate'?150000:20000),signal].filter(Boolean))});}
   catch{throw Object.assign(new Error('network_unconfirmed'),{unknown:true});}
   let result;try{result=await response.json();}catch{throw Object.assign(new Error('response_unconfirmed'),{unknown:true});}
   if(!response.ok||!result.ok)throw Object.assign(new Error(typeof result.error==='string'?result.error:'request_failed'),{unknown:result.delivery==='unconfirmed'||response.status>=500});
@@ -147,10 +148,84 @@ async function importSelectedDocument(){
   }catch(e){message('导入被拒绝：'+e.message+'。请重新选择并确认；未提交此文件。',true);}
 }
 
+// Preview is an explicit read, never an automatic task hook or a write authority.
+function invalidateRecall(clearInputs=false){
+  recallEpoch++;recallController?.abort();recallController=null;
+  $('recall-consent').checked=false;$('recall-submit').disabled=false;$('recall-cancel').disabled=true;
+  if(clearInputs){$('recall-task').value='';$('recall-project').value='';}
+  if(view==='recall'){
+    current=null;nextOffset=null;$('results').replaceChildren();$('export').disabled=true;
+    $('prev').disabled=true;$('next').disabled=true;
+    $('coverage').textContent='尚无本次预览结果。提交前需明确同意发送任务到当前本机记忆服务。';
+  }
+}
+function recallSelection(){
+  return JSON.stringify(['recall-task','recall-project','recall-limit','recall-budget'].map(id=>$(id).value));
+}
+function recallRequest(){
+  const task=$('recall-task').value,project=$('recall-project').value;
+  if(!task.trim()||!task.isWellFormed()||task.includes('\0')||new TextEncoder().encode(task).length>4096)
+    throw new Error('task_requires_1_to_4096_utf8_bytes');
+  if(project&&!/^[A-Za-z0-9_-]{1,96}$/.test(project))throw new Error('invalid_project');
+  if(!['5','10','20'].includes($('recall-limit').value)||!['2048','6000','8192'].includes($('recall-budget').value))
+    throw new Error('invalid_preview_budget');
+  return {task,project_id:project||null,limit:Number($('recall-limit').value),budget_bytes:Number($('recall-budget').value)};
+}
+async function verifyRecall(result,input,allowed){
+  const valid=condition=>{if(!condition)throw new Error('recall_contract_changed');};
+  const fields=new Set(['source_id','memories','trust','selection','confidence_semantics','exhaustive','dropped','budget_bytes','recall']);
+  valid(result&&Object.keys(result).every(key=>fields.has(key)));
+  valid(result?.source_id===sourceId&&result.trust==='untrusted-memory-data'&&result.exhaustive===false&&
+    result.selection==='bounded-literal-and-importance-v2'&&result.budget_bytes===input.budget_bytes&&
+    Number.isSafeInteger(result.dropped)&&result.dropped>=0&&Array.isArray(result.memories)&&result.memories.length<=input.limit&&
+    new TextEncoder().encode(JSON.stringify(result)).length<=input.budget_bytes);
+  const ids=new Set();
+  for(const row of result.memories){
+    valid(row&&typeof row.id==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(row.id)&&!ids.has(row.id)&&
+      Object.hasOwn(labels,row.type)&&row.status==='active'&&row.derivation_current!==false&&Number.isSafeInteger(row.revision)&&row.revision>0&&
+      (row.project_id==null||row.project_id===input.project_id)&&(row.owned_by_caller===true||row.visibility==='source')&&
+      typeof row.content==='string'&&row.content.isWellFormed()&&typeof row.provenance==='string'&&
+      typeof row.content_hash==='string'&&/^[a-f0-9]{64}$/.test(row.content_hash));
+    ids.add(row.id);allowed();
+    const digest=await sha256Hex(new TextEncoder().encode(row.content));allowed();valid(digest===row.content_hash);
+  }
+  return result;
+}
+async function previewRecall(){
+  if(busy||pending){message('请先处理尚未确认的写入请求，再预览召回。',true);return;}
+  const epoch=++recallEpoch,session=token,source=sourceId,selection=recallSelection();
+  recallController?.abort();const controller=new AbortController();recallController=controller;
+  current=null;nextOffset=null;$('results').replaceChildren();$('export').disabled=true;
+  $('prev').disabled=true;$('next').disabled=true;$('recall-submit').disabled=true;$('recall-cancel').disabled=false;
+  $('coverage').textContent='本次预览尚未确认，旧结果已清除。';
+  let submitted=false;
+  const allowed=()=>{
+    if(controller.signal.aborted||epoch!==recallEpoch||view!=='recall'||!session||token!==session||sourceId!==source||
+      !$('recall-consent').checked||selection!==recallSelection())throw new Error('recall_authorization_changed');
+  };
+  try{
+    allowed();const input=recallRequest();allowed();submitted=true;
+    message('正在查询已启用的记忆；不新增记忆、不调用模型。');
+    const result=await api('context',input,controller.signal);allowed();
+    await verifyRecall(result,input,allowed);allowed();render(result);
+    $('coverage').textContent='本机所有者视角 · 返回 '+result.memories.length+' / '+input.limit+' 条 · 响应 '+
+      new TextEncoder().encode(JSON.stringify(result)).length+' / '+input.budget_bytes+' UTF-8 字节（不是 token） · 已取候选窗口内舍弃 '+
+      result.dropped+' 条。先排序取最多 100 条候选，再按数量和字节预算保留整条；未统计窗口外遗漏。排序是字面匹配加重要性，不是真实性或语义准确率。';
+    message('本次只读预览已返回。它不是其他 MCP 身份的上下文，也不是模型回答或完整记忆备份。');
+  }catch(error){
+    if(epoch===recallEpoch&&view==='recall'&&session===token){
+      current=null;$('results').replaceChildren();$('export').disabled=true;
+      message(submitted?'预览未确认：'+error.message+'。查询可能已到达服务器；没有请求写入记忆或调用模型。':'未发送预览：'+error.message+'。请核对任务、范围及授权。',true);
+    }
+  }finally{
+    if(epoch===recallEpoch){recallController=null;$('recall-submit').disabled=false;$('recall-cancel').disabled=true;}
+  }
+}
+
 function render(result){
   current=result;$('results').replaceChildren();
   const rows=view==='jobs'?result.jobs:view==='agents'?result.agents:result.memories;
-  if(!rows?.length)$('results').append(element('p','这个窗口没有可见记录。新建记忆默认在“待确认”中。','note'));
+  if(!rows?.length)$('results').append(element('p',view==='recall'?'本次有限召回窗口为空，不代表记忆库为空或模型应当弃答。':'这个窗口没有可见记录。新建记忆默认在“待确认”中。','note'));
   for(const row of rows??[]){
     const card=element('article');
     if(view==='jobs') {
@@ -164,24 +239,29 @@ function render(result){
     }else if(view==='agents'){
       card.append(element('strong',row.agent_id),element('p',row.agent_type+' · r'+row.revision,'meta'),element('p',(row.capabilities??[]).join(' / ')||'未声明能力','meta'),element('p','名称和能力是客户端自述，不是软件身份认证。','note'));
     }else{
+      if(view==='recall')card.append(element('strong','召回顺序 #'+(result.memories.indexOf(row)+1)));
+      card.append(element('p','记忆 ID：'+row.id+(view==='recall'?' · 内容 SHA-256：'+row.content_hash:''),'meta'));
       card.append(element('span',labels[row.type]??row.type,'badge'),element('span',row.owned_by_caller?'自己拥有':'同源共享','badge'),element('p',row.content,'memory-content'));
       card.append(element('p','r'+row.revision+' · '+(row.project_id??'全局')+' · '+row.visibility+' · 可信度估计：'+(row.confidence??'未知'),'meta'),element('p','来源：'+row.provenance,'meta'));
       if(row.derivation)card.append(element('p','原文引用：'+row.derivation.quote,'memory-content'),element('p',row.derivation_current?'来源版本仍匹配；引用不代表真实性证明。':'来源已修改或归档；重新核对前不能激活。','note'));
-      if(row.owned_by_caller&&row.origin_kind!=='document_fragment'){
+      if(view!=='recall'&&row.owned_by_caller&&row.origin_kind!=='document_fragment'){
         const actions=element('div',undefined,'row card-actions');
         for(const [name,handler]of [['编辑',()=>edit(row)],...(row.status!=='active'?[['确认启用',()=>{if(confirm('确认启用这条记忆？这表示你认可本次内容，不是系统已证明其真实性。'))mutate('review',{memory_id:row.id,expected_revision:row.revision,status:'active'});}]]:[]),...(row.status!=='archived'?[['归档',()=>{if(confirm('归档后不再用于当前上下文。原始内容仍保留，不会物理擦除。'))mutate('review',{memory_id:row.id,expected_revision:row.revision,status:'archived'});}]]:[])]){const b=element('button',name);b.dataset.write='true';b.addEventListener('click',handler);actions.append(b);}card.append(actions);
       }
     }$('results').append(card);
   }
   nextOffset=Number.isInteger(result.next_offset)?result.next_offset:null;
-  $('prev').disabled=offset===0||view==='profile';$('next').disabled=nextOffset===null||view==='profile';$('export').disabled=false;
+  $('prev').disabled=offset===0||['profile','recall'].includes(view);$('next').disabled=nextOffset===null||['profile','recall'].includes(view);$('export').disabled=false;
   $('coverage').textContent='当前源和身份下的有限窗口；可能随并发修改变化。'+(result.dropped?'有 '+result.dropped+' 条因大小或数量限制未展示。':'')+(view==='profile'?'这里只展示已启用的全局身份、偏好、环境和目标。':'');
   controls();
 }
 async function load(){
-  const request=++loadVersion;current=null;$('export').disabled=true;for(const b of document.querySelectorAll('[data-view]'))b.setAttribute('aria-current',b.dataset.view===view?'page':'false');
-  $('view-title').textContent=views[view];$('search-form').hidden=['profile','agents','documents','jobs'].includes(view);
+  const request=++loadVersion;invalidateRecall();current=null;$('results').replaceChildren();$('export').disabled=true;for(const b of document.querySelectorAll('[data-view]'))b.setAttribute('aria-current',b.dataset.view===view?'page':'false');
+  $('view-title').textContent=views[view];$('search-form').hidden=['profile','recall','agents','documents','jobs'].includes(view);
   documentEpoch++;$('document-panel').hidden=view!=='documents';$('document-original').hidden=true;documentOriginal=null;
+  $('workspace').dataset.preview=String(view==='recall');
+  $('recall-panel').hidden=view!=='recall';$('memory-panel').hidden=view==='recall';
+  if(view==='recall')return; // Navigation/refresh never transmits the task.
   try{
     if(view==='documents'){
       const data=await api('document_list',{status:'any',limit:20,offset});
@@ -194,11 +274,11 @@ async function load(){
   catch(e){if(request===loadVersion)message('读取失败：'+e.message,true);}
 }
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('token').value.trim();$('token').value='';try{const info=await api('info');sourceId=info.source_id;$('scope').textContent='数据源：'+info.source_id+' · Linux 本机所有者（与同账号 stdio 共享）';$('login').hidden=true;$('workspace').hidden=false;$('logout').hidden=false;message('已连接。');await load();}catch(e){token='';message('连接失败：'+e.message,true);}});
-$('logout').addEventListener('click',()=>{if(pending||busy)return;token='';sourceId='';documentEpoch++;documentOriginal=null;$('document-original-text').textContent='';$('document-original').hidden=true;$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
+$('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateRecall(true);token='';sourceId='';documentEpoch++;documentOriginal=null;$('document-original-text').textContent='';$('document-original').hidden=true;$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
 for(const b of document.querySelectorAll('[data-view]'))b.addEventListener('click',()=>{view=b.dataset.view;offset=0;load();});
 $('refresh').addEventListener('click',()=>load());$('search-form').addEventListener('submit',e=>{e.preventDefault();offset=0;load();});
 $('prev').addEventListener('click',()=>{offset=Math.max(0,offset-20);load();});$('next').addEventListener('click',()=>{if(nextOffset!==null){offset=nextOffset;load();}});
-$('export').addEventListener('click',()=>{if(current)download({format:1,exported_at:new Date().toISOString(),scope:'visible page only, not a full backup',complete:false,view,result:current},'ultrabrain-personal-page.json');});
+$('export').addEventListener('click',()=>{if(current)download({format:1,exported_at:new Date().toISOString(),scope:view==='recall'?'local-owner recall preview only; task text omitted; not a full backup':'visible page only, not a full backup',complete:false,view,result:current},'ultrabrain-personal-page.json');});
 $('cancel-edit').addEventListener('click',()=>{resetEditor();controls();});
 $('queue-personal').addEventListener('click',()=>{if(editing||busy||pending)return;if(!$('consent').checked){message('排队前必须明确同意保存原文。',true);return;}if(!$('content').value.trim()){message('请填写要整理的原文。',true);return;}mutate('capture',{agent_id:'personal-console',transcript:$('content').value,project_id:$('project').value||null,consent:true},memoryAuthorization());});
 $('document-file').addEventListener('change',()=>{
@@ -214,5 +294,9 @@ $('memory-form').addEventListener('submit',e=>{
   if(editing)mutate('update',{memory_id:editing.id,expected_revision:editing.revision,event_id:crypto.randomUUID(),memory},memoryAuthorization());
   else mutate('commit',{agent_id:'personal-console',consent:true,memories:[memory]},memoryAuthorization());
 });
+$('recall-form').addEventListener('submit',e=>{e.preventDefault();return previewRecall();});
+for(const id of ['recall-task','recall-project','recall-limit','recall-budget'])$(id).addEventListener('input',()=>invalidateRecall());
+$('recall-consent').addEventListener('change',()=>{if(!$('recall-consent').checked)invalidateRecall();});
+$('recall-cancel').addEventListener('click',()=>{invalidateRecall();message('预览已取消，结果不会继续显示。已发送的查询无法撤回；未请求记忆写入或模型调用。');});
 $('retry').addEventListener('click',submitPending);$('save-pending').addEventListener('click',()=>{if(pending)download({format:1,warning:'Contains consented memory text; protect this local file. The request is not confirmed.',...pending},'ultrabrain-unconfirmed-request.json');});
 window.addEventListener('beforeunload',e=>{if(pending){e.preventDefault();e.returnValue='';}});
