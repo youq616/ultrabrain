@@ -34,6 +34,8 @@ jobs:
         run: bash scripts/bootstrap-linux.sh
       - name: Public identity CLI with real Unix socket, SCRAM, PostgreSQL and process binding
         run: bun test/personal-identity-integration.mjs
+      - name: Verified first-use preparation and separately authenticated console
+        run: bun test/personal-setup-integration.mjs
       - name: Stop only this disposable database
         if: always()
         run: bun src/cli.mjs db stop

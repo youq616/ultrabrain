@@ -1,0 +1,122 @@
+{
+  "format": 1,
+  "remote_base": "5dbbcd6e5744a803e30d2b1cd1e9ebcf1a1ba450",
+  "remote_base_tree": "c450b8630cc07806e55bffe9ad067a26f0ee3c73",
+  "base_pr": 18,
+  "prior_local_candidate": "f4842d6626ec51b9c082e1ee2d93134d76374bc3 (historical local-only identifier, not a remote parent)",
+  "source_snapshot": {
+    "artifact_id": 10583577298,
+    "sha256": "ce40638a97dfd3b36cb04a4d0f114d50779f7f4275bd4007ff47924acfe9965a"
+  },
+  "review": "implementation self-review; separate final reviewer PENDING",
+  "versions": {
+    "node": "v22.16.0",
+    "python": "3.13.5",
+    "account": "ordinary account; distro Python selected in test PATH"
+  },
+  "results": {
+    "new_deadline_before": {
+      "tests": 6,
+      "pass": 0,
+      "fail": 6
+    },
+    "node_integrated": {
+      "tests": 656,
+      "pass": 656,
+      "fail": 0,
+      "skipped": 0
+    },
+    "python_integrated": {
+      "tests": 683,
+      "pass": 683
+    },
+    "setup_focused": {
+      "tests": 36,
+      "pass": 36
+    },
+    "setup_optimized": {
+      "tests": 36,
+      "pass": 36
+    },
+    "syntax_diff": "Node syntax, Python AST and git diff --check passed",
+    "new_ci": "PENDING at candidate creation; record actual run and checkout SHA in PR"
+  },
+  "commands": {
+    "node": "PATH=/opt/nvm/versions/node/v22.16.0/bin:/usr/bin:/bin node --test test/*.test.mjs",
+    "python": "python3 -B -m unittest discover -s test -p test_*.py -v",
+    "focused": "python3 -B -m unittest discover -s test -p test_personal_setup*.py -v",
+    "optimized": "python3 -OO -B -m unittest discover -s test -p test_personal_setup*.py -v"
+  },
+  "files": [
+    {
+      "path": "scripts/personal-setup.py",
+      "git_blob": "86e355dcb5a26a6f2a59126bd3c87e0535cba2b3"
+    },
+    {
+      "path": "src/cli.mjs",
+      "git_blob": "337352894d6a69d42d1c739e2ff9bc8cac760ae6"
+    },
+    {
+      "path": "test/test_personal_setup.py",
+      "git_blob": "8a6fd8f4cd94274584b848028f7f90ee8dc6078a"
+    },
+    {
+      "path": "test/test_personal_setup_deadline.py",
+      "git_blob": "73ddaed1a0b6823830c7c3ec6416b6c6a1152d14"
+    },
+    {
+      "path": "test/personal-setup-cli.test.mjs",
+      "git_blob": "c2beb4e03cc75d7069e42c67f40fcaf5388e9ae5"
+    },
+    {
+      "path": "test/personal-setup-integration.mjs",
+      "git_blob": "2bff0de656ab5addd89bc12590e51f2d7268291f"
+    },
+    {
+      "path": ".github/workflows/personal-identity.yml",
+      "git_blob": "f5c9fa79b729eca5710e960585e0bf82ad1d81b9"
+    },
+    {
+      "path": ".github/workflows/personal-services.yml",
+      "git_blob": "8ba8c6f69f4c2f36fb378ebea6c46e1b675edbc7"
+    },
+    {
+      "path": "docs/PERSONAL-SETUP.md",
+      "git_blob": "6b303b05e654d7deeb61087e1311d4b9f05b33d0"
+    }
+  ],
+  "logs": [
+    {
+      "file": "deadline-first-failure.log",
+      "sha256": "095849a8c3032fe639ccab7de4c29bce320ec9781a2e80e3c438d6ca9c3911cf"
+    },
+    {
+      "file": "node-integrated.log",
+      "sha256": "1ce68c6f3b762667319073d9ffb0feb789461b1d3ed8a726a3f0a84682c02508"
+    },
+    {
+      "file": "python-integrated.log",
+      "sha256": "012bbcdaebe4b021af48fed936fc4e5ac1eae5eae4898725fa981aff1b05342c"
+    },
+    {
+      "file": "setup-final.log",
+      "sha256": "9d98646bb20f2b3bcb1f8c15e581d3b9ab1d13f41e72df2f662938844a7092c7"
+    },
+    {
+      "file": "setup-optimized.log",
+      "sha256": "7d868613bf9d48b9cbee24b9f63c0143cb1df03564cf4a6f8da6fea69c59fc68"
+    }
+  ],
+  "preserved_first_failures": [
+    {
+      "file": "first-cli-failure.log.gz",
+      "sha256": "a5de5296cab5e45baa5f9914c436be594ce2c9b7dbb7fd158c10fb0b0bff40a8",
+      "uncompressed_sha256": "cb2d2555147f7f6beff7c84ec26374df4a5b4df4beeb008d3e03b7b281ee12aa"
+    },
+    {
+      "file": "deadline-first-failure.log.gz",
+      "sha256": "29a256ee84ab535c53cf2e28f00a209067c1230ad5453cc0aabdb7da1773ad3e",
+      "uncompressed_sha256": "095849a8c3032fe639ccab7de4c29bce320ec9781a2e80e3c438d6ca9c3911cf"
+    }
+  ]
+}
