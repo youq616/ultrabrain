@@ -67,9 +67,9 @@ test('boolean revocation during connect retains the unchanged event without send
 for(const asynchronous of [false,true])test('queued last-mile registration rechecks '+(asynchronous?'asynchronous':'boolean')+' revocation before plaintext',async t=>{
  const {input,q}=setup(t);await q.enqueue(payload());let permitted=true;const calls=[];
  const result=await q.flush(async()=>conn(input,(p,{authorize})=>deliverCapture(p,q.profile,{authorize,
-  checkIdentity:async()=>{},invoke:async name=>{calls.push(name);if(name==='ultra_agent_register')permitted=false;return receipt(input);}})),
+  checkIdentity:async()=>{},invoke:async name=>{calls.push(name);if(name==='ultra_agent_list')return {source_id:input.source,agents:[],next_offset:null};if(name==='ultra_agent_register')permitted=false;return receipt(input);}})),
   {authorize:()=>permitted?undefined:asynchronous?Promise.resolve(false):false});
- assert.deepEqual(calls,['ultra_agent_register']);assert.equal(result.delivered,0);
+ assert.deepEqual(calls,['ultra_agent_list','ultra_agent_register']);assert.equal(result.delivered,0);
  assert.equal((await q.status()).pending+(await q.status()).blocked,1);
 });
 test('confirmed receipt after transmission removes the event even when consent was subsequently revoked',async t=>{
