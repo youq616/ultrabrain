@@ -9,6 +9,9 @@ import {connect,ROOT} from '../src/runtime.mjs';
 import {CaptureOutbox} from '../src/capture-outbox.mjs';
 import {connectClient} from '../packages/ultrabrain-client/src/runtime.mjs';
 import {UltraError} from '../src/core.mjs';
+import {PersonalMemoryStore} from '../src/personal-memory-store.mjs';
+import {deliverCapture} from '../src/capture-delivery.mjs';
+import {clientIdentity} from '../src/client-kit.mjs';
 assert.equal(process.env.ULTRABRAIN_TEST_ALLOW_WRITE,'1');
 const engine=await connect(),source='capture-'+randomBytes(5).toString('hex'),dir=mkdtempSync(join(tmpdir(),'ub-capture-e2e-'));
 const workspace=join(dir,'workspace'),profilePath=join(dir,'profile.json'),cli=join(ROOT,'packages/ultrabrain-client/dist/cli.cjs');mkdirSync(workspace,{mode:0o700});
@@ -73,6 +76,7 @@ try{
  r=await run('queue-flush',undefined,['--retry-blocked']);assert.equal(r.code,0);assert.equal(r.data.result.delivery.delivered,1);assert.equal(await count(),5);pass();
  const states=await engine.executeRaw('SELECT state,attempts FROM ultrabrain.personal_consolidations WHERE source_id=$1',[source]);assert.ok(states.every(r=>r.state==='queued'&&r.attempts===0));pass();
  // Recheck local authorization after asynchronous registration/identity calls, before plaintext transmission.
+ // For an absent Agent the fifth assertion is immediately after its create-only registration.
  const guarded=await connectClient(profile);let authorized=0;
  try {
    await assert.rejects(guarded.capture({agent_id:'denied-before-register',event_id:'declined-before-register',transcript:'SYNTHETIC_DECLINED_INPUT',consent:true},
@@ -80,12 +84,12 @@ try{
    assert.equal((await engine.executeRaw('SELECT agent_id FROM ultrabrain.agent_registry WHERE source_id=$1 AND agent_id=$2',[source,'denied-before-register'])).length,0);
    assert.equal(await count(),5);pass();
    await assert.rejects(guarded.capture({agent_id:'revoked-before-send',event_id:'must-not-send',transcript:'SYNTHETIC_REVOKED_INPUT',consent:true,project_id:profile.project_id},
-     {authorize:()=>{if(++authorized===3)throw new UltraError('capture_disabled','Synthetic revocation');}}),{code:'capture_disabled'});
+     {authorize:()=>{if(++authorized===5)throw new UltraError('capture_disabled','Synthetic revocation');}}),{code:'capture_disabled'});
    assert.equal((await engine.executeRaw('SELECT agent_id FROM ultrabrain.agent_registry WHERE source_id=$1 AND agent_id=$2',[source,'revoked-before-send'])).length,1);
    assert.equal(await count(),5);pass();
    authorized=0;
    await assert.rejects(guarded.capture({agent_id:'boolean-revoked',event_id:'boolean-must-not-send',transcript:'SYNTHETIC_REVOKED_INPUT',consent:true},
-     {authorize:()=>++authorized<3}),{code:'capture_disabled'});
+     {authorize:()=>++authorized<5}),{code:'capture_disabled'});
    assert.equal((await engine.executeRaw('SELECT agent_id FROM ultrabrain.agent_registry WHERE source_id=$1 AND agent_id=$2',[source,'boolean-revoked'])).length,1);
    assert.equal(await count(),5);pass();
  } finally {await guarded.close();}
@@ -100,5 +104,35 @@ try{
    {...profile,allow_capture:false,automatic_capture:[]});
  assert.equal(revoked.code,1);assert.equal(revoked.data.error,'capture_disabled');
  assert.equal((await q.status()).pending,0);assert.equal((await q.status()).blocked,0);assert.equal(await count(),5);pass();
+ // Existing metadata survives actual packaged capture, replay and outbox delivery.
+ const store=new PersonalMemoryStore({engine,sourceId:source,remote:false,transport:'stdio'});
+ await store.register({agent_id:'typed-capture',agent_type:'coding_agent',capabilities:['code','files'],workspace:'/synthetic/typed-workspace'});
+ const registration=async id=>(await engine.executeRaw('SELECT * FROM ultrabrain.agent_registry WHERE source_id=$1 AND actor_key=$2 AND agent_id=$3',[source,identity.actor_key,id]))[0];
+ const typedBefore=await registration('typed-capture');
+ const typedInput={agent_id:'typed-capture',event_id:'typed-direct',transcript:'SYNTHETIC_TYPED_CAPTURE',consent:true};
+ r=await run('capture',typedInput);assert.equal(r.code,0);assert.equal(r.data.result.storage,'journaled');assert.equal(await count(),6);
+ const typedJob=r.data.result.job_id;assert.deepEqual(await registration('typed-capture'),typedBefore);pass();
+ r=await run('capture',typedInput);assert.equal(r.code,0);assert.equal(r.data.result.job_id,typedJob);assert.equal(await count(),6);
+ assert.deepEqual(await registration('typed-capture'),typedBefore);pass();
+ await q.enqueue({...typedInput,event_id:'typed-outbox'});
+ r=await run('queue-flush');assert.equal(r.code,0);assert.equal(r.data.result.delivery.delivered,1);assert.equal(await count(),7);
+ assert.deepEqual(await registration('typed-capture'),typedBefore);pass();
+ // Deterministic race: create a different metadata tuple after the owned lookup
+ // and before the client's actual revision-zero registration reaches PostgreSQL.
+ const raced=await connectClient(profile);let registrationAttempts=0,raceBefore;
+ try {
+   const invoke=async(name,args)=>{
+     if(name==='ultra_agent_register'){
+       registrationAttempts++;
+       await store.register({agent_id:args.agent_id,agent_type:'coding_agent',capabilities:['race'],workspace:'/synthetic/race'});
+       raceBefore=await registration(args.agent_id);
+     }
+     const result=await raced.callAllowed(name,args);return JSON.parse(result.content[0].text);
+   };
+   const checkIdentity=async()=>assert.deepEqual(clientIdentity(await invoke('ultra_identity',{}),raced.profile),raced.identity);
+   const result=await deliverCapture({...typedInput,agent_id:'raced-capture',event_id:'raced-capture'},raced.profile,{checkIdentity,invoke});
+   assert.equal(result.storage,'journaled');assert.equal(registrationAttempts,1);assert.equal(await count(),8);
+   assert.deepEqual(await registration('raced-capture'),raceBefore);pass();
+ } finally {await raced.close();}
  console.log(`PASS ${checks} capture/outbox checks: packaged Node/Claude-event fixture/stdio/PostgreSQL, offline reopen and crash-after-commit replay`);
 }finally{await engine.disconnect();rmSync(dir,{recursive:true,force:true});}

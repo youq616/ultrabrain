@@ -1,0 +1,71 @@
+{
+  "format": 1,
+  "remote_base": "491bf6fd702d8b88d30d65acb23b259a99242fcb",
+  "application_source": "6aae8a01f0d5f27dedf64e0687af9cb3b02e29ea",
+  "review": "implementation self-review only; independent review PENDING",
+  "logs": [
+    {
+      "file": "node-baseline.log",
+      "sha256": "37aa09d0d1d28917e38d4282f6e132a2c9f89bb6744ddf6fbfdb895d64a69dc7"
+    },
+    {
+      "file": "node-baseline-unprivileged.log",
+      "sha256": "099736132303b2afcd23550924eee45a5921f49252d707ac9f46461a13194c19"
+    },
+    {
+      "file": "registration-first-failure.log",
+      "sha256": "dd1c8421b2ebfdee1341042885155a2e236e46f97fed16df409aa652a4773e2c"
+    },
+    {
+      "file": "node-candidate.log",
+      "sha256": "b04b2cbfe0cb68d29eda36ddcb023b7d89e1cd2b094c03511ffd57be85096ad7"
+    },
+    {
+      "file": "python-baseline.log",
+      "sha256": "0bbef7e9690ab441fd41cddfe46502ed0624ee386ca7541a49110893e2ee9481"
+    }
+  ],
+  "candidate_source_blobs": {
+    "src/client-agent.mjs": "f3b7a92539d137d356e956d2e28d3c03a30e9e40",
+    "src/capture-delivery.mjs": "489c5fa02d2c7b51fb906e8e94af4c83b5bf4c93",
+    "src/client-document.mjs": "d8cb4270e5dbb75e42fadd66f54329b927b84bff",
+    "src/client-kit.mjs": "f93d91080168eff3af15081d5d2416bb9ef15207",
+    "test/capture-delivery.test.mjs": "e7290bbb91450777f8407d8975094a115174b257",
+    "test/capture-hardening.test.mjs": "f87fe447f7574272d4062e50f222440ed41f4990",
+    "test/capture-integration.mjs": "7b3b0c506127fc1504a99eae83e6d9fbeab0b609",
+    "test/client-kit.test.mjs": "7ebdc47a72b19b7b13644cc90614218cf9918aa4",
+    "test/client-agent-registration.test.mjs": "df004571aeebab5132ef896d246b47c8ff8097c8"
+  },
+  "repository_first_failure": {
+    "file": "first-failure.log.gz",
+    "git_blob": "298dda549f2b081c36aa48e88ca9e97c68802fa8",
+    "uncompressed_sha256": "dd1c8421b2ebfdee1341042885155a2e236e46f97fed16df409aa652a4773e2c"
+  },
+  "supplementary_local_archive": {
+    "file": "ultrabrain-agent-registration-local-logs.zip",
+    "sha256": "55d84ff3d6f61dd1179261f0752773e8b111a3c23205307ce82bf8b0fb879933",
+    "delivery": "conversation attachment; not a repository artifact"
+  },
+  "results": {
+    "node_unprivileged_baseline": {
+      "tests": 612,
+      "pass": 612,
+      "fail": 0,
+      "skipped": 0
+    },
+    "new_regressions_before_fix": {
+      "tests": 20,
+      "pass": 7,
+      "fail": 13
+    },
+    "node_unprivileged_candidate": {
+      "tests": 644,
+      "pass": 644,
+      "fail": 0,
+      "skipped": 0
+    },
+    "python_local": "incomplete; execution deadline interrupted the run",
+    "candidate_ci": "pending",
+    "independent_review": "PENDING"
+  }
+}

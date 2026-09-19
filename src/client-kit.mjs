@@ -7,7 +7,7 @@ const clean=(x,max=4096)=>typeof x==='string'&&x.length>0&&x.length<=max&&!/[\x0
 const uuid=x=>typeof x==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(x);
 export const CLIENT_REQUIRED_TOOLS=Object.freeze(['ultra_identity','ultra_personal_context','ultra_personal_jobs']);
 export function requiredClientTools(profile) {
-  return [...new Set([...CLIENT_REQUIRED_TOOLS,...(profile.allowCapture?['ultra_agent_register','ultra_personal_capture']:[]),...(profile.allowDocuments?['ultra_agent_list','ultra_agent_register','ultra_personal_document_import','ultra_personal_document_read','ultra_personal_document_list','ultra_personal_document_queue','ultra_personal_document_archive']:[])])];
+  return [...new Set([...CLIENT_REQUIRED_TOOLS,...(profile.allowCapture?['ultra_agent_list','ultra_agent_register','ultra_personal_capture']:[]),...(profile.allowDocuments?['ultra_agent_list','ultra_agent_register','ultra_personal_document_import','ultra_personal_document_read','ultra_personal_document_list','ultra_personal_document_queue','ultra_personal_document_archive']:[])])];
 }
 export function clientProfile(input) {
   objectFields(input,['format','source','project_id','workspace','server','expected_instance','expected_actor','budget_bytes','timeout_ms','allow_capture','outbox_directory','automatic_capture','allow_documents','allow_task_context','automatic_task_context']);

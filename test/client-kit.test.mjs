@@ -22,6 +22,8 @@ test('read-only probe does not require write scope; capture probe checks capture
   assert.ok(!read.includes('ultra_agent_register'));
   assert.ok(!read.includes('ultra_personal_capture'));
   const write=requiredClientTools({allowCapture:true});
-  assert.ok(write.includes('ultra_agent_register')&&write.includes('ultra_personal_capture'));
+  assert.ok(write.includes('ultra_agent_list')&&write.includes('ultra_agent_register')&&write.includes('ultra_personal_capture'));
+  assert.ok(!read.includes('ultra_agent_list'));
+  assert.equal(new Set(requiredClientTools({allowCapture:true,allowDocuments:true})).size,requiredClientTools({allowCapture:true,allowDocuments:true}).length);
   read.push('mutated');assert.ok(!requiredClientTools({allowCapture:false}).includes('mutated'));
 });
