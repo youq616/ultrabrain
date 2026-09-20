@@ -134,3 +134,32 @@ test('normal document metadata operation does not erase an unrelated draft',asyn
  const f=fixture();f.run("mutate('document_archive',{document_id:'11111111-1111-4111-8111-111111111111'});");await f.settle();
  assert.equal(f.run('pending'),null);assert.equal(f.get('content').value,'ORIGINAL_DRAFT');
 });
+
+// Independent Codex review 5258535272 / 4055400401: a complete negative
+// envelope on HTTP success is contradictory, not proof a write was rejected.
+for(const op of ['commit','capture','update','review'])test('independent review: HTTP success with complete rejection retains '+op,async()=>{
+ const f=fixture(async b=>b.operation===op?{__status:200,__envelope:{ok:false,error:'invalid_params',delivery:'rejected'}}:receipt(b));
+ f.start(op);await f.settle();assert.equal(f.run('pending?.delivery_unconfirmed'),true);
+ assert.equal(f.get('content').value,'ORIGINAL_DRAFT');assert.equal(f.calls.filter(b=>b.operation===op).length,1);
+ assert.match(f.get('message').textContent,/response_unconfirmed/);
+});
+test('independent review: contradictory registration retains preparation without target send',async()=>{
+ const f=fixture(async b=>b.operation==='register'?{__status:200,__envelope:{ok:false,error:'invalid_params',delivery:'rejected'}}:receipt(b));
+ f.start();await f.settle();assert.notEqual(f.run('pending'),null);
+ assert.equal(f.run('pending.delivery_unconfirmed??false'),false);
+ assert.equal(f.calls.some(b=>b.operation==='commit'),false);
+});
+test('independent review: explicit non-success rejection still terminates a previously unsent event',async()=>{
+ const f=fixture(async b=>b.operation==='update'?{__status:400,__envelope:{ok:false,error:'revision_conflict',delivery:'rejected'}}:receipt(b));
+ f.start('update');await f.settle();assert.equal(f.run('pending'),null);
+ assert.equal(f.get('content').value,'ORIGINAL_DRAFT');assert.match(f.get('message').textContent,/revision_conflict/);
+});
+test('independent review: HTTP-success rejection replays the original event after an actual ambiguity',async()=>{
+ let attempts=0;const f=fixture(async b=>{
+  if(b.operation==='commit'&&++attempts===1)return {__status:200,__envelope:{ok:false,error:'invalid_params',delivery:'rejected'}};
+  const r=receipt(b);if(b.operation==='commit')r.replayed=true;return r;
+ });
+ f.start();await f.settle();const original=f.calls.find(b=>b.operation==='commit');assert.notEqual(f.run('pending'),null);
+ f.retry();await f.settle();assert.equal(f.run('pending'),null);
+ assert.deepEqual(f.calls.filter(b=>b.operation==='commit'),[original,original]);
+});

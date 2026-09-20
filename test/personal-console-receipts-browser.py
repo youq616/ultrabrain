@@ -27,7 +27,7 @@ with sync_playwright() as p:
         page.locator('#lookup-id').fill(memory_id)
         page.locator('#lookup-submit').click()
         expect(page.locator('#message')).to_contain_text('记录已核对')
-    def damage(operation, change, action):
+    def damage(operation, change, action, contradict=False):
         observed = []
         def intercept(route):
             body = route.request.post_data_json
@@ -38,12 +38,15 @@ with sync_playwright() as p:
             assert response.ok, 'Actual server operation failed before injected receipt damage'
             data = response.json()
             observed.append({'input': body['input'], 'result': json.loads(json.dumps(data['result']))})
-            change(data['result'])
+            if contradict:
+                data = {'ok': False, 'error': 'invalid_params', 'delivery': 'rejected'}
+            else:
+                change(data['result'])
             route.fulfill(status=200, content_type='application/json', body=json.dumps(data))
         page.route('**/api/call', intercept)
         action()
         expect(page.locator('#pending-panel')).to_be_visible()
-        expect(page.locator('#message')).to_contain_text('console_receipt_unconfirmed')
+        expect(page.locator('#message')).to_contain_text('response_unconfirmed' if contradict else 'console_receipt_unconfirmed')
         expect(page.locator('#save')).to_be_disabled()
         assert len(observed) == 1, 'There must be no automatic retry'
         page.unroute('**/api/call', intercept)
@@ -149,19 +152,31 @@ with sync_playwright() as p:
     expect(page.locator('#content')).to_have_value('RECEIPT_NEWER_UNSAVED_DRAFT')
     assert api('memory_read', {'memory_id': latest_id})['memory']['revision'] == 2
     checks += 1
+    # Independent-review P1 regression: actual commit followed by a complete
+    # negative envelope carried on HTTP success must retain the fresh event.
+    if page.locator('#cancel-edit').is_visible():
+        page.locator('#cancel-edit').click()
+    page.locator('#content').fill('RECEIPT_FALSE_REJECTION_ONCE')
+    page.locator('#consent').check()
+    contradicted = damage('commit', lambda r: None, lambda: page.locator('#save').click(), contradict=True)
+    contradicted_id = contradicted['result']['entries'][0]['id']
+    assert api('memory_read', {'memory_id': contradicted_id})['memory']['revision'] == 1
+    replay('commit', contradicted)
+    assert api('memory_read', {'memory_id': contradicted_id})['memory']['revision'] == 1
+    checks += 1
     page.locator('#logout').click()
     expect(page.locator('#workspace')).to_be_hidden()
     assert page.evaluate('localStorage.length') == 0 and page.evaluate('sessionStorage.length') == 0
     assert not errors, 'Unexpected browser JavaScript error; details omitted'
     # Exclude duplicate deliveries: the fixture separately checks real DB deltas.
     events = [c['input']['event_id'] for c in calls if c['operation'] in ('commit', 'capture', 'update', 'review')]
-    assert len(set(events)) == 7 and len(events) == 11
+    assert len(set(events)) == 8 and len(events) == 13
     checks += 1
     report = {'passed': True, 'checks': checks, 'browser': 'Chromium ' + browser.version,
-              'unique_events': 7, 'memory_write_deliveries': 11,
+              'unique_events': 8, 'memory_write_deliveries': 13,
               'scope': 'Real console/database responses, browser-only damage, stable explicit replay and independent draft preservation; synthetic data, no model calls'}
     if os.environ.get('ULTRABRAIN_BROWSER_REPORT'):
         Path(os.environ['ULTRABRAIN_BROWSER_REPORT']).write_text(json.dumps(report, indent=2) + '\n', encoding='utf8')
     context.close()
     browser.close()
-print('PASS', checks, 'real Chromium receipt/replay/draft checks; seven explicit synthetic events')
+print('PASS', checks, 'real Chromium receipt/replay/draft checks; eight explicit synthetic events')

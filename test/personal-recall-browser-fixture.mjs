@@ -71,8 +71,8 @@ try{
  finally{clearTimeout(receiptTimer);}
  const receiptAfter=await counts();
  assert.deepEqual(Object.fromEntries(Object.keys(receiptBefore).map(k=>[k,receiptAfter[k]-receiptBefore[k]])),
-   {personal_memories:4,personal_events:7,personal_consolidations:1,personal_documents:0});
+   {personal_memories:5,personal_events:8,personal_consolidations:1,personal_documents:0});
  const [draftLeak]=await engine.executeRaw("SELECT count(*)::integer AS n FROM ultrabrain.personal_memories WHERE source_id=$1 AND content LIKE 'RECEIPT_NEWER_UNSAVED_DRAFT%'",[source]);
  assert.equal(draftLeak.n,0);
- console.log('PASS receipt database deltas: 7 events, 4 memories, 1 queued job, 0 documents; replay does not duplicate writes, newer local draft not stored');
+ console.log('PASS receipt database deltas: 8 events, 5 memories, 1 queued job, 0 documents; replay does not duplicate writes, newer local draft not stored');
 }finally{await ui?.close();await engine.disconnect();}

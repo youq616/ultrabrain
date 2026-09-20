@@ -24,7 +24,7 @@ async function api(operation,input={},signal){
   if(!result||typeof result!=='object'||Array.isArray(result)||typeof result.ok!=='boolean')
     throw Object.assign(new Error('response_unconfirmed'),{unknown:true});
   if(result.ok===false){
-    if(typeof result.error!=='string'||!['rejected','unconfirmed'].includes(result.delivery))
+    if(response.ok||typeof result.error!=='string'||!['rejected','unconfirmed'].includes(result.delivery))
       throw Object.assign(new Error('response_unconfirmed'),{unknown:true});
     throw Object.assign(new Error(result.error),{unknown:result.delivery==='unconfirmed'||response.status>=500});
   }
