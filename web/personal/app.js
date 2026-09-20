@@ -137,6 +137,12 @@ function mutate(operation,input,authorize,receiptContext){
 // Bind document writes to the frozen import bytes or the explicitly selected card.
 // Queue checks cover the full-file UI contract; fragment hashes have no local byte
 // preimage here, so their shape is checked, not claimed as a content attestation.
+// One canonical timestamp rule for list metadata, original reads AND write receipts.
+// Date.parse alone normalizes invalid dates; shape plus exact round trip is required.
+function canonicalDocumentTimestamp(value){
+  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value))return false;
+  const time=Date.parse(value);return Number.isFinite(time)&&new Date(time).toISOString()===value;
+}
 function documentReceiptSelection(row){
   return {document_id:row.document_id,byte_size:row.byte_size,revision:row.revision};
 }
@@ -146,7 +152,7 @@ function verifyDocumentWriteReceipt(operation,input,result,source,selected){
   const digest=v=>typeof v==='string'&&/^[a-f0-9]{64}$/.test(v);
   const count=v=>Number.isSafeInteger(v)&&v>=0;
   const revision=v=>Number.isSafeInteger(v)&&v>=1&&v<=2147483647;
-  const date=v=>typeof v==='string'&&v.length>0&&Number.isFinite(Date.parse(v));
+  const date=canonicalDocumentTimestamp;
   valid(result&&typeof result==='object'&&!Array.isArray(result)&&result.dry_run!==true&&
     typeof result.replayed==='boolean'&&result.source_id===source&&result.event_id===input.event_id&&result.model_calls===0&&
     uuid(result.document_id));
@@ -202,12 +208,7 @@ function documentReadSelection(row){
 }
 function verifyDocumentMetadata(row){
   const valid=c=>{if(!c)throw new Error('document_read_unconfirmed');};
-  // PostgreSQL Date values are serialized by JSON as UTC with milliseconds.
-  // Shape alone permits impossible dates, while Date.parse alone normalizes them.
-  const date=v=>{
-    if(typeof v!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(v))return false;
-    const time=Date.parse(v);return Number.isFinite(time)&&new Date(time).toISOString()===v;
-  };
+  const date=canonicalDocumentTimestamp;
   valid(row&&typeof row==='object'&&!Array.isArray(row)&&
     typeof row.document_id==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(row.document_id));
   valid(typeof row.label==='string'&&row.label.isWellFormed()&&new TextEncoder().encode(row.label).length<=256&&

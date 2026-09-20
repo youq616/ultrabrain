@@ -144,3 +144,33 @@ test('a newer file selection is preserved when the original import is acknowledg
  assert.equal(f.get('document-consent').checked,false);assert.equal(f.get('content').value,'UNRELATED_DRAFT');
  assert.equal(f.calls.filter(b=>b.operation==='document_import').length,1);
 });
+
+// Independent review 5260679895 / 4057043888: receipts share the canonical
+// timestamp contract with document metadata. Bad acknowledgements retain events.
+const badReceiptDates=['0','2026-02-31','2026-02-31T00:00:00.000Z','2025-02-29T00:00:00.000Z',
+ '2026-09-20T24:00:00.000Z','2026-09-20T00:00:00Z','2026-09-20T00:00:00.000+00:00',
+ '2026-09-20T00:00:00.0000Z',' 2026-09-20T00:00:00.000Z'];
+for(const op of ['document_import','document_archive'])for(const value of badReceiptDates)
+ test('independent receipt timestamp: '+op+' rejects '+value+' without dropping the event',async()=>{
+  const field=op==='document_import'?'created_at':'archived_at';
+  const f=fixture(async b=>{const r=receipt(b);if(b.operation===op)r[field]=value;return r;});
+  await f.start(op);await f.settle();assert.equal(f.run('pending?.delivery_unconfirmed'),true);
+  assert.equal(f.get('content').value,'UNRELATED_DRAFT');assert.equal(f.calls.filter(b=>b.operation===op).length,1);
+  assert.match(f.get('message').textContent,/console_receipt_unconfirmed/);
+ });
+for(const op of ['document_import','document_archive'])
+ test('independent receipt timestamp: '+op+' recovers only by the same explicit event',async()=>{
+  let attempts=0;const field=op==='document_import'?'created_at':'archived_at';
+  const f=fixture(async b=>{const r=receipt(b);if(b.operation===op){if(++attempts===1)r[field]='0';else r.replayed=true;}return r;});
+  await f.start(op);await f.settle();assert.equal(f.run('pending?.delivery_unconfirmed'),true);
+  const original=f.calls.find(b=>b.operation===op);f.retry();await f.settle();
+  assert.equal(f.run('pending'),null);assert.deepEqual(f.calls.filter(b=>b.operation===op),[original,original]);
+  assert.equal(f.get('content').value,'UNRELATED_DRAFT');
+ });
+test('independent receipt timestamp: canonical leap-day values remain accepted',async()=>{
+ for(const op of ['document_import','document_archive']){
+  const field=op==='document_import'?'created_at':'archived_at';
+  const f=fixture(async b=>{const r=receipt(b);if(b.operation===op)r[field]='2024-02-29T23:59:59.999Z';return r;});
+  await f.start(op);await f.settle();assert.equal(f.run('pending'),null);
+ }
+});

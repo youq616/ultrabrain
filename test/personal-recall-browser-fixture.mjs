@@ -88,9 +88,9 @@ try{
  finally{clearTimeout(documentTimer);}
  const documentAfter=await counts();
  assert.deepEqual(Object.fromEntries(Object.keys(documentBefore).map(k=>[k,documentAfter[k]-documentBefore[k]])),
-   {personal_memories:2,personal_events:6,personal_consolidations:2,personal_documents:2});
+   {personal_memories:2,personal_events:8,personal_consolidations:2,personal_documents:3});
  const archived=await engine.executeRaw("SELECT status,revision FROM ultrabrain.personal_documents WHERE source_id=$1 ORDER BY id",[source]);
- assert.deepEqual(archived.map(r=>({...r})),[{status:'archived',revision:2},{status:'archived',revision:2}]);
+ assert.deepEqual(archived.map(r=>({...r})),Array.from({length:3},()=>({status:'archived',revision:2})));
  const fragments=await engine.executeRaw(`SELECT m.status,m.revision,j.state,j.attempts
    FROM ultrabrain.personal_document_fragments f
    JOIN ultrabrain.personal_memories m ON m.id=f.memory_id AND m.source_id=f.source_id AND m.actor_key=f.actor_key
@@ -99,7 +99,7 @@ try{
  assert.deepEqual(fragments.map(r=>({...r})),Array.from({length:2},()=>({status:'archived',revision:2,state:'stale',attempts:0})));
  const [unsaved]=await engine.executeRaw("SELECT count(*)::integer AS n FROM ultrabrain.personal_memories WHERE source_id=$1 AND content='DOCUMENT_UNRELATED_UNSAVED_DRAFT'",[source]);
  assert.equal(unsaved.n,0);
- console.log('PASS document receipt DB deltas: 6 events, 2 documents, 2 fragments, 2 stale zero-attempt jobs; replays/dedup do not duplicate records');
+ console.log('PASS document receipt DB deltas: 8 events, 3 documents, 2 fragments, 2 stale zero-attempt jobs; replays/dedup do not duplicate records');
  // Snapshot after prior synthetic document writes, then prove this new phase is read-only.
  const readBefore=await snapshot();
  const reads=spawn(process.env.ULTRABRAIN_BROWSER_PYTHON??'python3',[ROOT+'/test/personal-document-read-browser.py'],{

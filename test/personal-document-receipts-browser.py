@@ -136,9 +136,27 @@ with sync_playwright() as p:
     expect(page.get_by_role('button', name='归档文档', exact=True)).to_have_count(0)
     expect(page.locator('#content')).to_have_value('DOCUMENT_UNRELATED_UNSAVED_DRAFT')
     checks += 1
+    # Independent receipt timestamp regression: the database already committed;
+    # only the delivery is damaged. Keep each event until a verified exact replay.
+    page.locator('#document-file').set_input_files({'name': 'timestamp-receipt.txt', 'mimeType': 'text/plain', 'buffer': b'TIMESTAMP_RECEIPT'})
+    page.locator('#document-consent').check()
+    sent = damage('document_import', lambda r: r.update(created_at='0'), lambda: page.locator('#document-import').click())
+    timestamp_id = sent['result']['document_id']
+    assert api('document_read', {'document_id': timestamp_id})['revision'] == 1
+    replay('document_import', sent)
+    expect(page.locator('#results article')).to_have_count(3)
+    checks += 1
+    sent = damage('document_archive', lambda r: r.update(archived_at='2026-02-31T00:00:00.000Z'),
+                  lambda: page.get_by_role('button', name='归档文档', exact=True).click())
+    assert api('document_read', {'document_id': timestamp_id})['status'] == 'archived'
+    replay('document_archive', sent)
+    assert api('document_read', {'document_id': timestamp_id})['revision'] == 2
+    expect(page.get_by_role('button', name='归档文档', exact=True)).to_have_count(0)
+    expect(page.locator('#content')).to_have_value('DOCUMENT_UNRELATED_UNSAVED_DRAFT')
+    checks += 1
     writes = [c for c in calls if c['operation'] in ('document_import', 'document_queue', 'document_archive')]
-    assert len(writes) == 9 and len({c['input']['event_id'] for c in writes}) == 5
-    # The direct synthetic archival above is the sixth event, not a browser delivery.
+    assert len(writes) == 13 and len({c['input']['event_id'] for c in writes}) == 7
+    # The direct synthetic archival above is the eighth event, not a browser delivery.
     assert not any(c['operation'] in ('consolidate', 'commit', 'capture', 'update', 'review') for c in calls)
     page.locator('#logout').click()
     expect(page.locator('#workspace')).to_be_hidden()
@@ -146,10 +164,10 @@ with sync_playwright() as p:
     assert not errors, 'Unexpected browser JavaScript error; raw text omitted'
     checks += 1
     report = {'passed': True, 'checks': checks, 'browser': 'Chromium ' + browser.version,
-              'browser_write_deliveries': 9, 'unique_browser_events': 5, 'direct_fixture_events': 1,
-              'expected_total_events': 6, 'scope': 'Real console/PostgreSQL writes with damaged browser receipts and explicit stable replay; synthetic data, no model calls'}
+              'browser_write_deliveries': 13, 'unique_browser_events': 7, 'direct_fixture_events': 1,
+              'expected_total_events': 8, 'scope': 'Real console/PostgreSQL writes with damaged browser receipts and explicit stable replay; synthetic data, no model calls'}
     if os.environ.get('ULTRABRAIN_BROWSER_REPORT'):
         Path(os.environ['ULTRABRAIN_BROWSER_REPORT']).write_text(json.dumps(report, indent=2) + '\n', encoding='utf8')
     context.close()
     browser.close()
-print('PASS', checks, 'real Chromium document receipt checks; 6 synthetic events including concurrent archival')
+print('PASS', checks, 'real Chromium document receipt checks; 8 synthetic events including concurrent archival')
