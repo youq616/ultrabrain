@@ -59,3 +59,18 @@ test('task acceptance runs after runtime/database/browser setup and its report i
  const sourceUpload=workflow.slice(workflow.indexOf('name: document-module-source-'),workflow.indexOf('- uses: actions/setup-node@'));
  assert.ok(!sourceUpload.includes('personal-job-manager'),'Source archive must not depend on not-yet-created test outputs');
 });
+
+// Independent reviewer P1 5261033178 / 4057395465: additive task coverage
+// must not remove the document or other established cross-platform suites.
+test('portability keeps every fixed baseline contract suite and adds both task suites',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const text=readFileSync(new URL('../.github/workflows/client-portability.yml',import.meta.url),'utf8');
+ const command=text.split('\n').find(line=>line.includes('run: node --test '));
+ assert.ok(command,'Cross-platform test command required');
+ const files=command.slice(command.indexOf('node --test ')+12).trim().split(/\s+/);
+ const baseline=["test/personal-document-module.test.mjs","test/personal-document-read.test.mjs","test/personal-document-receipts.test.mjs","test/personal-console-receipts.test.mjs","test/personal-memory-compare.test.mjs","test/personal-memory-read.test.mjs","test/personal-memory-lookup.test.mjs","test/client-authorization.test.mjs","test/client-profile-authorization.test.mjs","test/client-request-authorization.test.mjs","test/client-task-context.test.mjs","test/client-kit.test.mjs","test/personal-documents.test.mjs","test/client-document-boundaries.test.mjs","test/native-adapters.test.mjs","test/capture-outbox.test.mjs","test/automatic-capture.test.mjs","test/capture-hardening.test.mjs","test/capture-delivery.test.mjs","test/capture-profile-binding.test.mjs","test/client-release-docs.test.mjs"];
+ for(const file of [...baseline,'test/personal-jobs.test.mjs','test/personal-job-manager.test.mjs'])
+  assert.ok(files.includes(file),'Missing previously accepted or new suite: '+file);
+ assert.equal(new Set(files).size,files.length,'Each suite must run once');
+ assert.ok(text.includes('ubuntu-24.04')&&text.includes('windows-2025'));
+});

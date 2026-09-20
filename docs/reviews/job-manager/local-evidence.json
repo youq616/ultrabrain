@@ -1,0 +1,163 @@
+{
+  "format": 1,
+  "base_commit": "92d840a453001dbc5d1a040203bb2ab696deb501",
+  "base_tree": "7b21f77d895e359c6a8714a274b0cd5c90fa578f",
+  "implementation_candidate": "2f5e620aee1b343121b93e9f3c034df16f86b7cf",
+  "implementation_tree": "ae370374cb420c7e5bb97d5cb5f414e849347a7e",
+  "review_id": 5261033178,
+  "review_comment_id": 4057395465,
+  "review_finding": "P1: preserve baseline document read/module suites in Ubuntu and Windows matrix",
+  "local_results": {
+    "node": {
+      "tests": 1248,
+      "pass": 1248,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "exit_code": 0
+    },
+    "python": {
+      "tests": 683,
+      "pass": 683,
+      "duration_seconds": 40.86,
+      "exit_code": 0
+    },
+    "task_subset": {
+      "tests": 83,
+      "pass": 83
+    },
+    "baseline82_reproduction": {
+      "pass": 16,
+      "fail": 66,
+      "exit_code": 1
+    },
+    "review_regression_before_fix": {
+      "pass": 0,
+      "fail": 1
+    }
+  },
+  "execution_user": "oai",
+  "umask": "022",
+  "new_final_ci": "pending at creation",
+  "new_final_independent_review": "pending at creation; earlier COMMENTED review found P1, not approval",
+  "files": [
+    {
+      "path": ".github/workflows/client-portability.yml",
+      "git_blob": "4c76a26ddeed45935f54d5590caefeebf4d12b89"
+    },
+    {
+      "path": ".github/workflows/personal-recall-preview.yml",
+      "git_blob": "0707e977cf2710f8b83406d5ce1680e124f83ce5"
+    },
+    {
+      "path": "docs/PERSONAL-JOB-MANAGER.md",
+      "git_blob": "5b96bf640a777bd6fe5d7d643c4c624558cb352e"
+    },
+    {
+      "path": "docs/reviews/job-manager/README.md",
+      "git_blob": "dba8ae2b6d50cd15e249b5815f4f21639039af3e"
+    },
+    {
+      "path": "docs/reviews/job-manager/first-failure-summary.json",
+      "git_blob": "af8e8a19d9626e72a78281f9a4fa257fb9b18747"
+    },
+    {
+      "path": "docs/reviews/job-manager/reviewer-first-failure.log",
+      "git_blob": "ae19101211e1d79ac6273f36e52b1f3b7107dec0"
+    },
+    {
+      "path": "src/personal-consolidation-core.mjs",
+      "git_blob": "72c80d85ff82d17f3ed4234fb1a1938b5cc314c6"
+    },
+    {
+      "path": "src/personal-consolidation.mjs",
+      "git_blob": "ff404e44a8086f3a9345dc16e046256ac1ab742e"
+    },
+    {
+      "path": "src/personal-plugin.mjs",
+      "git_blob": "6893343a7d9c5346d9b3557ebb29a67b669560fe"
+    },
+    {
+      "path": "test/personal-job-manager-browser.py",
+      "git_blob": "11d55c10d51cb4f6ab7a26fa7b2aa1e101b48a5a"
+    },
+    {
+      "path": "test/personal-job-manager-integration.mjs",
+      "git_blob": "e38dfb304dc9377f3879eb2cf1513d505182c3b4"
+    },
+    {
+      "path": "test/personal-job-manager.test.mjs",
+      "git_blob": "77c86d22e1d9bb3e4efbcfbf223e512f527c6332"
+    },
+    {
+      "path": "test/personal-jobs.test.mjs",
+      "git_blob": "ec36591a4efb764bfce96810d0f8c25c827d32fe"
+    },
+    {
+      "path": "web/personal/app.js",
+      "git_blob": "8e144b15a903fb7ba286485bbc1a3772e29b6d0a"
+    },
+    {
+      "path": "web/personal/index.html",
+      "git_blob": "aceea0b9ea85d20ce653afa08e69b7a47d469548"
+    }
+  ],
+  "logs": [
+    {
+      "file": "baseline-reproduced-first-failure.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "baseline-reproduced-first-failure.log",
+      "sha256": "a387f9b783e4e66c540bca6c72cdb998833a7323991632ef255e505b3b96fc72"
+    },
+    {
+      "file": "focused-reverified.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "focused-reverified.log",
+      "sha256": "1507759a0659337fd20a229169ab704f927403c351e976e87ecca3b8e5ae81c0"
+    },
+    {
+      "file": "node-before-review-fix.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-before-review-fix.log",
+      "sha256": "8bfce873c82880dfc44f92548b299f7d5198fc8a245079032f4eef4ca3473c98"
+    },
+    {
+      "file": "node-reverified.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-reverified.log",
+      "sha256": "58668cd4b7ad5809d5aabf974a309c63713bfce5a2b9940510339aeb1d244a7b"
+    },
+    {
+      "file": "python-reverification-interrupted.log",
+      "sha256": "c838130bdfbaa4f2b8b73d30d031ac0f95215575e1432d0ea03954332fb5193f"
+    },
+    {
+      "file": "python-reverification-interrupted.txt",
+      "sha256": "1a49fe905cc4e0916ea4e1537f5fc75777bed792f8ae02801b45f7dcf61663e5"
+    },
+    {
+      "file": "python-reverified.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-reverified.log",
+      "sha256": "a7b0afe65c24119399305bf173268ae066b41f5674e33c0a6692139874af020f"
+    },
+    {
+      "file": "reviewer-first-failure.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "reviewer-first-failure.log",
+      "sha256": "cd2c09f31064197197323d50c15b419ae0b870db70f53233c01a295ad96eaf2a"
+    }
+  ]
+}
