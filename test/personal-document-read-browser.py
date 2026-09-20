@@ -23,7 +23,11 @@ with sync_playwright() as p:
         return response.json()['result']
 
     rows = api('document_list', {'status': 'any', 'limit': 20})['documents']
-    assert len(rows) == 2 and all(r['status'] == 'archived' for r in rows)
+    # The preceding receipt phase also retains the timestamp-regression original.
+    # Check the exact fixture set, not a permissive minimum or the old two-row count.
+    expected_labels = {'回执合成.MD', 'historical-import.txt', 'timestamp-receipt.txt'}
+    assert len(rows) == len(expected_labels) and {r['label'] for r in rows} == expected_labels
+    assert all(r['status'] == 'archived' and r['revision'] == 2 for r in rows)
     a = next(r for r in rows if r['label'] == '回执合成.MD')
     b = next(r for r in rows if r['label'] == 'historical-import.txt')
     originals = {r['document_id']: api('document_read', {'document_id': r['document_id']}) for r in (a, b)}
@@ -39,7 +43,7 @@ with sync_playwright() as p:
         page.locator('#login-form button').click()
         expect(page.locator('#workspace')).to_be_visible()
         page.locator('[data-view="documents"]').click()
-        expect(page.locator('#results article')).to_have_count(2)
+        expect(page.locator('#results article')).to_have_count(len(expected_labels))
 
     page.goto(origin, wait_until='networkidle')
     login()
