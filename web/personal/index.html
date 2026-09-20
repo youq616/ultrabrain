@@ -42,6 +42,7 @@
 </section></section></div>
 <section id="pending-panel" class="panel warning" hidden><h2>有一次提交尚未确认</h2><p>不要重新生成内容或新的事件编号。下面的重试会使用相同请求。刷新或关闭页面会丢失内存中的待确认请求；可以先将其保存到本机。</p><p id="pending-id"></p><div class="row"><button id="retry">重试原请求</button><button id="save-pending">保存待确认请求</button></div></section>
 <section id="document-panel" class="panel" hidden><h2>导入个人文本文件</h2>
+<label>文档列表状态<select id="document-status"><option value="any" selected>全部文档</option><option value="active">使用中</option><option value="archived">已归档</option></select></label>
 <p class="note">只导入你在这个表单里明确选择的 UTF-8 文本文件（TXT / MD / JSON / CSV / LOG，≤128 KiB）。文件按原始字节保存，不会自动执行或解析其中内容，也不会自动排队整理。超过上限或编码非法的文件会被整体拒绝，不会截断保存。JSON/CSV 仅作为不可信文本保存。</p>
 <label>选择文件<input id="document-file" type="file" accept=".txt,.md,.json,.csv,.log,text/plain,application/json,text/csv"></label>
 <p class="note" id="document-file-info">尚未选择文件。</p>

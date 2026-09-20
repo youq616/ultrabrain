@@ -20,6 +20,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Archive exact tracked source before creating runtime data
+        run: git archive --format=tar.gz --output="$RUNNER_TEMP/document-module-source.tgz" HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: document-module-source-${{ github.sha }}
+          path: ${{ runner.temp }}/document-module-source.tgz
+          if-no-files-found: error
+          retention-days: 14
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -55,6 +63,12 @@ jobs:
           ULTRABRAIN_DOCUMENT_READ_SCREENSHOT: ${{ runner.temp }}/personal-document-read.png
           ULTRABRAIN_COMPARISON_SCREENSHOT: ${{ runner.temp }}/personal-memory-comparison.png
         run: bun test/personal-recall-browser-fixture.mjs
+      - name: Complete personal document module with real pagination and lifecycle
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_MODULE_REPORT: ${{ runner.temp }}/personal-document-module-report.json
+          ULTRABRAIN_MODULE_SCREENSHOT: ${{ runner.temp }}/personal-document-module.png
+        run: bun test/personal-document-module-integration.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: personal-recall-preview-${{ github.sha }}
@@ -70,6 +84,8 @@ jobs:
             ${{ runner.temp }}/personal-document-receipts.png
             ${{ runner.temp }}/personal-document-read-report.json
             ${{ runner.temp }}/personal-document-read.png
+            ${{ runner.temp }}/personal-document-module-report.json
+            ${{ runner.temp }}/personal-document-module.png
           if-no-files-found: error
           retention-days: 14
       - name: Stop only the disposable database

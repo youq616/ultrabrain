@@ -278,6 +278,37 @@ function documentReadActions(row){
   download.addEventListener('click',()=>readDocument(selected,true));
   actions.append(preview,download);return actions;
 }
+// Metadata-only pages form the document workspace's selection boundary. Validate the
+// entire page before rendering any card; a partial/foreign page is not an empty library.
+function documentListQuery(){
+  const status=$('document-status').value||'any';
+  if(!['any','active','archived'].includes(status))throw new Error('invalid_document_filter');
+  return {status,limit:20,offset};
+}
+function validateDocumentPage(result,input,source){
+  const valid=c=>{if(!c)throw new Error('document_list_unconfirmed');};
+  valid(result&&typeof result==='object'&&!Array.isArray(result)&&result.source_id===source&&
+    Object.keys(result).every(k=>['source_id','documents','next_offset'].includes(k))&&
+    Array.isArray(result.documents)&&result.documents.length<=input.limit&&
+    new TextEncoder().encode(JSON.stringify(result)).length<=131072);
+  valid(Number.isSafeInteger(input.offset)&&input.offset>=0&&input.offset<=1000000&&input.limit===20&&
+    ['any','active','archived'].includes(input.status)&&
+    result.next_offset===(result.documents.length===input.limit?input.offset+input.limit:null));
+  const fields=new Set(['document_id','label','format','byte_size','content_sha256','has_bom','agent_id','project_id',
+    'created_at','status','revision','archived_at','fragments','assurance']);
+  const ids=new Set(),documents=[];
+  for(const row of result.documents){
+    verifyDocumentMetadata(row);
+    valid(Object.keys(row).every(k=>fields.has(k))&&!ids.has(row.document_id)&&
+      (input.status==='any'||row.status===input.status)&&Number.isSafeInteger(row.fragments)&&row.fragments>=0&&
+      (row.assurance===undefined||typeof row.assurance==='string'&&row.assurance.length<=512));
+    ids.add(row.document_id);
+    // Every value in this public projection is scalar. Keep later mutation of a
+    // decoded result from changing the identity captured by read AND write buttons.
+    documents.push(Object.freeze({...row}));
+  }
+  return Object.freeze({source_id:source,documents:Object.freeze(documents),next_offset:result.next_offset});
+}
 function renderDocuments(result){
   current=result;$('results').replaceChildren();
   const rows=result.documents;
@@ -303,7 +334,9 @@ function renderDocuments(result){
   }
   nextOffset=Number.isInteger(result.next_offset)?result.next_offset:null;
   $('prev').disabled=offset===0;$('next').disabled=nextOffset===null;
-  $('coverage').textContent='只展示当前身份导入的文档元数据；原文不会自动展示或下载。';
+  $('coverage').textContent='已核对当前身份的文档列表 · '+({any:'全部',active:'使用中',archived:'已归档'}[$('document-status').value||'any'])+' · 本页 '+rows.length+' 条。列表是实时分页，不是完整备份；原文仅在明确点击后读取。';
+  $('export').disabled=false;
+  if(nextOffset>1000000){$('next').disabled=true;$('coverage').textContent+=' 已达列表偏移上限。';}
   controls();
 }
 async function importSelectedDocument(){
@@ -575,6 +608,10 @@ function render(result){
   controls();
 }
 async function load(){
+  const session=token,source=sourceId,selectedView=view,selectedOffset=offset,selectedStatus=$('document-status').value;
+  const activePage=()=>!!session&&token===session&&sourceId===source&&view===selectedView&&offset===selectedOffset&&
+    (selectedView!=='documents'||$('document-status').value===selectedStatus);
+  nextOffset=null;$('prev').disabled=true;$('next').disabled=true;
   const request=++loadVersion;invalidateRecall();invalidateLookup();invalidateComparison();controls();current=null;$('results').replaceChildren();$('export').disabled=true;for(const b of document.querySelectorAll('[data-view]'))b.setAttribute('aria-current',b.dataset.view===view?'page':'false');
   $('view-title').textContent=views[view];$('search-form').hidden=['profile','recall','lookup','agents','documents','jobs'].includes(view);
   documentEpoch++;invalidateDocumentRead();$('document-panel').hidden=view!=='documents';
@@ -583,14 +620,19 @@ async function load(){
   if(['recall','lookup'].includes(view))return; // Navigation/refresh never starts these explicit reads.
   try{
     if(view==='documents'){
-      const data=await api('document_list',{status:'any',limit:20,offset});
-      if(request===loadVersion&&token)renderDocuments(data);
+      const input=documentListQuery();
+      $('coverage').textContent='正在核对文档列表；未读取任何原文。';
+      const data=await api('document_list',input);
+      if(request===loadVersion&&activePage())renderDocuments(validateDocumentPage(data,input,source));
     }else{
       const data=await api(view==='jobs'?'jobs':view==='agents'?'agents':view==='profile'?'profile':'search',['agents','jobs'].includes(view)?{limit:20,offset}:view==='profile'?{limit:50,budget_bytes:131072}:{status:view,query:$('query').value,limit:20,offset,budget_bytes:131072});
       if(request===loadVersion&&token)render(data);
     }
   }
-  catch(e){if(request===loadVersion)message('读取失败：'+e.message,true);}
+  catch(e){if(request===loadVersion&&activePage()){
+    if(selectedView==='documents')$('coverage').textContent='本次文档列表未确认，不代表没有文档。请重新读取。';
+    message('读取失败：'+e.message,true);
+  }}
 }
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('token').value.trim();$('token').value='';try{const info=await api('info');sourceId=info.source_id;$('scope').textContent='数据源：'+info.source_id+' · Linux 本机所有者（与同账号 stdio 共享）';$('login').hidden=true;$('workspace').hidden=false;$('logout').hidden=false;message('已连接。');await load();}catch(e){token='';message('连接失败：'+e.message,true);}});
 $('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateRecall(true);invalidateLookup(true);invalidateComparison();draftConfidence=null;token='';sourceId='';documentEpoch++;invalidateDocumentRead();$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
@@ -606,6 +648,7 @@ $('document-file').addEventListener('change',()=>{
   $('document-file-info').textContent=file?(file.name+' · '+formatSize(file.size)+(file.size>131072?' · 超过 128 KiB 上限，将被整体拒绝':'')):'尚未选择文件。';
 });
 $('document-import').addEventListener('click',importSelectedDocument);
+$('document-status').addEventListener('change',()=>{offset=0;return load();});
 $('document-read-cancel').addEventListener('click',()=>{invalidateDocumentRead();message('本地原文已清除，尚未完成的读取不会展示或下载。已发送的只读查询无法撤回；没有删除服务器文档。');});
 $('memory-form').addEventListener('submit',e=>{
   e.preventDefault();if(!$('consent').checked){message('保存前必须明确同意采集。',true);return;}
