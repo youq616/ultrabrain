@@ -69,6 +69,12 @@ jobs:
           ULTRABRAIN_MODULE_REPORT: ${{ runner.temp }}/personal-document-module-report.json
           ULTRABRAIN_MODULE_SCREENSHOT: ${{ runner.temp }}/personal-document-module.png
         run: bun test/personal-document-module-integration.mjs
+      - name: Complete task management with PostgreSQL, native MCP and Chromium
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_JOB_REPORT: ${{ runner.temp }}/personal-job-manager-report.json
+          ULTRABRAIN_JOB_SCREENSHOT: ${{ runner.temp }}/personal-job-manager.png
+        run: bun test/personal-job-manager-integration.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: personal-recall-preview-${{ github.sha }}
@@ -86,6 +92,8 @@ jobs:
             ${{ runner.temp }}/personal-document-read.png
             ${{ runner.temp }}/personal-document-module-report.json
             ${{ runner.temp }}/personal-document-module.png
+            ${{ runner.temp }}/personal-job-manager-report.json
+            ${{ runner.temp }}/personal-job-manager.png
           if-no-files-found: error
           retention-days: 14
       - name: Stop only the disposable database

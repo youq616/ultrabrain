@@ -20,6 +20,12 @@
 <label>记忆 ID<input id="lookup-id" maxlength="36" spellcheck="false" placeholder="完整小写 UUID"></label>
 <div class="row"><button id="lookup-submit" type="submit">读取当前记录</button><button id="lookup-cancel" type="button" disabled>取消／清除核对</button></div>
 <p class="note">从召回卡片点击“核对最新记录”会重新读取，不直接编辑旧预览。核对不会改动右侧未保存的内容；明确点击“编辑”才填入所读版本。</p>
+</form></div><div id="job-panel" hidden><form id="job-form" autocomplete="off">
+<p class="note">只读取当前本机所有者的任务元数据；不会自动读取原文、采集内容或运行模型。</p>
+<label>任务状态<select id="job-state"><option value="any">全部</option><option value="queued">等待整理</option><option value="processing">处理中</option><option value="failed">处理失败</option><option value="completed">已整理</option><option value="stale">已取消或来源失效</option></select></label>
+<label>按任务 ID 核对（留空按状态分页；填写后忽略状态筛选）<input id="job-id" maxlength="36" spellcheck="false" placeholder="完整小写 UUID"></label>
+<div class="row"><button type="submit">读取任务</button><button type="button" id="job-clear">取消读取／清除结果</button></div>
+<p class="note">原文与生成候选需点击后另行读取，可能已被修改或归档。失败或租约到期的恢复可能重复计费；取消不撤销已发生费用，也不是物理删除。</p>
 </form></div><p class="note" id="coverage">只展示当前身份可见的记录。</p><div id="results" aria-live="polite"></div><div class="row"><button id="prev" disabled>上一页</button><button id="next" disabled>下一页</button><button id="export" disabled>导出当前页</button></div></section>
 <section id="memory-panel" class="panel"><h2 id="editor-title">新建候选记忆</h2><p class="note">保存不会自动确认真实性。编辑已有记忆后，它会重新进入待确认状态。</p><form id="memory-form">
 <label>类型<select id="type"><option value="identity">身份信息</option><option value="preference" selected>偏好</option><option value="environment">环境</option><option value="project">项目</option><option value="decision">决策</option><option value="skill">技能</option><option value="error">错误经验</option><option value="goal">目标</option><option value="experience">经验</option></select></label>
