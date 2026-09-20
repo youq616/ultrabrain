@@ -34,7 +34,7 @@ test('normal metadata page validates without reading original content',async()=>
   assert.deepEqual(f.calls,[{operation:'document_list',input:query()}]);assert.equal(f.get('content').value,'UNSAVED_DRAFT');
 });
 for(const status of ['any','active','archived'])test('filter '+status+' selects the server query, not a fake local filter',async()=>{
-  const f=fixture(async b=>page(b.input.status==='active'?[]:[row({status:'archived',revision:2,archived_at:'2026-09-20T01:00:00Z'})]));
+  const f=fixture(async b=>page(b.input.status==='active'?[]:[row({status:'archived',revision:2,archived_at:'2026-09-20T01:00:00.000Z'})]));
   f.get('document-status').value=status;await f.load();assert.equal(f.calls[0].input.status,status);
 });
 const bad=[
@@ -70,7 +70,7 @@ test('more entries than the requested page bound are rejected',()=>{
   const f=fixture();assert.throws(()=>f.validate(page(Array.from({length:21},(_,n)=>row({document_id:String(n).padStart(8,'0')+'-1111-4111-8111-111111111111'})))));
 });
 for(const status of ['active','archived'])test('server response must respect selected '+status+' filter',()=>{
-  const f=fixture(),r=status==='active'?row({status:'archived',revision:2,archived_at:'2026-09-20T01:00:00Z'}):row();
+  const f=fixture(),r=status==='active'?row({status:'archived',revision:2,archived_at:'2026-09-20T01:00:00.000Z'}):row();
   assert.throws(()=>f.validate(page([r]),query({status})));
 });
 for(const change of ['session','source','filter','offset','navigation','logout'])test('late list cannot expose metadata after '+change,async()=>{
@@ -94,3 +94,22 @@ test('failed response never leaves a previously enabled next-page control active
   const f=fixture(async()=>{throw Error('failure');});f.run('nextOffset=20');f.get('next').disabled=false;await f.load();
   assert.equal(f.run('nextOffset'),null);assert.equal(f.get('next').disabled,true);
 });
+
+// Independent review 5260544188 / 4056915947: Date.parse alone normalizes
+// impossible or abbreviated dates. No card, export or action may survive rejection.
+const noncanonicalDates=['0','2026-02-31','2026-02-31T00:00:00.000Z','2025-02-29T00:00:00.000Z',
+  '2026-09-20T24:00:00.000Z','2026-09-20T00:00:00Z','2026-09-20T00:00:00.000+00:00',
+  '2026-09-20T00:00:00.0000Z',' 2026-09-20T00:00:00.000Z'];
+for(const field of ['created_at','archived_at'])for(const value of noncanonicalDates)
+ test('independent timestamp review: reject '+field+' '+value+' atomically',async()=>{
+  const validRow=row({status:'archived',revision:2,archived_at:'2026-09-20T01:00:00.000Z'});
+  const invalid={...validRow,document_id:other,[field]:value};
+  const f=fixture(async()=>page([validRow,invalid]));await f.load();
+  assert.equal(f.run('current'),null);assert.equal(f.get('results').children.length,0);
+  assert.equal(f.get('export').disabled,true);assert.equal(f.get('next').disabled,true);
+  assert.equal(f.get('content').value,'UNSAVED_DRAFT');assert.equal(f.calls.length,1);
+ });
+for(const value of ['2024-02-29T00:00:00.000Z','2000-02-29T23:59:59.999Z','2026-09-20T00:00:00.001Z'])
+ test('canonical UTC timestamp retains valid leap day and milliseconds: '+value,()=>{
+  const f=fixture();assert.equal(f.validate(page([row({created_at:value})])).documents.length,1);
+ });

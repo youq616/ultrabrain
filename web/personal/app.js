@@ -202,7 +202,12 @@ function documentReadSelection(row){
 }
 function verifyDocumentMetadata(row){
   const valid=c=>{if(!c)throw new Error('document_read_unconfirmed');};
-  const date=v=>typeof v==='string'&&v.length>0&&Number.isFinite(Date.parse(v));
+  // PostgreSQL Date values are serialized by JSON as UTC with milliseconds.
+  // Shape alone permits impossible dates, while Date.parse alone normalizes them.
+  const date=v=>{
+    if(typeof v!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(v))return false;
+    const time=Date.parse(v);return Number.isFinite(time)&&new Date(time).toISOString()===v;
+  };
   valid(row&&typeof row==='object'&&!Array.isArray(row)&&
     typeof row.document_id==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(row.document_id));
   valid(typeof row.label==='string'&&row.label.isWellFormed()&&new TextEncoder().encode(row.label).length<=256&&

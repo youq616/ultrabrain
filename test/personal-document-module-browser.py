@@ -70,7 +70,8 @@ with sync_playwright() as p:
     expect(page.locator('#results article')).to_have_count(3)
     if os.environ.get('ULTRABRAIN_MODULE_SCREENSHOT'):
         page.screenshot(path=os.environ['ULTRABRAIN_MODULE_SCREENSHOT'], full_page=True)
-    for kind in ('foreign-source', 'duplicate-id', 'embedded-content', 'invalid-last-row', 'invalid-cursor'):
+    for kind in ('foreign-source', 'duplicate-id', 'embedded-content', 'invalid-last-row', 'invalid-cursor',
+                 'abbreviated-date', 'impossible-created-date', 'impossible-archive-date'):
         def corrupt(route):
             if route.request.post_data_json.get('operation') != 'document_list':
                 route.continue_()
@@ -87,8 +88,14 @@ with sync_playwright() as p:
                 result['documents'][0]['content_base64'] = 'SHOULD_NOT_RENDER'
             elif kind == 'invalid-last-row':
                 result['documents'][-1]['fragments'] = -1
-            else:
+            elif kind == 'invalid-cursor':
                 result['next_offset'] = 20
+            elif kind == 'abbreviated-date':
+                result['documents'][-1]['created_at'] = '0'
+            elif kind == 'impossible-created-date':
+                result['documents'][-1]['created_at'] = '2026-02-31T00:00:00.000Z'
+            else:
+                result['documents'][-1]['archived_at'] = '2026-02-31T00:00:00.000Z'
             route.fulfill(status=200, content_type='application/json', body=json.dumps(data))
         page.route('**/api/call', corrupt)
         page.locator('#refresh').click()

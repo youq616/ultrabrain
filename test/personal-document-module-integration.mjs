@@ -6,12 +6,13 @@ import {connect,ROOT} from '../src/runtime.mjs';
 import {PersonalMemoryStore} from '../src/personal-memory-store.mjs';
 import {PersonalDocumentStore} from '../src/personal-documents.mjs';
 import {startPersonalConsole} from '../src/personal-console.mjs';
+import {DOCUMENT_MODULE_TABLES,readDocumentModuleLinks,assertDocumentModuleLinks} from './fixtures/document-module-state.mjs';
 assert.equal(process.env.ULTRABRAIN_TEST_ALLOW_WRITE,'1','Disposable test database must be explicitly authorized');
 const engine=await connect(),source='document-module-'+randomBytes(5).toString('hex'),token=randomBytes(32).toString('hex');
 let ui;
 const ctx={engine,sourceId:source,remote:false,transport:'stdio'};
 const counts=async()=>{
-  const result={};for(const table of ['personal_memories','personal_events','personal_consolidations','personal_documents'])
+  const result={};for(const table of DOCUMENT_MODULE_TABLES)
     result[table]=(await engine.executeRaw(`SELECT count(*)::integer AS n FROM ultrabrain.${table} WHERE source_id=$1`,[source]))[0].n;
   return result;
 };
@@ -34,9 +35,13 @@ try{
   finally{clearTimeout(timer);}
   const after=await counts();
   assert.deepEqual(Object.fromEntries(Object.keys(before).map(k=>[k,after[k]-before[k]])),
-    {personal_memories:1,personal_events:3,personal_consolidations:1,personal_documents:1});
-  const [document]=await engine.executeRaw("SELECT status,revision FROM ultrabrain.personal_documents WHERE source_id=$1 AND label='module-user.md'",[source]);
-  assert.deepEqual(document,{status:'archived',revision:2});
+    {personal_memories:1,personal_events:3,personal_consolidations:1,personal_documents:1,personal_document_fragments:1});
+  const [document]=await engine.executeRaw("SELECT id::text AS document_id,status,revision FROM ultrabrain.personal_documents WHERE source_id=$1 AND label='module-user.md'",[source]);
+  assert.ok(document,'The imported document must remain after archival');
+  assert.deepEqual({status:document.status,revision:document.revision},{status:'archived',revision:2});
+  const original=Buffer.from('\ufeffMODULE_ORIGINAL\r\n保留否定词🙂\r\n');
+  const links=await readDocumentModuleLinks(engine,source,documents.actor);
+  assertDocumentModuleLinks(links,{documentId:document.document_id,original});
   const jobs=await engine.executeRaw('SELECT state,attempts FROM ultrabrain.personal_consolidations WHERE source_id=$1',[source]);
   assert.deepEqual(jobs,[{state:'stale',attempts:0}]);
   const [draft]=await engine.executeRaw("SELECT count(*)::integer AS n FROM ultrabrain.personal_memories WHERE source_id=$1 AND content='MODULE_UNSAVED_DRAFT'",[source]);

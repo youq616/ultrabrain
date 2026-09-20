@@ -57,8 +57,8 @@ const corruptions=[
  ['wrong hash',r=>r.content_sha256='0'.repeat(64)],['wrong BOM',r=>r.has_bom=true],['wrong agent',r=>r.agent_id='other'],
  ['wrong project',r=>r.project_id='other'],['changed creation',r=>r.created_at='2026-09-19T00:00:00.000Z'],
  ['invalid status',r=>r.status='candidate'],['zero revision',r=>r.revision=0],['fractional revision',r=>r.revision=1.5],
- ['unversioned archive',r=>{r.status='archived';r.archived_at='2026-09-20T01:00:00Z';}],
- ['archive without timestamp',r=>{r.status='archived';r.revision=2;}],['active with archive date',r=>r.archived_at='2026-09-20T01:00:00Z'],
+ ['unversioned archive',r=>{r.status='archived';r.archived_at='2026-09-20T01:00:00.000Z';}],
+ ['archive without timestamp',r=>{r.status='archived';r.revision=2;}],['active with archive date',r=>r.archived_at='2026-09-20T01:00:00.000Z'],
  ['dry run',r=>r.dry_run=true],['missing base64',r=>delete r.content_base64],['base64 wrong type',r=>r.content_base64={}],
  ['base64 whitespace',r=>r.content_base64+='\n'],['oversized base64',r=>r.content_base64='A'.repeat(174768)],
  ['self-consistent foreign body',r=>Object.assign(r,doc(2).response)],
@@ -82,11 +82,11 @@ test('legitimate archival since card render is shown as latest read status',asyn
  assert.match(f.get('document-original-title').textContent,/已归档/);await f.download();assert.equal(f.downloads.length,1);
 });
 test('archived originals remain readable',async()=>{
- const original=doc(1);for(const r of [original.row,original.response])Object.assign(r,{status:'archived',revision:2,archived_at:'2026-09-20T01:00:00Z'});
+ const original=doc(1);for(const r of [original.row,original.response])Object.assign(r,{status:'archived',revision:2,archived_at:'2026-09-20T01:00:00.000Z'});
  const f=fixture({documents:[original]});await f.read();assert.equal(f.get('document-original').hidden,false);await f.download();assert.equal(f.downloads.length,1);
 });
 test('archived selected record cannot regress to active',async()=>{
- const original=doc(1);Object.assign(original.row,{status:'archived',revision:2,archived_at:'2026-09-20T01:00:00Z'});
+ const original=doc(1);Object.assign(original.row,{status:'archived',revision:2,archived_at:'2026-09-20T01:00:00.000Z'});
  const f=fixture({documents:[original]});await f.read();noExposure(f);
 });
 test('each download rechecks server visibility instead of reusing the preview cache',async()=>{
