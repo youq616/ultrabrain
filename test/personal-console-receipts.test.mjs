@@ -163,3 +163,18 @@ test('independent review: HTTP-success rejection replays the original event afte
  f.retry();await f.settle();assert.equal(f.run('pending'),null);
  assert.deepEqual(f.calls.filter(b=>b.operation==='commit'),[original,original]);
 });
+
+// The legacy browser scenario must cancel its independent stale editor before a
+// new commit. Review/archival deliberately preserves that editor, not an implicit reset.
+test('independent editor is explicitly cancelled before a fresh commit scenario',async()=>{
+ const f=fixture(async b=>b.operation==='update'
+  ?{__status:400,__envelope:{ok:false,error:'revision_conflict',delivery:'rejected'}}:receipt(b));
+ f.start('update');await f.settle();assert.equal(f.run('pending'),null);
+ f.start('review');await f.settle();assert.equal(f.run('editing.revision'),2);
+ assert.equal(f.get('content').value,'ORIGINAL_DRAFT');
+ f.get('cancel-edit').handlers.get('click')();assert.equal(f.run('editing'),null);
+ assert.equal(f.get('content').value,'');f.get('content').value='EXPLICIT_NEW_COMMIT';f.get('consent').checked=true;
+ f.start('commit');await f.settle();assert.equal(f.run('pending'),null);
+ assert.deepEqual(f.calls.map(b=>b.operation),['update','review','register','commit']);
+ assert.equal(f.calls.at(-1).input.memories[0].content,'EXPLICIT_NEW_COMMIT');
+});

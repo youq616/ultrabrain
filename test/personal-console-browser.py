@@ -127,6 +127,15 @@ with sync_playwright() as p:
     expect(page.locator('#results article')).to_have_count(1)
     if os.environ.get('ULTRABRAIN_BROWSER_SCREENSHOT'):
         page.screenshot(path=os.environ['ULTRABRAIN_BROWSER_SCREENSHOT'], full_page=True)
+    # Archiving another action no longer discards the independent stale editor.
+    # Finish that editor explicitly before starting a NEW commit scenario.
+    expect(page.locator('#content')).to_have_value('这个过时的编辑不能覆盖已确认版本')
+    expect(page.locator('#cancel-edit')).to_be_visible()
+    page.locator('#cancel-edit').click()
+    expect(page.locator('#editor-title')).to_have_text('新建候选记忆')
+    expect(page.locator('#content')).to_have_value('')
+    expect(page.locator('#consent')).not_to_be_checked()
+    passed()
     # Drop the response only after the real server committed it; retry must reuse the event.
     page.locator('[data-view="candidate"]').click()
     expect(page.locator('#results article')).to_have_count(0)
@@ -146,6 +155,8 @@ with sync_playwright() as p:
     page.route('**/api/call', interrupt_ack)
     page.locator('#save').click()
     expect(page.locator('#pending-panel')).to_be_visible()
+    expect(page.locator('#message')).to_contain_text('network_unconfirmed')
+    assert len(attempts) == 1, 'The real commit must reach the injected lost-response boundary'
     expect(page.locator('#save')).to_be_disabled()
     page.locator('#consent').uncheck()
     page.locator('#retry').click()
