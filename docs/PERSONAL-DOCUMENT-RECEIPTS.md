@@ -31,3 +31,7 @@
 `node --test test/personal-document-receipts.test.mjs` 执行实际浏览器脚本与模拟 DOM/HTTP 响应，并用 canonical personal-document-core 的归一化和分片结果校对边界。它不等于真实浏览器或 PostgreSQL。
 
 `test/personal-document-receipts-browser.py` 由 `test/personal-recall-browser-fixture.mjs` 在隔离数据库启动的真实控制台下运行。浏览器用例在服务器真实提交后才破坏回执，要求显式同事件重放；分别检查去重、授权撤回、整文件分片、归档、原文下载和历史回执。数据库独立断言 6 事件、2 文档、2 片段和 2 个未运行且失效的任务，重试不得重复创建记录。它在已有预览/纠错/记忆回执阶段之后运行，有明确合成写入，不是全程只读或真实模型质量测试。
+
+## 后续读取扩展
+
+上述 document_read 不在本轮范围指文档写入回执阶段。后续明确读取／下载已经增加所选文档绑定、严格解码、最新选择隔离和取消按钮，见 [PERSONAL-DOCUMENT-READ.md](PERSONAL-DOCUMENT-READ.md)。写入回执及模型权限没有因此改变。

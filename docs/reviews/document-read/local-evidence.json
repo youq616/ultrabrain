@@ -1,0 +1,56 @@
+{
+  "format": 1,
+  "base": "6b8fffc6bbb88b131415e88771bb81bf85d829e9",
+  "base_tree": "894da20f32cdd6e3725ac7d44d461e937bd2f24c",
+  "execution_user": "oai",
+  "results": {
+    "node": {
+      "pass": 1053,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "exit": 0
+    },
+    "python": {
+      "pass": 683,
+      "duration_seconds": 43.745,
+      "exit": 0
+    },
+    "read_subset": 79,
+    "corrected_tests_on_old_app": {
+      "pass": 16,
+      "fail": 63
+    },
+    "real_browser": "pending candidate CI",
+    "independent_review": "pending candidate SHA"
+  },
+  "first_failure_in_repository": "excerpt only; full baseline-corrected-test.log retained in evidence archive",
+  "first_failure_uncompressed_sha256": "95488a9891cd0e682d1388cea19af20ba8d215409c9698d106106a22c1454d2f",
+  "core_blobs": {
+    "web/personal/app.js": "16680925b9a275f9c1b37ea4176ba6274738c897",
+    "web/personal/index.html": "89f55b502d57b4c5e7419b5dbe347ca7a88049d4",
+    "test/personal-document-read.test.mjs": "a234c658e59e24e5a686979e2fa9f9590bd3a88c",
+    "test/personal-document-read-browser.py": "aba41fee2e7a6960ba841013ba9f4b48e8a96cae",
+    "test/personal-recall-browser-fixture.mjs": "57a3a2b9e4370fa6e0a3d3258b61be93e40d46d4"
+  },
+  "log_sha256": {
+    "baseline-corrected-test.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "baseline-corrected-test.log": "95488a9891cd0e682d1388cea19af20ba8d215409c9698d106106a22c1454d2f",
+    "first-failure.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "first-failure.log": "58b02f47400be5de0dd5ae2550b513f41be57b2f7cd8a6957721ba36675f7f5e",
+    "focused-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "focused-final.log": "9148eee9c0e7961c7366fb76ec4e7f1ad284eed949a23dea285d41152f54f0a4",
+    "focused-initial.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "focused-initial.log": "d33d03cf0e49c96570cba11616602d2580f67e4c1dfd6ae0fbde31afdf89a122",
+    "node-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "node-final.log": "9f8392cc0f7e3abf660cb75f40a9f2f5c121f5fce94e82ba3497416629ccbfaf",
+    "node-first-full.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "node-first-full.log": "701c06ac041d2651511698c12dc9272b7563b310b91f09cd11ec81a09716aefc",
+    "python-final.duration": "76c7f3b9741ffc6c8245bdd5a0e6f7d65605d1047226a17a482b31f87a0f1eb9",
+    "python-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "python-final.log": "58c6504b53e8a696bc93409c3d895b1855e79455cc6751b8416a0bcff275d4ed",
+    "python-interrupted.log": "aff2cce679d345675b06510a45b4d03b22205bf6e64546daec55ac5f9ebedb1f",
+    "test-authoring-syntax.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "test-authoring-syntax.log": "321375cddc7a6ed312d308b2c10cf123d68971d7d1cab43441487e84cd03dde8"
+  }
+}

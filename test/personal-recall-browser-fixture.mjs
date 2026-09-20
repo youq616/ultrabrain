@@ -100,4 +100,16 @@ try{
  const [unsaved]=await engine.executeRaw("SELECT count(*)::integer AS n FROM ultrabrain.personal_memories WHERE source_id=$1 AND content='DOCUMENT_UNRELATED_UNSAVED_DRAFT'",[source]);
  assert.equal(unsaved.n,0);
  console.log('PASS document receipt DB deltas: 6 events, 2 documents, 2 fragments, 2 stale zero-attempt jobs; replays/dedup do not duplicate records');
+ // Snapshot after prior synthetic document writes, then prove this new phase is read-only.
+ const readBefore=await snapshot();
+ const reads=spawn(process.env.ULTRABRAIN_BROWSER_PYTHON??'python3',[ROOT+'/test/personal-document-read-browser.py'],{
+   env:{...process.env,ULTRABRAIN_BROWSER_ORIGIN:ui.origin,ULTRABRAIN_BROWSER_TOKEN:token,
+     ULTRABRAIN_BROWSER_REPORT:process.env.ULTRABRAIN_DOCUMENT_READ_REPORT,
+     ULTRABRAIN_BROWSER_SCREENSHOT:process.env.ULTRABRAIN_DOCUMENT_READ_SCREENSHOT},
+   cwd:ROOT,stdio:['ignore','inherit','inherit']});
+ const readTimer=setTimeout(()=>reads.kill('SIGKILL'),120000);
+ try{const code=await new Promise((done,fail)=>{reads.once('error',fail);reads.once('close',done);});assert.equal(code,0,'Document read Chromium validation failed');}
+ finally{clearTimeout(readTimer);}
+ assert.deepEqual(await snapshot(),readBefore,'Document reads must leave all five tables unchanged');
+ console.log('PASS document read five-table snapshots unchanged; no write or model calls in this phase');
 }finally{await ui?.close();await engine.disconnect();}

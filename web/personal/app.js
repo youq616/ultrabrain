@@ -3,7 +3,8 @@
 const $=id=>document.getElementById(id);
 const labels={identity:'身份',preference:'偏好',environment:'环境',project:'项目',decision:'决策',skill:'技能',error:'错误经验',goal:'目标',experience:'经验'};
 const views={candidate:'待确认记忆',active:'当前记忆',archived:'已归档',profile:'个人偏好',recall:'任务召回预览',lookup:'按 ID 核对',documents:'导入文档',agents:'已登记 Agent',jobs:'整理任务'};
-let sourceId='',token='',view='candidate',offset=0,nextOffset=null,current=null,editing=null,pending=null,busy=false,loadVersion=0,documentOriginal=null,documentEpoch=0;
+let sourceId='',token='',view='candidate',offset=0,nextOffset=null,current=null,editing=null,pending=null,busy=false,loadVersion=0,documentEpoch=0;
+let documentReadEpoch=0,documentReadController=null;
 let recallEpoch=0,recallController=null;
 let lookupEpoch=0,lookupController=null;
 let draftConfidence=null,comparison=null,comparisonEpoch=0,comparisonController=null;
@@ -123,7 +124,7 @@ async function submitPending(){
 }
 function mutate(operation,input,authorize,receiptContext){
   if(busy||pending){message('请先处理尚未确认的请求。',true);return;}
-  authorize?.();invalidateComparison();
+  authorize?.();invalidateComparison();invalidateDocumentRead();
   const session=token,source=sourceId,editorSnapshot=editorReceiptSelection();
   const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
   const snapshot=freeze(JSON.parse(JSON.stringify({...input,...(['commit','capture','update','review','document_import','document_queue','document_archive'].includes(operation)?{event_id:crypto.randomUUID()}:{})})));
@@ -188,21 +189,94 @@ const sha16=v=>v?String(v).slice(0,16)+'…':'';
 function base64ToBytes(value){const raw=atob(value);const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return bytes;}
 function bytesToBase64(bytes){let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(binary);}
 async function sha256Hex(bytes){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(b=>b.toString(16).padStart(2,'0')).join('');}
-async function fetchDocumentOriginal(documentId){
-  const session=token,epoch=documentEpoch;
-  const result=await api('document_read',{document_id:documentId});
-  const bytes=base64ToBytes(result.content_base64);
-  const digest=await sha256Hex(bytes);
-  if(digest!==result.content_sha256)throw Object.assign(new Error('fingerprint_mismatch_after_download'),{unknown:false});
-  if(!token||token!==session||epoch!==documentEpoch)throw new Error('document_view_changed');
-  documentOriginal={document:result,bytes};
-  return {result,bytes};
+// Document reads are explicit, latest-selection-only operations. No download cache:
+// even after a preview, downloading rechecks the server's current visibility.
+function invalidateDocumentRead(){
+  documentReadEpoch++;documentReadController?.abort();documentReadController=null;
+  $('document-original').hidden=true;$('document-original-title').textContent='';$('document-original-text').textContent='';
+  $('document-read-cancel').disabled=true;
 }
-function downloadDocument(){ // Only runs from an explicit download click.
-  if(!documentOriginal)return;
-  const url=URL.createObjectURL(new Blob([documentOriginal.bytes],{type:'text/plain'}));
-  const link=element('a');link.href=url;link.download=documentOriginal.document.label;link.click();
+function documentReadSelection(row){
+  return Object.freeze(Object.fromEntries(['document_id','label','format','byte_size','content_sha256','has_bom',
+    'agent_id','project_id','created_at','status','revision','archived_at'].map(key=>[key,row[key]])));
+}
+function verifyDocumentMetadata(row){
+  const valid=c=>{if(!c)throw new Error('document_read_unconfirmed');};
+  const date=v=>typeof v==='string'&&v.length>0&&Number.isFinite(Date.parse(v));
+  valid(row&&typeof row==='object'&&!Array.isArray(row)&&
+    typeof row.document_id==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(row.document_id));
+  valid(typeof row.label==='string'&&row.label.isWellFormed()&&new TextEncoder().encode(row.label).length<=256&&
+    !/[\\/\x00-\x1f\x7f<>:"|?*]/.test(row.label)&&
+    ['txt','md','json','csv','log'].includes(row.format)&&/\.([A-Za-z0-9]{1,16})$/.exec(row.label)?.[1].toLowerCase()===row.format);
+  valid(Number.isSafeInteger(row.byte_size)&&row.byte_size>=1&&row.byte_size<=131072&&
+    typeof row.content_sha256==='string'&&/^[a-f0-9]{64}$/.test(row.content_sha256)&&typeof row.has_bom==='boolean'&&
+    typeof row.agent_id==='string'&&/^[A-Za-z0-9_-]{1,96}$/.test(row.agent_id)&&
+    (row.project_id===null||typeof row.project_id==='string'&&/^[A-Za-z0-9_-]{1,96}$/.test(row.project_id))&&
+    Number.isSafeInteger(row.revision)&&row.revision>=1&&row.revision<=2147483647&&date(row.created_at)&&
+    (row.status==='active'&&row.archived_at===null||row.status==='archived'&&date(row.archived_at)));
+}
+async function verifyDocumentRead(result,selected,source,allowed){
+  const valid=c=>{if(!c)throw new Error('document_read_unconfirmed');};
+  allowed();verifyDocumentMetadata(result);
+  valid(result.source_id===source&&result.dry_run!==true&&result.fragments===null);
+  for(const key of ['document_id','label','format','byte_size','content_sha256','has_bom','agent_id','project_id','created_at'])
+    valid(result[key]===selected[key]);
+  // Archival can happen after rendering a card. Preserve immutable identity/content,
+  // but display the returned lifecycle state, never the stale card's active label.
+  valid(result.revision>=selected.revision&&
+    (result.revision!==selected.revision||result.status===selected.status&&result.archived_at===selected.archived_at)&&
+    (selected.status!=='archived'||result.status==='archived'));
+  const encoded=result.content_base64;
+  valid(typeof encoded==='string'&&encoded.length===4*Math.ceil(selected.byte_size/3)&&/^[A-Za-z0-9+/]+={0,2}$/.test(encoded));
+  let bytes,text;
+  try{
+    bytes=base64ToBytes(encoded);valid(bytes.length===selected.byte_size&&bytesToBase64(bytes)===encoded);
+    // NUL, whitespace, a literal replacement character and BOM-only are legal originals.
+    // A preview omits the leading BOM; the download always uses the original bytes.
+    text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);
+  }catch{throw new Error('document_read_unconfirmed');}
+  valid((bytes.length>=3&&bytes[0]===0xef&&bytes[1]===0xbb&&bytes[2]===0xbf)===selected.has_bom);
+  const digest=await sha256Hex(bytes);allowed();
+  if(digest!==selected.content_sha256)throw new Error('fingerprint_mismatch_after_download');
+  return {document:documentReadSelection(result),bytes,text};
+}
+function downloadDocument(original){ // Only called by the current explicit download action.
+  const url=URL.createObjectURL(new Blob([original.bytes],{type:'text/plain'}));
+  const link=element('a');link.href=url;link.download=original.document.label;link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function readDocument(row,download=false){
+  invalidateDocumentRead();
+  const session=token,source=sourceId,navigation=documentEpoch,epoch=documentReadEpoch,controller=new AbortController();
+  const current=()=>!!session&&token===session&&sourceId===source&&view==='documents'&&navigation===documentEpoch&&
+    epoch===documentReadEpoch&&!controller.signal.aborted;
+  const allowed=()=>{if(!current())throw new Error('document_view_changed');};
+  documentReadController=controller;
+  try{
+    allowed();const selected=documentReadSelection(row);verifyDocumentMetadata(selected);
+    $('document-read-cancel').disabled=false;
+    message('正在核对所选文档原文；不写入记忆、不调用模型。');
+    const result=await api('document_read',{document_id:selected.document_id},controller.signal);allowed();
+    const original=await verifyDocumentRead(result,selected,source,allowed);allowed();
+    if(download){downloadDocument(original);message('已核对所选文档并发起原文下载。');}
+    else{
+      $('document-original-title').textContent='原文 · '+original.document.label+
+        (original.document.status==='archived'?'（已归档，仍可下载核对）':'（纯文本预览，不执行内容）');
+      $('document-original-text').textContent=original.text;$('document-original').hidden=false;
+      message('已按纯文本显示所选原文，身份、元数据和指纹核对通过。下载需点击“下载原文”。');
+    }
+  }catch(error){
+    // Old errors, including an ignored abort, cannot overwrite a newer screen/message.
+    if(current())message((download?'下载':'读取')+'未确认：'+error.message+'。原文未展示或下载；未请求写入或模型调用。',true);
+  }finally{if(epoch===documentReadEpoch)documentReadController=null;}
+}
+function documentReadActions(row){
+  // Capture scalar metadata, not the mutable list result or a shared byte cache.
+  const selected=documentReadSelection(row),actions=element('div',undefined,'row card-actions');
+  const preview=element('button','查看原文'),download=element('button','下载原文');
+  preview.addEventListener('click',()=>readDocument(selected));
+  download.addEventListener('click',()=>readDocument(selected,true));
+  actions.append(preview,download);return actions;
 }
 function renderDocuments(result){
   current=result;$('results').replaceChildren();
@@ -214,24 +288,7 @@ function renderDocuments(result){
       element('p',row.format.toUpperCase()+' · '+formatSize(row.byte_size)+' · SHA-256 '+sha16(row.content_sha256)+(row.has_bom?' · 含 BOM':''),'meta'),
       element('p',(row.project_id??'全局')+' · 片段 '+row.fragments+' · r'+row.revision+' · 导入于 '+row.created_at,'meta'));
     if(row.status==='active'){
-      const actions=element('div',undefined,'row card-actions');
-      const viewButton=element('button','查看原文');
-      viewButton.addEventListener('click',async()=>{
-        try{
-          const {result:read,bytes}=await fetchDocumentOriginal(row.document_id);
-          $('document-original-title').textContent='原文 · '+row.label+'（纯文本预览，不执行内容）';
-          $('document-original-text').textContent=new TextDecoder('utf-8').decode(bytes);
-          $('document-original').hidden=false;
-          message('已按纯文本显示原文，指纹校验通过。下载需点击“下载原文”。');
-        }catch(e){message('读取失败：'+e.message,true);}
-      });
-      const download=element('button','下载原文');
-      download.addEventListener('click',async()=>{
-        try{
-          if(!documentOriginal||documentOriginal.document.document_id!==row.document_id)await fetchDocumentOriginal(row.document_id);
-          downloadDocument();
-        }catch(e){message('下载失败：'+e.message,true);}
-      });
+      const actions=documentReadActions(row);
       const queue=element('button','排队整理（之后才会调用模型）');queue.dataset.write='true';
       queue.addEventListener('click',()=>{
         // Immutable original is split server-side at UTF-8 boundaries, not by naive browser byte steps.
@@ -240,27 +297,8 @@ function renderDocuments(result){
       });
       const archive=element('button','归档文档');archive.dataset.write='true';
       archive.addEventListener('click',()=>{if(confirm('归档会使相关片段退出当前使用范围、使派生记忆失效并阻止未完成任务写回。原始文件字节保留可下载，这不是物理擦除。继续？'))mutate('document_archive',{document_id:row.document_id},undefined,documentReceiptSelection(row));});
-      actions.append(viewButton,download,queue,archive);card.append(actions);
-    }else{
-      const actions=element('div',undefined,'row card-actions');
-      const viewButton=element('button','查看原文');
-      viewButton.addEventListener('click',async()=>{
-        try{
-          const {result:read,bytes}=await fetchDocumentOriginal(row.document_id);
-          $('document-original-title').textContent='原文 · '+row.label+'（已归档，仍可下载核对）';
-          $('document-original-text').textContent=new TextDecoder('utf-8').decode(bytes);
-          $('document-original').hidden=false;
-        }catch(e){message('读取失败：'+e.message,true);}
-      });
-      const download=element('button','下载原文');
-      download.addEventListener('click',async()=>{
-        try{
-          if(!documentOriginal||documentOriginal.document.document_id!==row.document_id)await fetchDocumentOriginal(row.document_id);
-          downloadDocument();
-        }catch(e){message('下载失败：'+e.message,true);}
-      });
-      actions.append(viewButton,download);card.append(actions);
-    }
+      actions.append(queue,archive);card.append(actions);
+    }else card.append(documentReadActions(row));
     $('results').append(card);
   }
   nextOffset=Number.isInteger(result.next_offset)?result.next_offset:null;
@@ -539,7 +577,7 @@ function render(result){
 async function load(){
   const request=++loadVersion;invalidateRecall();invalidateLookup();invalidateComparison();controls();current=null;$('results').replaceChildren();$('export').disabled=true;for(const b of document.querySelectorAll('[data-view]'))b.setAttribute('aria-current',b.dataset.view===view?'page':'false');
   $('view-title').textContent=views[view];$('search-form').hidden=['profile','recall','lookup','agents','documents','jobs'].includes(view);
-  documentEpoch++;$('document-panel').hidden=view!=='documents';$('document-original').hidden=true;documentOriginal=null;
+  documentEpoch++;invalidateDocumentRead();$('document-panel').hidden=view!=='documents';
   $('workspace').dataset.preview=String(view==='recall');
   $('recall-panel').hidden=view!=='recall';$('lookup-panel').hidden=view!=='lookup';$('memory-panel').hidden=view==='recall';
   if(['recall','lookup'].includes(view))return; // Navigation/refresh never starts these explicit reads.
@@ -555,7 +593,7 @@ async function load(){
   catch(e){if(request===loadVersion)message('读取失败：'+e.message,true);}
 }
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('token').value.trim();$('token').value='';try{const info=await api('info');sourceId=info.source_id;$('scope').textContent='数据源：'+info.source_id+' · Linux 本机所有者（与同账号 stdio 共享）';$('login').hidden=true;$('workspace').hidden=false;$('logout').hidden=false;message('已连接。');await load();}catch(e){token='';message('连接失败：'+e.message,true);}});
-$('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateRecall(true);invalidateLookup(true);invalidateComparison();draftConfidence=null;token='';sourceId='';documentEpoch++;documentOriginal=null;$('document-original-text').textContent='';$('document-original').hidden=true;$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
+$('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateRecall(true);invalidateLookup(true);invalidateComparison();draftConfidence=null;token='';sourceId='';documentEpoch++;invalidateDocumentRead();$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
 for(const b of document.querySelectorAll('[data-view]'))b.addEventListener('click',()=>{view=b.dataset.view;offset=0;load();});
 $('refresh').addEventListener('click',()=>load());$('search-form').addEventListener('submit',e=>{e.preventDefault();offset=0;load();});
 $('prev').addEventListener('click',()=>{offset=Math.max(0,offset-20);load();});$('next').addEventListener('click',()=>{if(nextOffset!==null){offset=nextOffset;load();}});
@@ -568,6 +606,7 @@ $('document-file').addEventListener('change',()=>{
   $('document-file-info').textContent=file?(file.name+' · '+formatSize(file.size)+(file.size>131072?' · 超过 128 KiB 上限，将被整体拒绝':'')):'尚未选择文件。';
 });
 $('document-import').addEventListener('click',importSelectedDocument);
+$('document-read-cancel').addEventListener('click',()=>{invalidateDocumentRead();message('本地原文已清除，尚未完成的读取不会展示或下载。已发送的只读查询无法撤回；没有删除服务器文档。');});
 $('memory-form').addEventListener('submit',e=>{
   e.preventDefault();if(!$('consent').checked){message('保存前必须明确同意采集。',true);return;}
   const memory=memoryDraft();

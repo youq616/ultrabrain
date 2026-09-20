@@ -46,7 +46,7 @@
 <label>选择文件<input id="document-file" type="file" accept=".txt,.md,.json,.csv,.log,text/plain,application/json,text/csv"></label>
 <p class="note" id="document-file-info">尚未选择文件。</p>
 <label class="checkbox"><input id="document-consent" type="checkbox">我确认此文件由我本人选择，内容不含不应保存的秘密，同意按原始字节保存到我的个人记忆库。</label>
-<div class="row"><button type="button" id="document-import" data-write="true">导入此文件</button></div>
+<div class="row"><button type="button" id="document-import" data-write="true">导入此文件</button><button type="button" id="document-read-cancel" disabled>清除原文／取消读取</button></div>
 <p class="note">排队整理会从原文生成候选记忆片段（每段 ≤32 KiB，区间以 UTF-8 字节计），生成结果仍需逐条确认。归档会使相关片段退出当前使用范围并使派生记忆失效，但原始文件保留，不等于物理擦除。浏览器仅以纯文本展示原文；下载必须点击“下载原文”才会发生。</p>
 <div id="document-original" hidden><h3 id="document-original-title">原文（纯文本预览）</h3><pre id="document-original-text"></pre></div>
 </section>
