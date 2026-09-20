@@ -1,0 +1,132 @@
+{
+  "format": 1,
+  "base": "4b8ed520995b7b10c65d5008c49630358c5e8830",
+  "base_tree": "194f42d11284a30f103e93e8171a8bf508f5df16",
+  "results": {
+    "node": {
+      "tests": 887,
+      "pass": 887,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    "python": {
+      "tests": 683,
+      "pass": 683
+    },
+    "receipt_tests": {
+      "tests": 62,
+      "pass": 62
+    },
+    "original_54_tests": {
+      "pass": 4,
+      "fail": 50
+    },
+    "real_browser": "pending new candidate CI",
+    "independent_review": "pending exact commit"
+  },
+  "files": [
+    {
+      "path": "web/personal/app.js",
+      "git_blob": "99d90173bee78b7ed584e16e8a3370870820bdb7"
+    },
+    {
+      "path": "test/personal-console-receipts.test.mjs",
+      "git_blob": "52af5394f8f66c22147a83bac04a0e507ec96923"
+    },
+    {
+      "path": "test/personal-console-receipts-browser.py",
+      "git_blob": "c0e03b8138172edf8e74cad7acd97e8d165d5206"
+    },
+    {
+      "path": "test/personal-console-consent.test.mjs",
+      "git_blob": "fa9793b5c9be2fcdf2c7d5bd26bc4987fbceed96"
+    },
+    {
+      "path": "test/personal-memory-compare.test.mjs",
+      "git_blob": "1f346f87e7953ae5c6b224cf5b11aa40a7e55e7c"
+    },
+    {
+      "path": "test/personal-recall-browser-fixture.mjs",
+      "git_blob": "96e9cbf53ff210a6c1ffd1e409e1c1efaac79e2f"
+    },
+    {
+      "path": ".github/workflows/personal-recall-preview.yml",
+      "git_blob": "1bb70104a90ac5fff6dd15574cb71fca5262a1a5"
+    },
+    {
+      "path": ".github/workflows/client-portability.yml",
+      "git_blob": "91ee5933a8924c1beac5c5626920104cf757a04c"
+    }
+  ],
+  "logs": [
+    {
+      "file": "after-initial.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "after-initial.log",
+      "sha256": "69e70e5c1b18530f9f2fb031e45f677cd32a8ee7419260bbf9171e3290631688"
+    },
+    {
+      "file": "before.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "before.log",
+      "sha256": "e2a7c8e72622b297a5aae771a910655148ac3aff2165b7797fb2af64dcfb89f0"
+    },
+    {
+      "file": "focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "focused.log",
+      "sha256": "df254a8df08fc05b3b7a2481e26891c36b6ba553eacd3b74766de51597e0eaba"
+    },
+    {
+      "file": "node-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-final.log",
+      "sha256": "11f4435be1da52d30268efe77b14dfb1c3e33c87abfd5450d4e36628c847ee3c"
+    },
+    {
+      "file": "node-first-full.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-first-full.log",
+      "sha256": "8d0e06e9426fad118d3363be709dc128f3935b7d2c7cda2c6b2965ba636d7401"
+    },
+    {
+      "file": "python-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-final.log",
+      "sha256": "2db9d70ae43a0e90d68787895c8376c66a460b4410b8a764ae1c451ceafc2edf"
+    },
+    {
+      "file": "python-interrupted.log",
+      "sha256": "ff7bf9d19d8175407939c1d2523a033a33fcc3ba0e1e5fa02e0cabe6070f30f9"
+    },
+    {
+      "file": "python-interrupted.txt",
+      "sha256": "5684b937f0b2547de28425bfea5c44e01413da37b4e2338a6f1154ebc9a04838"
+    },
+    {
+      "file": "receipts-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "receipts-final.log",
+      "sha256": "621006fb6c45316c5af3870c79c414f3ba96b0599ccc4070f3da5e91b27c9411"
+    }
+  ],
+  "first_failure": {
+    "git_blob": "691939d90b51de8e722043b3a1c20e526335a8d5",
+    "uncompressed_sha256": "e2a7c8e72622b297a5aae771a910655148ac3aff2165b7797fb2af64dcfb89f0"
+  }
+}

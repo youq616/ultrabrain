@@ -15,7 +15,13 @@ function fixture(route=async()=>{}) {
   const ctx=vm.createContext({document:{getElementById:get,querySelectorAll:()=>[],createElement:element},
     window:{addEventListener(){}},crypto:{randomUUID},AbortSignal,confirm:()=>true,
     fetch:async(_url,options)=>{const body=JSON.parse(options.body);calls.push(body);await route(body);
-      return {ok:true,json:async()=>({ok:true,result:{memories:[],next_offset:null}})};}});
+      const p=body.input;
+      const result=body.operation==='register'?{source_id:'default',agent_id:p.agent_id,actor_key:'a'.repeat(64),revision:1,replayed:true}
+        :body.operation==='commit'?{source_id:'default',event_id:p.event_id,entries:[{id:'11111111-1111-4111-8111-111111111111',revision:1,status:'candidate'}],storage:'stored',state:'candidate',model_calls:0,review_required:true,replayed:false}
+        :body.operation==='capture'?{source_id:'default',event_id:p.event_id,input_id:'11111111-1111-4111-8111-111111111111',job_id:'22222222-2222-4222-8222-222222222222',input_revision:1,storage:'journaled',state:'queued',model_calls:0,review_required:true,replayed:false}
+        :body.operation==='update'?{id:p.memory_id,revision:p.expected_revision+1,status:'candidate',review_required:true,replayed:false}
+        :{memories:[],next_offset:null};
+      return {ok:true,json:async()=>({ok:true,result})};}});
   vm.runInContext(app,ctx);
   vm.runInContext("token='synthetic-token';sourceId='default';",ctx);
   get('content').value='Synthetic explicitly selected text';get('consent').checked=true;
@@ -38,7 +44,7 @@ for(const operation of ['commit','capture'])for(const change of ['consent','cont
 for(const operation of ['commit','capture','update'])
   test(`browser ${operation} retains an unconfirmed event and does not retry after consent withdrawal`,async()=>{
     let attempts=0;const f=fixture(async body=>{if(body.operation===operation&&++attempts===1)throw new Error('Synthetic response lost after submission');});
-    if(operation==='update')f.run("editing={id:'synthetic-id',revision:4,confidence:null};");
+    if(operation==='update')f.run("editing={id:'11111111-1111-4111-8111-111111111111',revision:4,confidence:null};");
     if(operation==='capture')f.click('queue-personal');else f.click('memory-form','submit');
     await f.settled();assert.equal(attempts,1);
     const before=JSON.stringify(f.calls.find(call=>call.operation===operation)),count=f.calls.length;
@@ -53,7 +59,7 @@ for(const operation of ['commit','capture','update'])
   });
 test('browser update retry rejects changed form content while preserving its original event',async()=>{
   const f=fixture(async body=>{if(body.operation==='update')throw new Error('Synthetic lost response');});
-  f.run("editing={id:'synthetic-id',revision:4,confidence:null};");f.click('memory-form','submit');await f.settled();
+  f.run("editing={id:'11111111-1111-4111-8111-111111111111',revision:4,confidence:null};");f.click('memory-form','submit');await f.settled();
   const event=f.run('pending.input.event_id');f.get('content').value='Different unapproved content';
   f.click('retry');await f.settled();
   assert.equal(f.calls.filter(call=>call.operation==='update').length,1);

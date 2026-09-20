@@ -54,4 +54,25 @@ try{
  assert.deepEqual({...final,confidence:Number(final.confidence)},{content:'LOOKUP_MANUAL_MERGE',status:'candidate',revision:8,confidence:0.4});
  assert.equal((await snapshot()).personal_consolidations,before.personal_consolidations);
  console.log('PASS exact lookup browser final database state: manual reconciliation retained, repeated stale overwrite refused, no consolidation jobs');
+ // Separate synthetic receipt-fault phase. Replays must not create additional events,
+ // rows or jobs; the browser intentionally injects malformed replies after real commits.
+ const counts=async()=>{
+   const result={};for(const table of ['personal_memories','personal_events','personal_consolidations','personal_documents'])
+     result[table]=(await engine.executeRaw(`SELECT count(*)::integer AS n FROM ultrabrain.${table} WHERE source_id=$1`,[source]))[0].n;
+   return result;
+ };
+ const receiptBefore=await counts();
+ const receipts=spawn(process.env.ULTRABRAIN_BROWSER_PYTHON??'python3',[ROOT+'/test/personal-console-receipts-browser.py'],{
+   env:{...process.env,ULTRABRAIN_BROWSER_ORIGIN:ui.origin,ULTRABRAIN_BROWSER_TOKEN:token,
+     ULTRABRAIN_BROWSER_REPORT:process.env.ULTRABRAIN_RECEIPT_REPORT,ULTRABRAIN_BROWSER_SCREENSHOT:process.env.ULTRABRAIN_RECEIPT_SCREENSHOT},
+   cwd:ROOT,stdio:['ignore','inherit','inherit']});
+ const receiptTimer=setTimeout(()=>receipts.kill('SIGKILL'),120000);
+ try{const code=await new Promise((done,fail)=>{receipts.once('error',fail);receipts.once('close',done);});assert.equal(code,0,'Receipt Chromium validation failed');}
+ finally{clearTimeout(receiptTimer);}
+ const receiptAfter=await counts();
+ assert.deepEqual(Object.fromEntries(Object.keys(receiptBefore).map(k=>[k,receiptAfter[k]-receiptBefore[k]])),
+   {personal_memories:4,personal_events:7,personal_consolidations:1,personal_documents:0});
+ const [draftLeak]=await engine.executeRaw("SELECT count(*)::integer AS n FROM ultrabrain.personal_memories WHERE source_id=$1 AND content LIKE 'RECEIPT_NEWER_UNSAVED_DRAFT%'",[source]);
+ assert.equal(draftLeak.n,0);
+ console.log('PASS receipt database deltas: 7 events, 4 memories, 1 queued job, 0 documents; replay does not duplicate writes, newer local draft not stored');
 }finally{await ui?.close();await engine.disconnect();}

@@ -21,7 +21,16 @@ async function api(operation,input={},signal){
   let response;try{response=await fetch('/api/call',{method:'POST',credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({operation,input}),signal:AbortSignal.any([AbortSignal.timeout(operation==='consolidate'?150000:20000),signal].filter(Boolean))});}
   catch{throw Object.assign(new Error('network_unconfirmed'),{unknown:true});}
   let result;try{result=await response.json();}catch{throw Object.assign(new Error('response_unconfirmed'),{unknown:true});}
-  if(!response.ok||!result.ok)throw Object.assign(new Error(typeof result.error==='string'?result.error:'request_failed'),{unknown:result.delivery==='unconfirmed'||response.status>=500});
+  if(!result||typeof result!=='object'||Array.isArray(result)||typeof result.ok!=='boolean')
+    throw Object.assign(new Error('response_unconfirmed'),{unknown:true});
+  if(result.ok===false){
+    if(typeof result.error!=='string'||!['rejected','unconfirmed'].includes(result.delivery))
+      throw Object.assign(new Error('response_unconfirmed'),{unknown:true});
+    throw Object.assign(new Error(result.error),{unknown:result.delivery==='unconfirmed'||response.status>=500});
+  }
+  if(!response.ok)throw Object.assign(new Error('response_unconfirmed'),{unknown:true});
+  if(!result.result||typeof result.result!=='object'||Array.isArray(result.result))
+    throw Object.assign(new Error('response_unconfirmed'),{unknown:true});
   return result.result;
 }
 function download(value,name){const u=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)+'\n'],{type:'application/json'}));const link=element('a');link.href=u;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
@@ -36,20 +45,91 @@ function memoryAuthorization(){
       throw new Error('memory_consent_or_selection_changed');
   };
 }
+// Validate the EXISTING server contract; a 2xx response alone is not acknowledgement.
+// Update/review currently return no event ID or source: match their ID/revision/status,
+// keep the session boundary, and do not claim cryptographic or full-content attestation.
+const EDITOR_WRITES=new Set(['commit','capture','update']);
+function verifyWriteReceipt(operation,input,result,source){
+  if(!['register','commit','capture','update','review'].includes(operation))return;
+  const valid=c=>{if(!c)throw Object.assign(new Error('console_receipt_unconfirmed'),{unknown:true});};
+  const uuid=v=>typeof v==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(v);
+  const revision=v=>Number.isSafeInteger(v)&&v>=1&&v<=2147483647;
+  valid(result&&typeof result==='object'&&!Array.isArray(result)&&result.dry_run!==true&&typeof result.replayed==='boolean');
+  if(operation==='register'){
+    valid(result.source_id===source&&result.agent_id===input.agent_id&&revision(result.revision)&&
+      typeof result.actor_key==='string'&&/^[a-f0-9]{64}$/.test(result.actor_key));return;
+  }
+  if(['commit','capture'].includes(operation)){
+    valid(result.source_id===source&&result.event_id===input.event_id&&result.model_calls===0&&result.review_required===true);
+    if(operation==='commit'){
+      const count=Array.isArray(input.memories)?input.memories.length:typeof input.summary==='string'?1:0;
+      valid(count>=1&&count<=16&&result.storage==='stored'&&result.state==='candidate'&&Array.isArray(result.entries)&&result.entries.length===count);
+      const seen=new Set();for(const row of result.entries){
+        valid(row&&uuid(row.id)&&!seen.has(row.id)&&row.revision===1&&row.status==='candidate');seen.add(row.id);
+      }
+    }else valid(result.storage==='journaled'&&result.state==='queued'&&uuid(result.input_id)&&result.input_revision===1&&uuid(result.job_id));
+    return;
+  }
+  valid(uuid(input.memory_id)&&result.id===input.memory_id&&revision(result.revision)&&result.revision===input.expected_revision+1&&
+    result.status===(operation==='update'?'candidate':input.status));
+  if(operation==='update')valid(result.review_required===true);
+  // Optional future binding fields must not contradict this request.
+  if(Object.hasOwn(result,'source_id'))valid(result.source_id===source);
+  if(Object.hasOwn(result,'event_id'))valid(result.event_id===input.event_id);
+}
+function editorReceiptSelection(){
+  return JSON.stringify([editing?.id??null,editing?.revision??null,memoryDraft(),$('consent').checked]);
+}
 async function submitPending(){
-  if(!pending||busy)return;busy=true;controls();
+  if(!pending||busy)return;const request=pending;let submitted=false,acknowledged=false;busy=true;controls();
+  const contextCurrent=()=>{
+    if(pending!==request||!request.sessionCurrent())throw Object.assign(new Error('console_session_changed'),{unknown:true});
+  };
   try{
-    pending.authorize?.();
-    if(['commit','capture','document_import'].includes(pending.operation))await api('register',{agent_id:'personal-console',agent_type:'general_agent',capabilities:[]});
-    pending.authorize?.();
-    const operation=pending.operation;const result=await api(operation,pending.input);pending=null;resetEditor();message((operation==='consolidate'?'整理请求已返回，请在整理任务中查看实际状态。':'操作已确认。')+(result.state==='needs_model'?'尚未配置个人整理模型，未发送原文。':'')+(result.review_required?'该记忆需要明确确认后才进入当前上下文。':''));await load();
+    contextCurrent();request.authorize?.();
+    if(['commit','capture','document_import'].includes(request.operation)){
+      const registration={agent_id:'personal-console',agent_type:'general_agent',capabilities:[]};
+      const registered=await api('register',registration);contextCurrent();
+      verifyWriteReceipt('register',registration,registered,request.source_id);
+    }
+    request.authorize?.();contextCurrent();
+    // Use the same frozen request for sending, validation and every explicit retry.
+    submitted=true;const result=await api(request.operation,request.input);contextCurrent();
+    verifyWriteReceipt(request.operation,request.input,result,request.source_id);
+    const clearEditor=EDITOR_WRITES.has(request.operation)&&request.editorUnchanged();
+    acknowledged=true;pending=null;
+    if(clearEditor)resetEditor();
+    else if(EDITOR_WRITES.has(request.operation))$('consent').checked=false;
+    message((request.operation==='consolidate'?'整理请求已返回，请在整理任务中查看实际状态。':'操作已确认。')+
+      (result.state==='needs_model'?'尚未配置个人整理模型，未发送原文。':'')+
+      (result.review_required?'该记忆需要明确确认后才进入当前上下文。':'')+
+      (result.replayed===true?'重放确认的是原事件，不代表记录仍处于该版本；当前状态请重新读取。':'')+
+      (EDITOR_WRITES.has(request.operation)&&!clearEditor?'提交后修改的草稿已保留，尚未保存；原请求已确认，不代表当前草稿已保存。请重新核对版本和保存同意。':''));
+    await load();
   }catch(e){
-    if(e.unknown){pending.delivery_unconfirmed=true;message('尚未取得可靠确认：'+e.message+'。请重试同一请求，不要更换事件编号。',true);}
-    else if(pending.delivery_unconfirmed)message('本次重试已停止：'+e.message+'。此前提交仍未确认；待确认请求和事件编号已保留。重新核对原内容与授权后才可重试。',true);
+    // Never turn a later UI/rendering error into a request replay after a verified ack.
+    if(acknowledged){message('操作已取得确认，但页面刷新失败。请重新读取记录，不要重复提交。',true);}
+    else if(pending!==request){message('请求状态已变化，无法确认原提交。请保留原事件并核对，不要重复提交。',true);}
+    else if(e.unknown){
+      if(submitted)request.delivery_unconfirmed=true;
+      message((request.delivery_unconfirmed?'尚未取得可靠确认：':'准备阶段未取得可靠确认，尚未发送本次目标写入：')+e.message+
+        '。原请求和事件编号已保留；请核对后重试同一请求，不要更换事件编号。',true);
+    }
+    else if(request.delivery_unconfirmed)message('本次重试已停止：'+e.message+'。此前提交仍未确认；待确认请求和事件编号已保留。重新核对原内容与授权后才可重试。',true);
     else {pending=null;message('请求被拒绝：'+e.message+'。草稿已保留；版本冲突时可点击“读取当前版本对照”，不要直接覆盖他人的更改。',true);}
   }finally{busy=false;controls();}
 }
-function mutate(operation,input,authorize){if(busy||pending){message('请先处理尚未确认的请求。',true);return;}authorize?.();invalidateComparison();pending={operation,authorize,input:{...input,...(['commit','capture','update','review','document_import','document_queue','document_archive'].includes(operation)?{event_id:crypto.randomUUID()}: {})}};submitPending();}
+function mutate(operation,input,authorize){
+  if(busy||pending){message('请先处理尚未确认的请求。',true);return;}
+  authorize?.();invalidateComparison();
+  const session=token,source=sourceId,editorSnapshot=editorReceiptSelection();
+  const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
+  const snapshot=freeze(JSON.parse(JSON.stringify({...input,...(['commit','capture','update','review','document_import','document_queue','document_archive'].includes(operation)?{event_id:crypto.randomUUID()}:{})})));
+  pending={operation,authorize,input:snapshot,source_id:source,
+    sessionCurrent:()=>!!session&&token===session&&sourceId===source,
+    editorUnchanged:()=>editorReceiptSelection()===editorSnapshot};
+  submitPending();
+}
 const formatSize=n=>n<1024?n+' B':(n/1024).toFixed(1)+' KiB';
 const sha16=v=>v?String(v).slice(0,16)+'…':'';
 function base64ToBytes(value){const raw=atob(value);const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return bytes;}

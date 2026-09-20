@@ -46,7 +46,7 @@ test('adoption needs its own explicit checkbox',async()=>{
 });
 test('explicit adoption preserves all draft fields, including its confidence estimate, and resets save consent',async()=>{
   const f=fixture(async body=>body.operation==='memory_read'?receipt(row(3,'CONCURRENT',{confidence:0.9})):
-    body.operation==='update'?{id,revision:4,status:'candidate',review_required:true}:{memories:[]});
+    body.operation==='update'?{id,revision:4,status:'candidate',review_required:true,replayed:false}:{memories:[]});
   f.get('project').value='project-draft';f.get('importance').value='high';f.get('provenance').value='Draft source';
   await f.read();f.get('comparison-consent').checked=true;f.click('comparison-consent','change');assert.equal(f.get('comparison-adopt').disabled,false);
   f.click('comparison-adopt');assert.equal(f.run('editing.revision'),3);assert.equal(f.run('editing.content'),'CONCURRENT');
