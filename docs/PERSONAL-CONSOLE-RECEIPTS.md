@@ -25,3 +25,7 @@ commit 核对 source_id/event_id、完整条目数量、每条唯一 UUID/revisi
 ## 验证
 
 Node 用实际浏览器 JS 和明确模拟 HTTP 覆盖错误回执、登记拦截、重复条目、不可变重放及草稿变化。新增 Chromium 阶段在真实控制台/数据库完成操作后，仅篡改送回浏览器的回执，验证拒绝、显式重放及真实表数据增量。它有明确合成写入，不是只读测试，不使用用户内容或真实模型。最终 SHA、CI 与独立复审结果记录于 PR #20。
+
+## 后续文档写入扩展
+
+上述“文档操作本轮未逐字段校验”描述的是 console-receipts 历史阶段。后续 document-receipts 阶段已经为管理台 document_import/document_queue/document_archive 添加请求绑定校验；范围、既有历史回执语义及不提供的保证见 [PERSONAL-DOCUMENT-RECEIPTS.md](PERSONAL-DOCUMENT-RECEIPTS.md)。取消任务和模型整理仍不在新增业务回执校验范围内。

@@ -49,7 +49,9 @@ function memoryAuthorization(){
 // Update/review currently return no event ID or source: match their ID/revision/status,
 // keep the session boundary, and do not claim cryptographic or full-content attestation.
 const EDITOR_WRITES=new Set(['commit','capture','update']);
-function verifyWriteReceipt(operation,input,result,source){
+function verifyWriteReceipt(operation,input,result,source,documentSelection){
+  if(['document_import','document_queue','document_archive'].includes(operation))
+    return verifyDocumentWriteReceipt(operation,input,result,source,documentSelection);
   if(!['register','commit','capture','update','review'].includes(operation))return;
   const valid=c=>{if(!c)throw Object.assign(new Error('console_receipt_unconfirmed'),{unknown:true});};
   const uuid=v=>typeof v==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(v);
@@ -95,7 +97,7 @@ async function submitPending(){
     request.authorize?.();contextCurrent();
     // Use the same frozen request for sending, validation and every explicit retry.
     submitted=true;const result=await api(request.operation,request.input);contextCurrent();
-    verifyWriteReceipt(request.operation,request.input,result,request.source_id);
+    verifyWriteReceipt(request.operation,request.input,result,request.source_id,request.receipt_context);
     const clearEditor=EDITOR_WRITES.has(request.operation)&&request.editorUnchanged();
     acknowledged=true;pending=null;
     if(clearEditor)resetEditor();
@@ -119,16 +121,67 @@ async function submitPending(){
     else {pending=null;message('请求被拒绝：'+e.message+'。草稿已保留；版本冲突时可点击“读取当前版本对照”，不要直接覆盖他人的更改。',true);}
   }finally{busy=false;controls();}
 }
-function mutate(operation,input,authorize){
+function mutate(operation,input,authorize,receiptContext){
   if(busy||pending){message('请先处理尚未确认的请求。',true);return;}
   authorize?.();invalidateComparison();
   const session=token,source=sourceId,editorSnapshot=editorReceiptSelection();
   const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
   const snapshot=freeze(JSON.parse(JSON.stringify({...input,...(['commit','capture','update','review','document_import','document_queue','document_archive'].includes(operation)?{event_id:crypto.randomUUID()}:{})})));
   pending={operation,authorize,input:snapshot,source_id:source,
+    receipt_context:receiptContext===undefined?null:freeze(JSON.parse(JSON.stringify(receiptContext))),
     sessionCurrent:()=>!!session&&token===session&&sourceId===source,
     editorUnchanged:()=>editorReceiptSelection()===editorSnapshot};
   submitPending();
+}
+// Bind document writes to the frozen import bytes or the explicitly selected card.
+// Queue checks cover the full-file UI contract; fragment hashes have no local byte
+// preimage here, so their shape is checked, not claimed as a content attestation.
+function documentReceiptSelection(row){
+  return {document_id:row.document_id,byte_size:row.byte_size,revision:row.revision};
+}
+function verifyDocumentWriteReceipt(operation,input,result,source,selected){
+  const valid=c=>{if(!c)throw Object.assign(new Error('console_receipt_unconfirmed'),{unknown:true});};
+  const uuid=v=>typeof v==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(v);
+  const digest=v=>typeof v==='string'&&/^[a-f0-9]{64}$/.test(v);
+  const count=v=>Number.isSafeInteger(v)&&v>=0;
+  const revision=v=>Number.isSafeInteger(v)&&v>=1&&v<=2147483647;
+  const date=v=>typeof v==='string'&&v.length>0&&Number.isFinite(Date.parse(v));
+  valid(result&&typeof result==='object'&&!Array.isArray(result)&&result.dry_run!==true&&
+    typeof result.replayed==='boolean'&&result.source_id===source&&result.event_id===input.event_id&&result.model_calls===0&&
+    uuid(result.document_id));
+  if(operation==='document_import'){
+    // Input is the exact bounded snapshot sent by importSelectedDocument, not a
+    // re-read of the file picker, which may now contain a different selection.
+    valid(typeof input.content_base64==='string'&&input.content_base64.length<=174764&&digest(input.content_sha256));
+    let bytes;try{bytes=base64ToBytes(input.content_base64);}catch{valid(false);}
+    valid(bytes.length>=1&&bytes.length<=131072&&bytesToBase64(bytes)===input.content_base64);
+    const format=/\.([A-Za-z0-9]{1,16})$/.exec(input.label)?.[1].toLowerCase();
+    const bom=bytes.length>=3&&bytes[0]===0xef&&bytes[1]===0xbb&&bytes[2]===0xbf;
+    valid(['txt','md','json','csv','log'].includes(format)&&result.format===format&&result.label===input.label&&
+      result.byte_size===bytes.length&&result.content_sha256===input.content_sha256&&result.has_bom===bom&&
+      result.agent_id===input.agent_id&&result.project_id===(input.project_id??null)&&result.status==='active'&&result.revision===1&&
+      result.storage==='stored'&&typeof result.already_imported==='boolean'&&date(result.created_at));
+    return;
+  }
+  valid(selected&&selected.document_id===input.document_id&&result.document_id===input.document_id&&
+    count(selected.byte_size)&&selected.byte_size>=1&&selected.byte_size<=131072&&revision(selected.revision));
+  if(operation==='document_queue'){
+    valid(input.fragments===undefined&&result.storage==='journaled'&&result.review_required===true&&
+      Array.isArray(result.fragments)&&result.fragments.length>=1&&result.fragments.length<=16);
+    const memories=new Set(),jobs=new Set();let end=0;
+    for(const f of result.fragments){
+      valid(f&&uuid(f.memory_id)&&uuid(f.job_id)&&!memories.has(f.memory_id)&&!jobs.has(f.job_id)&&
+        f.state==='queued'&&f.offset_unit==='utf8-bytes'&&digest(f.fragment_sha256)&&
+        count(f.byte_start)&&count(f.byte_end)&&f.byte_start===end&&f.byte_end>f.byte_start&&
+        f.byte_end-f.byte_start<=32768&&f.byte_end<=selected.byte_size&&
+        (f.byte_end===selected.byte_size||f.byte_end-f.byte_start>=32765));
+      memories.add(f.memory_id);jobs.add(f.job_id);end=f.byte_end;
+    }
+    valid(end===selected.byte_size);return;
+  }
+  valid(operation==='document_archive'&&result.status==='archived'&&revision(result.revision)&&
+    result.revision===selected.revision+1&&date(result.archived_at)&&result.original_retained===true&&
+    count(result.archived_fragments)&&count(result.fenced_jobs)&&count(result.derived_entries_invalidated));
 }
 const formatSize=n=>n<1024?n+' B':(n/1024).toFixed(1)+' KiB';
 const sha16=v=>v?String(v).slice(0,16)+'…':'';
@@ -183,10 +236,10 @@ function renderDocuments(result){
       queue.addEventListener('click',()=>{
         // Immutable original is split server-side at UTF-8 boundaries, not by naive browser byte steps.
         if(!confirm('将把 '+row.label+' 按 UTF-8 字符边界划分为 ≤32 KiB 的片段排队整理。排队只保存候选，不调用模型；之后在“整理任务”里逐条明确运行模型并核对结果。继续？'))return;
-        mutate('document_queue',{document_id:row.document_id});
+        mutate('document_queue',{document_id:row.document_id},undefined,documentReceiptSelection(row));
       });
       const archive=element('button','归档文档');archive.dataset.write='true';
-      archive.addEventListener('click',()=>{if(confirm('归档会使相关片段退出当前使用范围、使派生记忆失效并阻止未完成任务写回。原始文件字节保留可下载，这不是物理擦除。继续？'))mutate('document_archive',{document_id:row.document_id});});
+      archive.addEventListener('click',()=>{if(confirm('归档会使相关片段退出当前使用范围、使派生记忆失效并阻止未完成任务写回。原始文件字节保留可下载，这不是物理擦除。继续？'))mutate('document_archive',{document_id:row.document_id},undefined,documentReceiptSelection(row));});
       actions.append(viewButton,download,queue,archive);card.append(actions);
     }else{
       const actions=element('div',undefined,'row card-actions');

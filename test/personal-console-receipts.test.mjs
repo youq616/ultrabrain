@@ -131,7 +131,10 @@ test('a post-ack rendering failure never creates an unconfirmed retry',async()=>
  f.retry();await f.settle();assert.equal(f.calls.filter(b=>b.operation==='commit').length,1);
 });
 test('normal document metadata operation does not erase an unrelated draft',async()=>{
- const f=fixture();f.run("mutate('document_archive',{document_id:'11111111-1111-4111-8111-111111111111'});");await f.settle();
+ const f=fixture(async b=>b.operation==='document_archive'?{source_id:'default',event_id:b.input.event_id,document_id:id,
+  status:'archived',revision:2,archived_at:'2026-09-20T00:00:00.000Z',archived_fragments:0,fenced_jobs:0,
+  derived_entries_invalidated:0,original_retained:true,model_calls:0,replayed:false}:receipt(b));
+ f.run(`mutate('document_archive',{document_id:'${id}'},undefined,{document_id:'${id}',revision:1,byte_size:1});`);await f.settle();
  assert.equal(f.run('pending'),null);assert.equal(f.get('content').value,'ORIGINAL_DRAFT');
 });
 

@@ -75,4 +75,29 @@ try{
  const [draftLeak]=await engine.executeRaw("SELECT count(*)::integer AS n FROM ultrabrain.personal_memories WHERE source_id=$1 AND content LIKE 'RECEIPT_NEWER_UNSAVED_DRAFT%'",[source]);
  assert.equal(draftLeak.n,0);
  console.log('PASS receipt database deltas: 8 events, 5 memories, 1 queued job, 0 documents; replay does not duplicate writes, newer local draft not stored');
+ // Independent document receipt phase: actual import/dedup/queue/archive writes,
+ // damaged browser replies, exact replay and retained-original downloads.
+ const documentBefore=await counts();
+ const documents=spawn(process.env.ULTRABRAIN_BROWSER_PYTHON??'python3',[ROOT+'/test/personal-document-receipts-browser.py'],{
+   env:{...process.env,ULTRABRAIN_BROWSER_ORIGIN:ui.origin,ULTRABRAIN_BROWSER_TOKEN:token,
+     ULTRABRAIN_BROWSER_REPORT:process.env.ULTRABRAIN_DOCUMENT_RECEIPT_REPORT,
+     ULTRABRAIN_BROWSER_SCREENSHOT:process.env.ULTRABRAIN_DOCUMENT_RECEIPT_SCREENSHOT},
+   cwd:ROOT,stdio:['ignore','inherit','inherit']});
+ const documentTimer=setTimeout(()=>documents.kill('SIGKILL'),120000);
+ try{const code=await new Promise((done,fail)=>{documents.once('error',fail);documents.once('close',done);});assert.equal(code,0,'Document receipt Chromium validation failed');}
+ finally{clearTimeout(documentTimer);}
+ const documentAfter=await counts();
+ assert.deepEqual(Object.fromEntries(Object.keys(documentBefore).map(k=>[k,documentAfter[k]-documentBefore[k]])),
+   {personal_memories:2,personal_events:6,personal_consolidations:2,personal_documents:2});
+ const archived=await engine.executeRaw("SELECT status,revision FROM ultrabrain.personal_documents WHERE source_id=$1 ORDER BY id",[source]);
+ assert.deepEqual(archived.map(r=>({...r})),[{status:'archived',revision:2},{status:'archived',revision:2}]);
+ const fragments=await engine.executeRaw(`SELECT m.status,m.revision,j.state,j.attempts
+   FROM ultrabrain.personal_document_fragments f
+   JOIN ultrabrain.personal_memories m ON m.id=f.memory_id AND m.source_id=f.source_id AND m.actor_key=f.actor_key
+   JOIN ultrabrain.personal_consolidations j ON j.input_id=m.id AND j.source_id=m.source_id AND j.actor_key=m.actor_key
+   WHERE f.source_id=$1 ORDER BY f.byte_start`,[source]);
+ assert.deepEqual(fragments.map(r=>({...r})),Array.from({length:2},()=>({status:'archived',revision:2,state:'stale',attempts:0})));
+ const [unsaved]=await engine.executeRaw("SELECT count(*)::integer AS n FROM ultrabrain.personal_memories WHERE source_id=$1 AND content='DOCUMENT_UNRELATED_UNSAVED_DRAFT'",[source]);
+ assert.equal(unsaved.n,0);
+ console.log('PASS document receipt DB deltas: 6 events, 2 documents, 2 fragments, 2 stale zero-attempt jobs; replays/dedup do not duplicate records');
 }finally{await ui?.close();await engine.disconnect();}

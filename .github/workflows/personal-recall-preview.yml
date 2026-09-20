@@ -49,6 +49,8 @@ jobs:
           ULTRABRAIN_LOOKUP_SCREENSHOT: ${{ runner.temp }}/personal-memory-lookup.png
           ULTRABRAIN_RECEIPT_REPORT: ${{ runner.temp }}/personal-console-receipts-report.json
           ULTRABRAIN_RECEIPT_SCREENSHOT: ${{ runner.temp }}/personal-console-receipts.png
+          ULTRABRAIN_DOCUMENT_RECEIPT_REPORT: ${{ runner.temp }}/personal-document-receipts-report.json
+          ULTRABRAIN_DOCUMENT_RECEIPT_SCREENSHOT: ${{ runner.temp }}/personal-document-receipts.png
           ULTRABRAIN_COMPARISON_SCREENSHOT: ${{ runner.temp }}/personal-memory-comparison.png
         run: bun test/personal-recall-browser-fixture.mjs
       - uses: actions/upload-artifact@v4
@@ -62,6 +64,8 @@ jobs:
             ${{ runner.temp }}/personal-memory-comparison.png
             ${{ runner.temp }}/personal-console-receipts-report.json
             ${{ runner.temp }}/personal-console-receipts.png
+            ${{ runner.temp }}/personal-document-receipts-report.json
+            ${{ runner.temp }}/personal-document-receipts.png
           if-no-files-found: error
           retention-days: 14
       - name: Stop only the disposable database
