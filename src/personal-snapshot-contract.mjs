@@ -17,6 +17,17 @@ const string=(value,max)=>typeof value==='string'&&value.isWellFormed()&&bytes(v
 const fields=['id','type','origin_kind','content','content_hash','confidence','importance','provenance','agent_id','project_id',
   'status','visibility','revision','created_at','updated_at','last_confirmed','owned_by_caller','derivation','derivation_current','trust'];
 const exactKeys=(value,names)=>object(value)&&Object.keys(value).length===names.length&&names.every(k=>Object.hasOwn(value,k));
+// JSON.parse accepts exponent overflow as +/-Infinity. Check every decoded numeric
+// value BEFORE JSON.stringify can normalize it to null or any digest is computed.
+// The replacer visits nested objects AND arrays; finite values retain the original
+// JSON number semantics and the existing wire/digest representation.
+function finiteSnapshotJSON(value){
+  return JSON.stringify(value,(_key,child)=>{
+    if(typeof child==='number'&&!Number.isFinite(child))
+      throw Object.assign(new Error('memory_snapshot_unconfirmed'),{code:'memory_snapshot_unconfirmed'});
+    return child;
+  });
+}
 /** The injected digest accepts a UTF-8 string and returns a hex string or a promise.
  * Checkpoints run around asynchronous work so a browser can revoke local delivery.
  * A matching digest proves consistency, not authenticity or completeness of a hostile server.
@@ -30,7 +41,7 @@ export async function verifyMemorySnapshot(result,request,source,hash,checkpoint
     result.read_only===true&&result.complete===true&&Array.isArray(result.memories)&&
     Number.isSafeInteger(result.record_count)&&result.record_count===result.memories.length&&result.record_count<=SNAPSHOT_MAX_RECORDS&&
     JSON.stringify(result.excluded)===JSON.stringify(SNAPSHOT_EXCLUDES)&&digest(result.memories_sha256)&&
-    bytes(JSON.stringify(result))<=SNAPSHOT_MAX_BYTES);
+    bytes(finiteSnapshotJSON(result))<=SNAPSHOT_MAX_BYTES);
   let previous='';
   for(const row of result.memories){
     valid(exactKeys(row,fields)&&uuid(row.id)&&row.id>previous&&row.owned_by_caller===true&&row.trust==='untrusted-memory-data');

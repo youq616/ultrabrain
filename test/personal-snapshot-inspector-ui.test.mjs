@@ -105,3 +105,29 @@ test('capture-phase navigation clears verified data and consent without waiting 
  for(const handler of f.events.get('click'))handler({target:{closest:()=>true}});
  assert.equal(f.run('inspectorData'),null);assert.equal(f.get('inspector-panel').hidden,true);assert.equal(f.get('inspector-consent').checked,false);
 });
+
+// Actual inspection UI must withhold BOTH sides on a digest-consistent overflow,
+// not just report the numeric difference after issuing an inspected handle.
+for(const side of ['left','right'])test('completion: overflow in '+side+' withholds both local files and every action',async()=>{
+ const f=fixture();f.open();
+ const valid=encoded(envelope([row(1,{derivation:{nested:[{n:null}]}})]));
+ const corrupt=new TextEncoder().encode(new TextDecoder().decode(valid).replace('"n": null','"n": 1e400'));
+ const bad=f.file(corrupt),good=f.file(valid);
+ f.select(side==='left'?bad:good,side==='right'?bad:good);await f.inspect();
+ assert.equal(f.run('inspectorData'),null);assert.equal(f.run('inspectorReport'),null);
+ assert.equal(f.get('inspector-summary').textContent,'');assert.equal(f.get('inspector-details').hidden,true);
+ assert.equal(f.get('inspector-compare').disabled,true);assert.equal(f.get('inspector-export').disabled,true);
+ assert.match(f.get('message').textContent,/memory_snapshot_unconfirmed/);
+ assert.equal(f.downloads.length,0);assert.equal(f.get('content').value,'UNSAVED_DRAFT');
+});
+test('completion: a bad new file cannot leave an old successful comparison exportable',async()=>{
+ const f=fixture();f.open();f.select(f.file(),f.file(encoded(envelope([row(2)]))));await f.inspect();f.compare();
+ assert.notEqual(f.run('inspectorReport'),null);
+ const raw=new TextDecoder().decode(encoded(envelope([row(1,{derivation:{n:null}})]))).replace('"n": null','"n": -1e400');
+ f.select(f.file(),f.file(new TextEncoder().encode(raw)));await f.inspect();
+ assert.equal(f.run('inspectorData'),null);assert.match(f.get('message').textContent,/memory_snapshot_unconfirmed/);
+ f.click('inspector-export');
+ assert.equal(f.run('inspectorData'),null);assert.equal(f.run('inspectorReport'),null);
+ assert.equal(f.get('inspector-details').hidden,true);assert.equal(f.downloads.length,0);
+ assert.equal(f.get('content').value,'UNSAVED_DRAFT');
+});

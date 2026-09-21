@@ -1,6 +1,7 @@
 /** Canonical no-IO inspection and comparison, not an authenticity/restore test. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import * as c from '../src/personal-snapshot-contract.mjs';
 import {hash,uuid,row,envelope,encoded} from './helpers/snapshot-audit-fixture.mjs';
 const inspect=(s=envelope())=>c.inspectMemorySnapshotFile(encoded(s),hash);
@@ -118,4 +119,56 @@ test('compact snapshot limit is enforced independently of the on-disk pretty lim
  const data=encoded(envelope(Array.from({length:500},(_,i)=>row(i,{content:'x'.repeat(17000)}))));
  assert.ok(data.byteLength< c.SNAPSHOT_FILE_MAX_BYTES);
  await assert.rejects(c.inspectMemorySnapshotFile(data,hash),/memory_snapshot_unconfirmed/);
+});
+
+// Independent review 5265555599 / 4061276373: JSON.stringify turns non-finite
+// decoded numbers into null. A null-derived digest must not authenticate overflow.
+for(const [name,derivation]of [
+ ['positive overflow',{n:Infinity}],['negative overflow',{deep:[{n:-Infinity}]}],['NaN',{deep:[NaN]}],
+])test('completion: shared snapshot contract rejects '+name+' before hashing',async()=>{
+ const snapshot=envelope([row(1,{derivation})]);let calls=0;
+ await assert.rejects(c.verifyMemorySnapshot(snapshot,{request_id:snapshot.request_id},snapshot.source_id,
+  text=>{calls++;return hash(text);}),{code:'memory_snapshot_unconfirmed'});
+ assert.equal(calls,0,'A rejected tree must never reach the supplied digest');
+});
+for(const [name,derivation,token]of [
+ ['positive member',{n:'OVERFLOW_NUMBER'},'1e400'],
+ ['negative array',{deep:[{n:'OVERFLOW_NUMBER'}]},'-1e400'],
+ ['large exponent',{deep:['OVERFLOW_NUMBER']},'9E9999'],
+ ['empty member',{'':'OVERFLOW_NUMBER'},'-9e9999'],
+ ['prototype-named member',JSON.parse('{"__proto__":{"n":"OVERFLOW_NUMBER"}}'),'1e400'],
+ ['escaped property',{n:'OVERFLOW_NUMBER'},'1e400'],
+])test('completion: file rejects non-finite '+name+' despite a matching null digest',async()=>{
+ const snapshot=envelope([row(1,{derivation})]);
+ // Produce the digest of the representation the vulnerable parser stringifies.
+ const asNull=JSON.parse(JSON.stringify(snapshot.memories).replace('"OVERFLOW_NUMBER"','null'));
+ snapshot.memories_sha256=hash(JSON.stringify(asNull));
+ let raw=JSON.stringify(snapshot).replace('"OVERFLOW_NUMBER"',token);
+ if(name==='escaped property')raw=raw.replace('"n":','"\\u006e":');
+ let calls=0;await assert.rejects(c.inspectMemorySnapshotFile(new TextEncoder().encode(raw),text=>{
+  calls++;return hash(text);
+ }),{code:'memory_snapshot_unconfirmed'});assert.equal(calls,0);
+});
+for(const n of [Number.MAX_VALUE,-Number.MAX_VALUE,Number.MIN_VALUE,0])test('completion: finite JSON number stays valid '+n,async()=>{
+ const file=await inspect(envelope([row(1,{derivation:{nested:[{n}]}})]));
+ assert.equal(file.snapshot.memories[0].derivation.nested[0].n,n);
+ assert.equal(c.compareMemorySnapshots(file,file).counts.unchanged,1);
+});
+test('completion: literal overflow text is not confused with numbers or null',async()=>{
+ const text=await inspect(envelope([row(1,{derivation:{n:'1e400',value:'Infinity'}})]));
+ const nil=await inspect(envelope([row(1,{derivation:{n:null,value:null}})]));
+ const report=c.compareMemorySnapshots(text,nil);
+ assert.deepEqual(report.counts,{left_only:0,right_only:0,changed:1,unchanged:0});
+ assert.deepEqual(report.differences[0].fields,['derivation']);
+});
+// Regression guards for the two independently observed, full-CI fixture failures.
+test('completion: legacy console assertions select memory results rather than unrelated inspector panels',()=>{
+ const script=readFileSync(new URL('../test/personal-console-browser.py',import.meta.url),'utf8');
+ assert.ok(!script.includes("page.locator('.memory-content')"));
+ assert.equal(script.split("page.locator('#results .memory-content')").length-1,4);
+});
+test('completion: File method restoration is a no-return callback rather than a callable evaluation result',()=>{
+ const script=readFileSync(new URL('../test/personal-snapshot-inspector-browser.py',import.meta.url),'utf8');
+ assert.ok(script.includes("page.evaluate('() => { File.prototype.arrayBuffer=window.originalInspectBuffer; }')"));
+ assert.ok(!script.includes("page.evaluate('File.prototype.arrayBuffer=window.originalInspectBuffer')"));
 });

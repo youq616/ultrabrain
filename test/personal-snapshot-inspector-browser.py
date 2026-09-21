@@ -1,4 +1,5 @@
 """Actual browser loads local synthetic PostgreSQL exports; asserts no data upload/query."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -110,6 +111,36 @@ with sync_playwright() as p:
         expect(page.locator('#inspector-details')).to_be_hidden()
         expect(page.locator('#inspector-export')).to_be_disabled()
         checks += 1
+    # Independent P2: a malicious local JSON number may decode as Infinity, while
+    # its claimed memories digest is identical to a genuine null representation.
+    # Build the oracle with Python SHA-256, independently of the browser verifier.
+    null_snapshot = json.loads(left.read_bytes())
+    null_snapshot['memories'][0]['derivation'] = {'untrusted': [{'n': None}]}
+    null_snapshot['memories_sha256'] = hashlib.sha256(json.dumps(
+        null_snapshot['memories'], ensure_ascii=False, separators=(',', ':')).encode('utf8')).hexdigest()
+    null_bytes = json.dumps(null_snapshot, ensure_ascii=False, separators=(',', ':')).encode('utf8')
+    def local_file(data):
+        return {'name': 'numeric-boundary.json', 'mimeType': 'application/json', 'buffer': data}
+    page.locator('#inspector-left').set_input_files(local_file(null_bytes))
+    page.locator('#inspector-right').set_input_files(local_file(null_bytes))
+    inspect()
+    compare()
+    expect(page.locator('#inspector-diff-summary')).to_contain_text('完全相同 23')
+    checks += 1
+    assert null_bytes.count(b'"n":null') == 1
+    for side, literal in [('left', b'1e400'), ('right', b'-1e400')]:
+        overflow = null_bytes.replace(b'"n":null', b'"n":'+literal)
+        page.locator('#inspector-left').set_input_files(local_file(overflow if side == 'left' else null_bytes))
+        page.locator('#inspector-right').set_input_files(local_file(overflow if side == 'right' else null_bytes))
+        page.locator('#inspector-consent').check()
+        page.locator('#inspector-run').click()
+        expect(page.locator('#message')).to_contain_text('memory_snapshot_unconfirmed')
+        expect(page.locator('#inspector-summary')).to_have_text('')
+        expect(page.locator('#inspector-differences article')).to_have_count(0)
+        expect(page.locator('#inspector-details')).to_be_hidden()
+        expect(page.locator('#inspector-export')).to_be_disabled()
+        assert page.evaluate('inspectorData === null && inspectorReport === null')
+        checks += 1
     # Cancellation while the real File read promise is awaiting local delivery.
     select()
     page.evaluate("""() => {window.originalInspectBuffer=File.prototype.arrayBuffer;
@@ -121,7 +152,8 @@ with sync_playwright() as p:
     expect(page.locator('html')).to_have_attribute('data-inspect-waiting', 'true')
     page.locator('#inspector-cancel').click()
     page.evaluate('window.releaseInspectRead()')
-    page.evaluate('File.prototype.arrayBuffer=window.originalInspectBuffer')
+    # Returning the native method here would make Playwright invoke it unbound.
+    page.evaluate('() => { File.prototype.arrayBuffer=window.originalInspectBuffer; }')
     expect(page.locator('#inspector-panel')).to_be_hidden()
     expect(page.locator('#inspector-summary')).to_have_text('')
     assert page.evaluate('inspectorData === null')
