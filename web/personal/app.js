@@ -9,6 +9,7 @@ let recallEpoch=0,recallController=null;
 let lookupEpoch=0,lookupController=null;
 let draftConfidence=null,comparison=null,comparisonEpoch=0,comparisonController=null;
 let jobReadController=null;
+let jobRecovery=null,jobRecoveryController=null,jobRecoveryEpoch=0;
 function message(text,error=false){$('message').textContent=text;$('message').dataset.error=String(error);}
 function element(tag,text,cls){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;}
 function controls(){
@@ -18,6 +19,17 @@ function controls(){
   $('compare-current').disabled=busy||!!pending||!!comparisonController||!editableMemory(editing)||view==='recall';
   $('comparison-adopt').disabled=busy||!!pending||!comparison?.canAdopt||!$('comparison-consent').checked;
   $('comparison-cancel').disabled=!comparison&&!comparisonController;
+  const modelPending=pending?.operation==='consolidate';
+  $('pending-job-recovery').hidden=!modelPending;
+  $('pending-job-inspect').disabled=busy||!!jobRecoveryController;
+  $('pending-job-clear').disabled=busy;
+  $('pending-job-finish').disabled=busy||!!jobRecoveryController||!recoveryCurrent(pending)||
+    !terminalJob(jobRecovery.row)||!$('pending-job-consent').checked;
+  $('retry').disabled=busy||!!jobRecoveryController||(modelPending&&pending.delivery_unconfirmed&&
+    (!recoveryCurrent(pending)||terminalJob(jobRecovery.row)||jobRecovery.row.attempts>=3));
+  $('pending-guidance').textContent=modelPending?
+    '这是模型整理请求，不是幂等事件重放。先只读核对原任务状态；再次执行可能重复计费。刷新或关闭页面仍会丢失待确认请求。':
+    '不要重新生成内容或新的事件编号。明确重试使用相同请求；刷新或关闭页面会丢失内存中的待确认请求，可先保存到本机。';
 }
 async function api(operation,input={},signal){
   let response;try{response=await fetch('/api/call',{method:'POST',credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({operation,input}),signal:AbortSignal.any([AbortSignal.timeout(operation==='consolidate'?150000:20000),signal].filter(Boolean))});}
@@ -52,6 +64,7 @@ function memoryAuthorization(){
 // keep the session boundary, and do not claim cryptographic or full-content attestation.
 const EDITOR_WRITES=new Set(['commit','capture','update']);
 function verifyWriteReceipt(operation,input,result,source,documentSelection){
+  if(operation==='consolidate')return verifyConsolidationReceipt(input,result,source,documentSelection);
   if(operation==='cancel_job'){
     const matches=result&&typeof result==='object'&&!Array.isArray(result)&&result.dry_run!==true&&
       result.id===input.job_id&&result.state==='stale'&&
@@ -91,8 +104,13 @@ function verifyWriteReceipt(operation,input,result,source,documentSelection){
 function editorReceiptSelection(){
   return JSON.stringify([editing?.id??null,editing?.revision??null,memoryDraft(),$('consent').checked]);
 }
-async function submitPending(){
-  if(!pending||busy)return;const request=pending;let submitted=false,acknowledged=false;busy=true;controls();
+async function submitPending(modelRetry=false){
+  if(!pending||busy||jobRecoveryController)return;const request=pending;
+  if(request.operation==='consolidate'&&request.delivery_unconfirmed&&
+    (!modelRetry||!recoveryCurrent(request)||terminalJob(jobRecovery.row)||jobRecovery.row.attempts>=3)){
+    message('先只读核对原任务状态；未重新调用模型。',true);return;
+  }
+  invalidateJobRecovery();let submitted=false,acknowledged=false;busy=true;controls();
   const contextCurrent=()=>{
     if(pending!==request||!request.sessionCurrent())throw Object.assign(new Error('console_session_changed'),{unknown:true});
   };
@@ -636,8 +654,16 @@ function validateJobPage(result,input,source){
     valid(!input.state||input.state==='any'||row.state===input.state);
     const created=Date.parse(row.created_at);valid(created<=latest);latest=created;seen.add(row.job_id);
     if(row.state!=='completed'){valid(row.result===null);continue;}
-    const r=row.result;
-    valid(row.attempts>=1&&object(r)&&Object.keys(r).every(k=>['entries','gateway_invocations','usage','profile_hash','input_hash','review_required','source_retained','truth_verified'].includes(k))&&
+    valid(row.attempts>=1);verifyCompletedJobReceipt(row.result,valid);
+  }
+  return result;
+}
+function verifyCompletedJobReceipt(r,valid){
+  const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
+  const uuid=v=>typeof v==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(v);
+  const digest=v=>typeof v==='string'&&/^[a-f0-9]{64}$/.test(v);
+  const count=v=>Number.isSafeInteger(v)&&v>=0;
+    valid(object(r)&&Object.keys(r).every(k=>['entries','gateway_invocations','usage','profile_hash','input_hash','review_required','source_retained','truth_verified'].includes(k))&&
       Array.isArray(r.entries)&&r.entries.length<=16&&r.gateway_invocations===1&&digest(r.profile_hash)&&digest(r.input_hash)&&
       r.review_required===true&&r.source_retained===true&&r.truth_verified===false&&object(r.usage)&&
       Object.keys(r.usage).every(k=>['input_tokens','output_tokens'].includes(k)));
@@ -649,9 +675,112 @@ function validateJobPage(result,input,source){
         e.exact_duplicate_hints.length<=3&&e.exact_duplicate_hints.every(uuid)&&new Set(e.exact_duplicate_hints).size===e.exact_duplicate_hints.length);
       ids.add(e.id);
     }
-  }
-  return result;
 }
+
+// A processing reply has no immutable event receipt. Verify only the actual
+// single-job console contract, and never infer current durable state or billing.
+function verifyConsolidationReceipt(input,result,source,selected){
+  const valid=c=>{if(!c)throw Object.assign(new Error('console_receipt_unconfirmed'),{unknown:true});};
+  const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
+  const uuid=v=>typeof v==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(v);
+  const attempts=v=>Number.isSafeInteger(v)&&v>=0&&v<=3;
+  valid(input.expected_source===source&&input.allow_model_call===true&&input.limit===1&&uuid(input.job_id)&&typeof input.retry==='boolean');
+  valid(object(result)&&result.source_id===source&&result.dry_run!==true&&Array.isArray(result.results));
+  if(result.state==='needs_model'){
+    valid(Object.keys(result).every(k=>['source_id','state','results','model_calls'].includes(k))&&result.results.length===0&&result.model_calls===0);return;
+  }
+  valid(Object.keys(result).every(k=>['source_id','results','processed','model_requests_attempted','retry_policy'].includes(k))&&
+    result.results.length<=1&&result.processed===result.results.length&&
+    Number.isInteger(result.model_requests_attempted)&&result.model_requests_attempted>=0&&result.model_requests_attempted<=1&&
+    typeof result.retry_policy==='string'&&result.retry_policy.length>0&&result.retry_policy.length<=1024);
+  if(result.results.length===0){valid(result.model_requests_attempted===0);return;}
+  const r=result.results[0];
+  valid(object(r)&&r.job_id===input.job_id&&['completed','failed','stale','lease_lost'].includes(r.state)&&
+    Object.keys(r).every(k=>['job_id','state','attempts','error','result','input_id','input_revision','retryable','lease_until','created_at','updated_at','assurance'].includes(k)));
+  if(selected){
+    valid(selected.job_id===input.job_id);
+    if(Object.hasOwn(r,'input_id'))valid(r.input_id===selected.input_id);
+    if(Object.hasOwn(r,'input_revision'))valid(r.input_revision===selected.input_revision);
+    if(Object.hasOwn(r,'attempts'))valid(r.attempts>=selected.attempts);
+  }
+  if(r.state==='lease_lost'){valid(r.result===null);return;}
+  valid(attempts(r.attempts)&&(result.model_requests_attempted===0||r.attempts>=1));
+  if(r.state==='completed'){
+    valid(result.model_requests_attempted===1&&r.error===null);verifyCompletedJobReceipt(r.result,valid);
+  }else valid(r.result===null&&typeof r.error==='string'&&/^[a-z_]{1,96}$/.test(r.error));
+  // Skip rows can contain the pre-update lease/time metadata. The process endpoint
+  // is not a status read; do not impose status-page invariants on those historical fields.
+}
+const terminalJob=row=>['completed','failed','stale'].includes(row.state);
+function recoveryCurrent(request){
+  return !!request&&pending===request&&jobRecovery?.request===request&&request.sessionCurrent()&&
+    jobRecovery.navigation===loadVersion&&jobRecovery.view===view;
+}
+function invalidateJobRecovery(){
+  jobRecoveryEpoch++;jobRecoveryController?.abort();jobRecoveryController=null;jobRecovery=null;
+  $('pending-job-status').textContent='';$('pending-job-consent').checked=false;
+}
+async function inspectPendingJob(finish=false){
+  const request=pending;
+  if(!request||request.operation!=='consolidate'||busy||jobRecoveryController)return;
+  if(finish&&(!recoveryCurrent(request)||!terminalJob(jobRecovery.row)||!$('pending-job-consent').checked))return;
+  if(finish&&!confirm('仅结束本地待确认追踪，不把状态查询当作原请求回执。不会重新调用模型、取消任务或撤销费用。继续？'))return;
+  if(pending!==request||!request.sessionCurrent()||(finish&&(!recoveryCurrent(request)||!$('pending-job-consent').checked)))return;
+  const consent=finish&&$('pending-job-consent').checked;
+  invalidateJobRecovery();if(consent)$('pending-job-consent').checked=true;
+  const epoch=jobRecoveryEpoch,navigation=loadVersion,selectedView=view,controller=new AbortController();
+  jobRecoveryController=controller;if(finish)busy=true;controls();
+  const current=()=>pending===request&&request.sessionCurrent()&&epoch===jobRecoveryEpoch&&
+    navigation===loadVersion&&selectedView===view&&!controller.signal.aborted;
+  let settled=false;
+  try{
+    if(!current())throw Error('console_session_changed');
+    const result=await api('jobs',{job_id:request.input.job_id},controller.signal);
+    if(!current())return;
+    const row=validateJobPage(result,{job_id:request.input.job_id},request.source_id).jobs[0];
+    const selected=request.receipt_context;
+    if(selected&&(row.input_id!==selected.input_id||row.input_revision!==selected.input_revision||row.attempts<selected.attempts))
+      throw Error('job_recovery_binding_changed');
+    if(finish){
+      if(!$('pending-job-consent').checked||!terminalJob(row))throw Error('job_recovery_state_changed');
+      pending=null;settled=true;invalidateJobRecovery();
+      message('已重新核对任务状态 '+row.state+'，仅结束本地待确认追踪；原处理回执仍未恢复，未重新调用模型，不代表撤销费用。');
+      await load();return row;
+    }
+    jobRecovery={request,row,navigation,view:selectedView};
+    $('pending-job-status').textContent=JSON.stringify({job_id:row.job_id,input_id:row.input_id,input_revision:row.input_revision,
+      state:row.state,attempts:row.attempts,lease_until:row.lease_until,updated_at:row.updated_at},null,2);
+    message('只读核对已返回：'+row.state+'。这是读取时的任务状态，不是原处理请求回执；未调用模型。'+
+      (terminalJob(row)?'可明确结束本地追踪；失败任务的后续恢复需从任务卡片重新确认费用。':'原请求仍保留；再次执行前仍需明确确认费用，服务器负责最终租约检查。'));
+    return row;
+  }catch(error){
+    if(settled)message('本地追踪已结束，但页面刷新失败；请重新读取任务，不要因此重复调用模型。',true);
+    else if(current()){
+      jobRecovery=null;$('pending-job-status').textContent='';$('pending-job-consent').checked=false;
+      message('原任务核对未确认：'+error.message+'。原请求仍保留，未重新调用模型。',true);
+    }
+  }finally{
+    if(jobRecoveryController===controller)jobRecoveryController=null;
+    if(finish)busy=false;controls();
+  }
+}
+async function retryPendingRequest(){
+  if(pending?.operation!=='consolidate')return submitPending();
+  const request=pending;
+  if(busy||jobRecoveryController||!recoveryCurrent(request)){
+    message('请先只读核对原任务状态，不要直接重复调用模型。',true);return;
+  }
+  // Re-read immediately before the fee decision. A job completed since the last
+  // observation must not be resubmitted merely to recover a lost acknowledgement.
+  const row=await inspectPendingJob();
+  if(!row||!recoveryCurrent(request)||terminalJob(row)||row.attempts>=3){
+    if(row)message('当前任务不可从待确认请求重新执行。请核对终态或继续观察租约；未调用模型。',true);return;
+  }
+  if(!confirm('这不是幂等事件重放：将再次提交相同任务请求，可能重复调用模型并计费。服务器仍会检查状态、租约和原 retry 标志。继续？'))return;
+  if(!recoveryCurrent(request))return;
+  return submitPending(true);
+}
+
 function renderJobs(result){
   const input=jobListQuery(),session=token,source=sourceId,selection=jobSelection(),generation=loadVersion;
   const allowed=()=>!!session&&token===session&&sourceId===source&&view==='jobs'&&generation===loadVersion&&
@@ -684,7 +813,8 @@ function renderJobs(result){
     }
     if(['queued','failed','processing'].includes(row.state)){
       if(row.attempts<3)card.append(action(row.state==='queued'?'整理此条（调用模型）':'恢复／重试（可能再次计费）',
-        ()=>mutate('consolidate',{expected_source:sourceId,job_id:row.job_id,limit:1,allow_model_call:true,retry:row.state!=='queued'}),
+        ()=>mutate('consolidate',{expected_source:sourceId,job_id:row.job_id,limit:1,allow_model_call:true,retry:row.state!=='queued'},undefined,
+          {job_id:row.job_id,input_id:row.input_id,input_revision:row.input_revision,attempts:row.attempts}),
         {write:true,prompt:'只处理这一个任务。原文将发送给服务器已配置的个人整理模型，可能产生费用；失败或中断恢复可能再次计费。继续？'}));
       card.append(action('取消整理，保留原文',()=>mutate('cancel_job',{job_id:row.job_id}),
         {write:true,prompt:'取消只阻止这一个未完成任务的结果提交，保留原文；不能撤销已经发出的模型请求或费用。继续？'}));
@@ -729,6 +859,7 @@ function render(result){
   controls();
 }
 async function load(){
+  invalidateJobRecovery();
   const session=token,source=sourceId,selectedView=view,selectedOffset=offset,selectedStatus=$('document-status').value,selectedJobs=jobSelection();
   const activePage=()=>!!session&&token===session&&sourceId===source&&view===selectedView&&offset===selectedOffset&&
     (selectedView!=='documents'||$('document-status').value===selectedStatus)&&
@@ -805,8 +936,10 @@ $('recall-form').addEventListener('submit',e=>{e.preventDefault();return preview
 for(const id of ['recall-task','recall-project','recall-limit','recall-budget'])$(id).addEventListener('input',()=>invalidateRecall());
 $('recall-consent').addEventListener('change',()=>{if(!$('recall-consent').checked)invalidateRecall();});
 $('recall-cancel').addEventListener('click',()=>{invalidateRecall();message('预览已取消，结果不会继续显示。已发送的查询无法撤回；未请求记忆写入或模型调用。');});
-$('retry').addEventListener('click',()=>{
-  if(pending?.operation==='consolidate'&&!confirm('这不是幂等事件重放：再次尝试可能调用模型并再次计费。请先核对任务状态；确认仍要重试原任务？'))return;
-  return submitPending();
-});$('save-pending').addEventListener('click',()=>{if(pending)download({format:1,warning:'Contains consented memory text; protect this local file. The request is not confirmed.',...pending},'ultrabrain-unconfirmed-request.json');});
+$('pending-job-inspect').addEventListener('click',()=>inspectPendingJob());
+$('pending-job-finish').addEventListener('click',()=>inspectPendingJob(true));
+$('pending-job-consent').addEventListener('change',controls);
+$('pending-job-clear').addEventListener('click',()=>{if(busy)return;invalidateJobRecovery();controls();message('本地核对已清除；原模型请求仍保留，没有取消服务器任务。');});
+$('retry').addEventListener('click',retryPendingRequest);
+$('save-pending').addEventListener('click',()=>{if(pending)download({format:1,warning:'Contains consented memory text; protect this local file. The request is not confirmed.',...pending},'ultrabrain-unconfirmed-request.json');});
 window.addEventListener('beforeunload',e=>{if(pending){e.preventDefault();e.returnValue='';}});

@@ -9,6 +9,7 @@ import {fileURLToPath} from 'node:url';
 import {requireThat,sourceId,integer,UltraError} from './core.mjs';
 import {objectFields} from './personal-memory.mjs';
 import {PersonalConsolidator} from './personal-consolidation.mjs';
+import {configuredPersonalModel} from './adapters/personal-model.mjs';
 import {PersonalMemoryStore} from './personal-memory-store.mjs';
 import {PersonalDocumentStore} from './personal-documents.mjs';
 import {createPersonalReadiness} from './personal-readiness.mjs';
@@ -84,7 +85,7 @@ async function jsonBody(req,limit=280000,canonical=false) {
   }
   catch{throw new UltraError('invalid_params','Invalid JSON request');}
 }
-export async function startPersonalConsole({engine,source,token,port=3132,invocationId=process.env.INVOCATION_ID}) {
+export async function startPersonalConsole({engine,source,token,port=3132,invocationId=process.env.INVOCATION_ID,configureModel=configuredPersonalModel}) {
   sourceId(source);integer(port,3132,0,65535);
   requireThat(typeof token==='string'&&/^[a-f0-9]{64}$/.test(token),'invalid_token_file','A full console token is required');
   const hash=createHash('sha256').update(token).digest();
@@ -143,7 +144,7 @@ export async function startPersonalConsole({engine,source,token,port=3132,invoca
         requireThat(Object.hasOwn(METHODS,body.operation),'invalid_params','Unknown personal operation');
         submitted=WRITES.has(body.operation);
         const method=METHODS[body.operation];
-        const result=method.startsWith('job_')?await new PersonalConsolidator(store.ctx)[method.slice(4)](body.input??{})
+        const result=method.startsWith('job_')?await new PersonalConsolidator(store.ctx,configureModel)[method.slice(4)](body.input??{})
           :DOCUMENT_METHODS.has(method)?await new PersonalDocumentStore(store.ctx)[method](body.input??{})
           :await store[method](body.input??{});
         send(res,200,{ok:true,result});

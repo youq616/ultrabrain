@@ -46,7 +46,15 @@
 <div class="row"><button type="button" id="comparison-adopt" disabled>采用新基准，保留草稿</button><button type="button" id="comparison-cancel" disabled>取消／清除对照</button></div>
 <p class="note">采用不是保存。仍需重新勾选表单的保存同意；保存成功后回到候选，启用还需明确确认。读取后如再次发生修改，旧版本保存仍会被拒绝。未确认提交必须先处理原事件，不能通过对照绕过。</p>
 </section></section></div>
-<section id="pending-panel" class="panel warning" hidden><h2>有一次提交尚未确认</h2><p>不要重新生成内容或新的事件编号。下面的重试会使用相同请求。刷新或关闭页面会丢失内存中的待确认请求；可以先将其保存到本机。</p><p id="pending-id"></p><div class="row"><button id="retry">重试原请求</button><button id="save-pending">保存待确认请求</button></div></section>
+<section id="pending-panel" class="panel warning" hidden><h2>有一次提交尚未确认</h2><p id="pending-guidance">不要重新生成内容或新的事件编号。下面的重试会使用相同请求。刷新或关闭页面会丢失内存中的待确认请求；可以先将其保存到本机。</p><p id="pending-id"></p><div class="row"><button id="retry">重试原请求</button><button id="save-pending">保存待确认请求</button></div>
+<div id="pending-job-recovery" hidden><h3>核对原整理任务</h3>
+<p class="note">只读查询原任务，不发送原文、不重新调用模型。状态属于读取时刻，不证明原请求的交付或费用；不会恢复丢失的原回执。</p>
+<div class="row"><button type="button" id="pending-job-inspect">核对原任务状态（不调用模型）</button><button type="button" id="pending-job-clear">取消核对／清除状态</button></div>
+<pre id="pending-job-status"></pre>
+<label class="checkbox"><input type="checkbox" id="pending-job-consent">我已核对当前任务，理解这里只结束本地待确认追踪，不代表原请求得到回执，也不撤销费用。</label>
+<button type="button" id="pending-job-finish" disabled>重新核对终态并结束本地追踪</button>
+<p class="note">只有任务已完成、失败或失效才能结束追踪，点击后还会重新查询。等待或处理中保持原请求；重试需先核对状态并再次确认可能重复计费。失败任务结束追踪后，从任务卡片明确恢复。</p>
+</div></section>
 <section id="document-panel" class="panel" hidden><h2>导入个人文本文件</h2>
 <label>文档列表状态<select id="document-status"><option value="any" selected>全部文档</option><option value="active">使用中</option><option value="archived">已归档</option></select></label>
 <p class="note">只导入你在这个表单里明确选择的 UTF-8 文本文件（TXT / MD / JSON / CSV / LOG，≤128 KiB）。文件按原始字节保存，不会自动执行或解析其中内容，也不会自动排队整理。超过上限或编码非法的文件会被整体拒绝，不会截断保存。JSON/CSV 仅作为不可信文本保存。</p>

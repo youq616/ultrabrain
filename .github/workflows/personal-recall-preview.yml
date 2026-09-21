@@ -75,6 +75,12 @@ jobs:
           ULTRABRAIN_JOB_REPORT: ${{ runner.temp }}/personal-job-manager-report.json
           ULTRABRAIN_JOB_SCREENSHOT: ${{ runner.temp }}/personal-job-manager.png
         run: bun test/personal-job-manager-integration.mjs
+      - name: Processing acknowledgement and explicit same-job recovery
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_JOB_RECOVERY_REPORT: ${{ runner.temp }}/personal-job-recovery-report.json
+          ULTRABRAIN_JOB_RECOVERY_SCREENSHOT: ${{ runner.temp }}/personal-job-recovery.png
+        run: bun test/personal-job-recovery-integration.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: personal-recall-preview-${{ github.sha }}
@@ -94,6 +100,8 @@ jobs:
             ${{ runner.temp }}/personal-document-module.png
             ${{ runner.temp }}/personal-job-manager-report.json
             ${{ runner.temp }}/personal-job-manager.png
+            ${{ runner.temp }}/personal-job-recovery-report.json
+            ${{ runner.temp }}/personal-job-recovery.png
           if-no-files-found: error
           retention-days: 14
       - name: Stop only the disposable database
