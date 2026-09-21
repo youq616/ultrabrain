@@ -67,3 +67,11 @@ test('served JS does not use HTML insertion or browser token storage',async t=>{
  assert.equal(r.status,200);for(const text of ['innerHTML','outerHTML','insertAdjacentHTML','localStorage','sessionStorage','document.cookie'])assert.ok(!r.text.includes(text),text);
  assert.match(r.text,/textContent/);assert.match(r.text,/crypto\.randomUUID/);
 });
+
+test('local inspector is a fixed code-only asset, not a new data API',async t=>{
+ const s=await fixture(t),r=await raw(s.origin,{method:'GET',path:'/snapshot-inspector-ui.js'});
+ assert.equal(r.status,200);assert.equal(r.headers['cache-control'],'no-store');
+ for(const forbidden of ['innerHTML','localStorage','sessionStorage',"api('","fetch('"])assert.ok(!r.text.includes(forbidden));
+ assert.equal((await raw(s.origin,{method:'GET',path:'/snapshot-inspector-ui.js?file=secret'})).status,404);
+ assert.equal(s.queries,1);
+});

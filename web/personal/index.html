@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script><script src="/snapshot-inspector-ui.js" defer></script></head>
 <body>
 <header><div><p class="eyebrow">ULTRABRAIN / PERSONAL</p><h1>个人记忆管理台</h1><p id="scope">仅本机访问 · 不自动采集 · 模型调用需明确授权</p></div><button id="logout" hidden>锁定管理台</button></header>
 <main>
@@ -46,6 +46,23 @@
 <div class="row"><button type="button" id="comparison-adopt" disabled>采用新基准，保留草稿</button><button type="button" id="comparison-cancel" disabled>取消／清除对照</button></div>
 <p class="note">采用不是保存。仍需重新勾选表单的保存同意；保存成功后回到候选，启用还需明确确认。读取后如再次发生修改，旧版本保存仍会被拒绝。未确认提交必须先处理原事件，不能通过对照绕过。</p>
 </section></section></div>
+<section class="panel"><button type="button" id="inspector-open">核验／对照本地快照</button><p class="note">只读取明确选择的本地导出文件，不上传文件、不恢复或覆盖记忆。</p></section>
+<section id="inspector-panel" class="panel" hidden aria-label="本地快照核验与对照">
+<h2>本地快照核验与差异对照</h2>
+<p class="note">使用“导出我的记忆快照”生成的 JSON。左侧必选，右侧可选；每文件最多16 MiB，解析后的紧凑快照最多8 MiB／1000条。整个文件先核验，再展示结果；不把部分文件当完整快照。</p>
+<label>左侧快照<input id="inspector-left" type="file" accept=".json,application/json"></label>
+<label>右侧快照（可选）<input id="inspector-right" type="file" accept=".json,application/json"></label>
+<label class="checkbox"><input id="inspector-consent" type="checkbox">我有权在本机查看这些文件，并同意读取到当前页面内存。它们可能含秘密；文件内容不会上传或自动脱敏。</label>
+<div class="row"><button type="button" id="inspector-run" disabled>核验所选文件</button><button type="button" id="inspector-cancel">取消／清除本地核验</button></div>
+<pre id="inspector-summary" class="memory-content" aria-live="polite"></pre>
+<p class="note">指纹通过只说明文件内部一致，不是数字签名、数据库完整性或所有者身份认证。原格式没有导出主体标识；相同来源不证明同一所有者。只比较这两个文件，不推断时间先后，也不查询当前数据库。</p>
+<label class="checkbox"><input id="inspector-compare-consent" type="checkbox">我确认所选文件适合互相对照；仅一侧存在不等于新增或删除，同版本字段不同也不自动判定损坏。</label>
+<button type="button" id="inspector-compare" disabled>比较已核验文件</button>
+<p id="inspector-diff-summary" class="note" aria-live="polite"></p><div id="inspector-differences"></div>
+<div class="row"><button type="button" id="inspector-prev" disabled>上一页差异</button><button type="button" id="inspector-next" disabled>下一页差异</button><button type="button" id="inspector-export" disabled>导出差异清单（无正文）</button></div>
+<p class="note">清单仍含私有 ID 和指纹，不是恢复计划。正文仅在明确点击某条差异后显示；不会自动导入或启用记录。</p>
+<section id="inspector-details" hidden><h3>所选条目：纯文本核对</h3><button type="button" id="inspector-detail-clear">清除正文</button><h4>左侧文件</h4><pre id="inspector-detail-left" class="memory-content"></pre><h4>右侧文件</h4><pre id="inspector-detail-right" class="memory-content"></pre></section>
+</section>
 <section id="snapshot-panel" class="panel warning" hidden><h2>导出我的个人记忆快照</h2>
 <p class="note">一次性读取当前所有者全部项目、全部状态的记忆，包括候选、归档、明确采集的原文记录和文档片段。不是当前搜索页；不导出其他所有者的共享记忆。已保存记忆中若有秘密也会原样包含，不自动脱敏。最多 1000 条、响应 8 MiB，超过限制整体拒绝，不截断。</p>
 <p class="note">不含原始文档文件、任务和事件历史、服务配置或密钥，不能直接恢复数据库。完整恢复请使用已有恢复套件。下载文件含私有正文，请在本机妥善保护。</p>
