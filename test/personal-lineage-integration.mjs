@@ -1,6 +1,9 @@
 /** Actual PostgreSQL, native MCP and Chromium. Synthetic setup, no external provider. */
 import assert from 'node:assert/strict';
-import {randomBytes,createHash} from 'node:crypto';
+import {randomBytes,randomUUID,createHash} from 'node:crypto';
+import {mkdtemp,writeFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {spawn} from 'node:child_process';
 import {connect,ROOT,loadNative} from '../src/runtime.mjs';
 import {PersonalMemoryStore} from '../src/personal-memory-store.mjs';
@@ -13,6 +16,8 @@ assert.equal(process.env.ULTRABRAIN_TEST_ALLOW_WRITE,'1','Disposable database re
 const engine=await connect(),source='lineage-'+randomBytes(5).toString('hex'),token=randomBytes(32).toString('hex');
 const ctx={engine,sourceId:source,remote:false,transport:'stdio'},store=new PersonalMemoryStore(ctx),documents=new PersonalDocumentStore(ctx);
 const tables=['personal_memories','personal_events','personal_consolidations','agent_registry','personal_documents','personal_document_fragments'];
+const directory=await mkdtemp(join(tmpdir(),'ultra-lineage-workspace-'));
+const localSnapshot=join(directory,'owned-snapshot.json');
 let ui,invocations=0,checks=0;const pass=()=>checks++;
 const snapshot=async()=>{
  const result={};for(const table of tables)result[table]=(await engine.executeRaw(`SELECT md5(coalesce(string_agg(row_to_json(t)::text,',' ORDER BY row_to_json(t)::text),'')) AS digest FROM ultrabrain.${table} t WHERE source_id=$1`,[source]))[0].digest;
@@ -33,7 +38,7 @@ const native=async(id,identity=ctx)=>{
 };
 const runBrowser=async(fixture,race=false)=>{
  const child=spawn(process.env.ULTRABRAIN_BROWSER_PYTHON??'python3',[ROOT+'/test/personal-lineage-browser.py',...(race?['--race']:[])],{
-  cwd:ROOT,env:{...process.env,ULTRABRAIN_BROWSER_ORIGIN:ui.origin,ULTRABRAIN_BROWSER_TOKEN:token,ULTRABRAIN_LINEAGE_FIXTURE:JSON.stringify(fixture)},
+  cwd:ROOT,env:{...process.env,ULTRABRAIN_BROWSER_ORIGIN:ui.origin,ULTRABRAIN_BROWSER_TOKEN:token,ULTRABRAIN_LINEAGE_FIXTURE:JSON.stringify(fixture),ULTRABRAIN_LINEAGE_SNAPSHOT:localSnapshot},
   stdio:['ignore','inherit','inherit']});
  const deadline=setTimeout(()=>child.kill('SIGKILL'),120000);
  try{assert.equal(await new Promise((done,fail)=>{child.once('error',fail);child.once('close',done);}),0,'Lineage browser failed');}
@@ -58,6 +63,8 @@ try{
  const other=new PersonalMemoryStore(foreign);await other.register({agent_id:'lineage-fixture'});
  fixture.shared={id:(await other.commit({event_id:'shared',agent_id:'lineage-fixture',consent:true,memories:[{type:'preference',content:'可见共享记录',visibility:'source'}]})).entries[0].id};
  await other.review({memory_id:fixture.shared.id,expected_revision:1,event_id:'share-active',status:'active'});
+ // Actual export for cross-workspace revocation; private temp file, no test upload.
+ await writeFile(localSnapshot,JSON.stringify(await store.snapshot({request_id:randomUUID(),consent:true}),null,2)+'\n',{mode:0o600});
  const before=await snapshot();
  for(const name of ['matched','changed','archived','fragment']){
   const memory=(await native(fixture[name].id)).memory,origin=(await native(fixture[name].input)).memory;
@@ -86,4 +93,4 @@ try{
  assert.equal(final.content,'EXPLICIT_CONCURRENT_CORRECTION');pass();
  assert.equal(invocations,4);
  console.log(`PASS ${checks} lineage PostgreSQL/native-MCP oracles: read-only six-table phase, separate one-event concurrent correction, four injected generators and zero external models`);
-}finally{await ui?.close();await engine.disconnect();}
+}finally{try{await ui?.close();await engine.disconnect();}finally{await rm(directory,{recursive:true,force:true});}}

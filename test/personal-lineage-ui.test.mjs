@@ -126,3 +126,52 @@ test('lineage UI: navigation capture clears displayed source before other click 
  for(const handler of f.events.get('click'))handler({target:{closest:()=>true}});
  assert.equal(f.get('lineage-original-text').textContent,'');assert.equal(f.get('lineage-panel').hidden,true);assert.equal(f.get('lineage-id').value,'');
 });
+
+// Independent P2 5267519383 / 4062850569: match the actual delegated selector.
+// The older closest:()=>true fixture could not detect an omitted entry point.
+function captureClick(f,id){
+ const ancestor={id};
+ for(const handler of f.events.get('click')??[])
+  handler({target:{closest:selectors=>selectors.split(',').map(s=>s.trim()).includes('#'+id)?ancestor:null}});
+}
+function assertLineageCleared(f){
+ assert.equal(f.run('lineageData'),null);assert.equal(f.run('lineageWorking'),false);
+ assert.equal(f.run('lineageController'),null);assert.equal(f.get('lineage-panel').hidden,true);
+ assert.equal(f.get('lineage-consent').checked,false);assert.equal(f.get('lineage-id').value,'');
+ assert.equal(f.get('lineage-run').disabled,true);
+ for(const id of ['lineage-status','lineage-memory','lineage-quote','lineage-metadata','lineage-original-text'])
+  assert.equal(f.get(id).textContent,'',id+' must not retain private data');
+ for(const id of ['lineage-show-source','lineage-open-source','lineage-open-memory'])assert.equal(f.get(id).disabled,true);
+ assert.equal(f.get('content').value,'UNSAVED_PRIVATE_DRAFT');
+}
+for(const entry of ['snapshot-open','inspector-open','explorer-open'])for(const shown of [false,true])
+ test('workspace boundary: '+entry+' synchronously revokes '+(shown?'visible source':'prepared reference'),async()=>{
+  const f=fixture();f.open();await f.inspect();if(shown)f.click('lineage-show-source');
+  const reads=f.calls.length,version=f.run('loadVersion'),view=f.run('view');
+  captureClick(f,entry);assertLineageCleared(f);
+  assert.equal(f.run('loadVersion'),version);assert.equal(f.run('view'),view);
+  assert.equal(f.calls.length,reads,'The boundary must not start a data request');
+  f.open();await f.click('lineage-run');assert.equal(f.calls.length,reads,'Reopening does not renew consent');
+ });
+for(const phase of [1,2,3])for(const failure of [false,true])
+ test('workspace boundary: explorer entry fences pending read '+phase+(failure?' rejection':' delivery'),async()=>{
+  let release,entered,settle;
+  const gate=new Promise(r=>entered=r);
+  const f=fixture(async(b,n,{memory,source})=>{
+   if(n===phase)await new Promise((resolve,reject)=>{release=resolve;settle=reject;entered();});
+   return b.input.memory_id===memory.id?memory:source;
+  });
+  f.open();const work=f.inspect();await reach(gate,work);
+  captureClick(f,'explorer-open');assertLineageCleared(f);
+  f.get('message').textContent='NEW_WORKSPACE_MESSAGE';
+  if(failure)settle(Error('LATE_PRIVATE_ERROR'));else release();
+  await work;assertLineageCleared(f);assert.equal(f.calls.length,phase,'No following reads after revocation');
+  assert.equal(f.get('message').textContent,'NEW_WORKSPACE_MESSAGE');
+ });
+test('workspace boundary: unrelated controls do not silently revoke source consent',async()=>{
+ const f=fixture();f.open();await f.inspect();f.click('lineage-show-source');
+ captureClick(f,'lineage-clear-source');assert.equal(f.get('lineage-consent').checked,true);
+ assert.notEqual(f.run('lineageData'),null);
+ f.click('lineage-clear-source');assert.equal(f.get('lineage-original-text').textContent,'');
+ assert.equal(f.get('lineage-memory').textContent,f.memory.content);
+});

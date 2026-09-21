@@ -166,6 +166,78 @@ with sync_playwright() as p:
         expect(page.locator('#content')).to_have_value('UNSAVED_LINEAGE_DRAFT')
         expect(page.locator('#lineage-panel')).to_be_hidden()
         checks += 1
+        # Independent P2: a verified local file may already exist while lineage is open.
+        # Prepare via the genuine inspector UI, not by injecting a fake checked handle.
+        count = len(calls)
+        page.locator('#inspector-open').click()
+        page.locator('#inspector-left').set_input_files(os.environ['ULTRABRAIN_LINEAGE_SNAPSHOT'])
+        expect(page.locator('#explorer-open')).to_be_disabled()
+        page.locator('#inspector-consent').check()
+        page.locator('#inspector-run').click()
+        expect(page.locator('#message')).to_contain_text('内部一致性核验通过')
+        expect(page.locator('#explorer-open')).to_be_enabled()
+        assert len(calls) == count, 'Local file preparation must not query the server'
+        checks += 1
+
+        def source_cleared():
+            expect(page.locator('#lineage-panel')).to_be_hidden()
+            expect(page.locator('#lineage-result')).to_be_hidden()
+            expect(page.locator('#lineage-original')).to_be_hidden()
+            expect(page.locator('#lineage-consent')).not_to_be_checked()
+            expect(page.locator('#lineage-id')).to_have_value('')
+            for ident in ('lineage-status', 'lineage-memory', 'lineage-quote', 'lineage-metadata', 'lineage-original-text'):
+                expect(page.locator('#'+ident)).to_have_text('')
+            assert page.evaluate('lineageData===null && lineageController===null && lineageWorking===false')
+            expect(page.locator('#content')).to_have_value('UNSAVED_LINEAGE_DRAFT')
+
+        inspect('matched')
+        page.locator('#lineage-show-source').click()
+        expect(page.locator('#lineage-original-text')).to_contain_text('不要使用 Docker Hub')
+        context_before = page.evaluate('({view,loadVersion})')
+        count = len(calls)
+        page.locator('#explorer-open').click()
+        source_cleared()
+        assert page.evaluate('({view,loadVersion})') == context_before
+        expect(page.locator('#explorer-panel')).to_be_visible()
+        expect(page.locator('#explorer-consent')).not_to_be_checked()
+        assert page.evaluate('inspectorData!==null'), 'Independent verified local file must be retained'
+        assert len(calls) == count
+        checks += 1
+
+        # Also leave during an actual server source read: cancellation must stop the
+        # final primary reread, even when its successful response was already buffered.
+        def open_explorer_late(route):
+            body = route.request.post_data_json
+            if body['operation'] != 'memory_read' or body['input']['memory_id'] != f['matched']['input']:
+                route.continue_()
+                return
+            response = route.fetch()
+            assert response.ok
+            page.locator('#explorer-open').click()
+            source_cleared()
+            page.evaluate("document.getElementById('message').textContent='EXPLORER_CURRENT_MESSAGE'")
+            route.fulfill(response=response)
+        open_record('matched')
+        page.route('**/api/call', open_explorer_late)
+        count = len(calls)
+        page.locator('#lineage-consent').check()
+        page.locator('#lineage-run').click()
+        expect(page.locator('#message')).to_have_text('EXPLORER_CURRENT_MESSAGE')
+        page.wait_for_load_state('networkidle')
+        source_cleared()
+        assert len(calls) == count+2, 'Revoked lineage must not follow with a third read'
+        page.unroute('**/api/call', open_explorer_late)
+        checks += 1
+
+        # File browsing remains usable, but reopening lineage never renews its consent.
+        page.locator('#explorer-consent').check()
+        page.locator('#explorer-run').click()
+        expect(page.locator('#explorer-summary')).to_contain_text('仅本地快照')
+        count = len(calls)
+        open_record('matched')
+        expect(page.locator('#lineage-consent')).not_to_be_checked()
+        assert len(calls) == count
+        checks += 1
         inspect('matched')
         page.locator('#lineage-show-source').click()
         page.set_viewport_size({'width': 390, 'height': 844})
@@ -183,7 +255,8 @@ with sync_playwright() as p:
         checks += 1
         report = {'passed': True, 'checks': checks, 'browser': 'Chromium '+browser.version,
                   'operations_after_setup': ['memory_read'], 'downloads': 0, 'model_calls': 0,
-                  'scope': 'Real console/PostgreSQL source inspection; read-only phase, independent quote/hash oracle; concurrency write phase reported separately'}
+                  'workspace_revocation_checks': 4,
+                  'scope': 'Real console/PostgreSQL source inspection; read-only phase including verified-file workspace transitions; concurrency write phase reported separately'}
         if os.environ.get('ULTRABRAIN_LINEAGE_REPORT'):
             Path(os.environ['ULTRABRAIN_LINEAGE_REPORT']).write_text(json.dumps(report, indent=2)+'\n', encoding='utf8')
         print('PASS', checks, 'real Chromium lineage read-only checks')

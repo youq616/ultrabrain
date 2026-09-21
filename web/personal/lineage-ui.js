@@ -113,6 +113,8 @@ lineageObserver.observe($('view-title'),{childList:true});
 lineageObserver.observe($('workspace'),{attributes:true,attributeFilter:['hidden']});
 lineageObserver.observe($('logout'),{attributes:true,attributeFilter:['disabled']});
 document.addEventListener('submit',()=>invalidateLineage(true),true);
+// Opening a nested snapshot workspace does not change view/loadVersion. Revoke
+// here, before its own click handler, including already verified-file browsing.
 document.addEventListener('click',event=>{
-  if(event.target?.closest?.('[data-view],#refresh,#logout,#prev,#next,[data-write],#save,#retry,#snapshot-open,#inspector-open'))invalidateLineage(true);
+  if(event.target?.closest?.('[data-view],#refresh,#logout,#prev,#next,[data-write],#save,#retry,#snapshot-open,#inspector-open,#explorer-open'))invalidateLineage(true);
 },true);
