@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script><script src="/snapshot-inspector-ui.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script><script src="/snapshot-inspector-ui.js" defer></script><script src="/snapshot-explorer-ui.js" defer></script></head>
 <body>
 <header><div><p class="eyebrow">ULTRABRAIN / PERSONAL</p><h1>个人记忆管理台</h1><p id="scope">仅本机访问 · 不自动采集 · 模型调用需明确授权</p></div><button id="logout" hidden>锁定管理台</button></header>
 <main>
@@ -55,6 +55,26 @@
 <label class="checkbox"><input id="inspector-consent" type="checkbox">我有权在本机查看这些文件，并同意读取到当前页面内存。它们可能含秘密；文件内容不会上传或自动脱敏。</label>
 <div class="row"><button type="button" id="inspector-run" disabled>核验所选文件</button><button type="button" id="inspector-cancel">取消／清除本地核验</button></div>
 <pre id="inspector-summary" class="memory-content" aria-live="polite"></pre>
+<button type="button" id="explorer-open" disabled>浏览已核验快照</button>
+<section id="explorer-panel" class="panel" hidden aria-label="快照记忆浏览器">
+<h3>快照记忆浏览器</h3>
+<p class="note">浏览完整已核验文件，不是当前服务器列表。索引默认隐藏正文；筛选只在当前页面进行，不上传关键词、不调用模型。每页20条，可浏览全部匹配记录。</p>
+<label>浏览哪份文件<select id="explorer-side"><option value="left">左侧快照</option><option value="right" id="explorer-side-right" disabled>右侧快照</option></select></label>
+<div class="row fields"><label>状态<select id="explorer-status"><option value="">全部状态</option><option value="candidate">待确认</option><option value="active">已启用</option><option value="archived">已归档</option></select></label><label>重要性<select id="explorer-importance"><option value="">全部</option><option value="low">低</option><option value="normal">普通</option><option value="high">高</option></select></label></div>
+<div class="row fields"><label>类型（精确匹配，留空为全部）<input id="explorer-type" maxlength="32" spellcheck="false" placeholder="例如 preference、goal"></label><label>来源类型<select id="explorer-origin"><option value="">全部</option><option value="agent">Agent记录</option><option value="document_fragment">文档片段</option></select></label></div>
+<div class="row fields"><label>项目范围<select id="explorer-project-scope"><option value="all">所有项目及全局</option><option value="global">仅全局</option><option value="exact">仅指定项目</option></select></label><label>精确项目标识<input id="explorer-project" maxlength="96" spellcheck="false" disabled></label></div>
+<label>Agent标识（精确匹配，留空为全部）<input id="explorer-agent" maxlength="96" spellcheck="false" autocomplete="off"></label>
+<label>正文中的连续文字<input id="explorer-query" maxlength="4096" spellcheck="false" autocomplete="off" placeholder="区分大小写，保留空格；不是正则或语义搜索"></label>
+<p class="note">条件之间为“并且”。仅搜索正文，不搜索来源说明或派生引用；精确项目不包含全局记录。查询上限4096 UTF-8字节。修改条件会清除旧结果，需再次明确读取；更换左右文件需重新同意。</p>
+<label>排序<select id="explorer-sort"><option value="id_asc">记忆ID升序</option><option value="updated_desc">更新时间降序</option><option value="created_desc">创建时间降序</option><option value="importance_desc">重要性降序</option></select></label>
+<label class="checkbox"><input id="explorer-consent" type="checkbox">我同意浏览所选文件的记忆索引，并在明确点击某条记录时显示其完整正文与元数据。</label>
+<div class="row"><button type="button" id="explorer-run" disabled>筛选／读取索引</button><button type="button" id="explorer-close">关闭／清除浏览</button></div>
+<p id="explorer-summary" class="note" role="status"></p><div id="explorer-results" aria-live="polite"></div>
+<div class="row"><button type="button" id="explorer-prev" disabled>上一页记录</button><button type="button" id="explorer-next" disabled>下一页记录</button></div>
+<section id="explorer-detail" hidden><h4>所选本地记录（不读取当前数据库）</h4><p id="explorer-detail-id" class="meta"></p><button type="button" id="explorer-detail-clear">清除此条正文</button><pre id="explorer-detail-text" class="memory-content"></pre></section>
+<p class="note">文件中的状态、所有者及时间都是快照数据，不是当前权限或真实性认证。此处不能编辑、启用或恢复记录；关闭浏览不删除原文件。索引中的ID和项目标识仍属私有数据。</p>
+</section>
+
 <p class="note">指纹通过只说明文件内部一致，不是数字签名、数据库完整性或所有者身份认证。原格式没有导出主体标识；相同来源不证明同一所有者。只比较这两个文件，不推断时间先后，也不查询当前数据库。</p>
 <label class="checkbox"><input id="inspector-compare-consent" type="checkbox">我确认所选文件适合互相对照；仅一侧存在不等于新增或删除，同版本字段不同也不自动判定损坏。</label>
 <button type="button" id="inspector-compare" disabled>比较已核验文件</button>

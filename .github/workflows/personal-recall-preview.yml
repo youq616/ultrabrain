@@ -99,6 +99,12 @@ jobs:
           ULTRABRAIN_INSPECTOR_REPORT: ${{ runner.temp }}/personal-snapshot-inspector-report.json
           ULTRABRAIN_INSPECTOR_SCREENSHOT: ${{ runner.temp }}/personal-snapshot-inspector.png
         run: bun test/personal-snapshot-inspector-integration.mjs
+      - name: Browse complete local snapshot records without data upload or mutation
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_EXPLORER_REPORT: ${{ runner.temp }}/personal-snapshot-explorer-report.json
+          ULTRABRAIN_EXPLORER_SCREENSHOT: ${{ runner.temp }}/personal-snapshot-explorer.png
+        run: bun test/personal-snapshot-explorer-integration.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: personal-recall-preview-${{ github.sha }}
@@ -126,6 +132,8 @@ jobs:
             ${{ runner.temp }}/personal-snapshot.png
             ${{ runner.temp }}/personal-snapshot-inspector-report.json
             ${{ runner.temp }}/personal-snapshot-inspector.png
+            ${{ runner.temp }}/personal-snapshot-explorer-report.json
+            ${{ runner.temp }}/personal-snapshot-explorer.png
           if-no-files-found: error
           retention-days: 14
       - name: Stop only the disposable database

@@ -147,3 +147,63 @@ export function compareMemorySnapshots(left,right){
     limitations:['local-file-comparison-only','unsigned-self-declared-owner','absence-is-not-deletion',
       'no-live-database-check','not-a-restore-plan','ids-and-hashes-are-private-metadata']});
 }
+
+// A record browser is not a restore/import plan. It uses the same checked,
+// immutable handles as comparison and never infers current server authority.
+export const SNAPSHOT_BROWSER_PAGE_SIZE=20;
+const browserDefaults=Object.freeze({query:'',status:'',type:'',importance:'',origin_kind:'',
+  project_scope:'all',project_id:'',agent_id:'',sort:'id_asc',offset:0});
+function browserOptions(options){
+  const valid=c=>{if(!c)throw inspectionError('snapshot_query_invalid');};
+  valid(object(options)&&Object.keys(options).every(k=>Object.hasOwn(browserDefaults,k)));
+  const o={...browserDefaults,...options};
+  const label=v=>string(v,96)&&/^[A-Za-z0-9_-]+$/.test(v);
+  valid(string(o.query,4096)&&!o.query.includes('\0')&&
+    ['','candidate','active','archived'].includes(o.status)&&
+    (o.type===''||string(o.type,32)&&/^[a-z_]+$/.test(o.type))&&
+    ['','low','normal','high'].includes(o.importance)&&['','agent','document_fragment'].includes(o.origin_kind)&&
+    ['all','global','exact'].includes(o.project_scope)&&
+    (o.project_scope==='exact'?label(o.project_id):o.project_id==='')&&
+    (o.agent_id===''||label(o.agent_id))&&
+    ['id_asc','updated_desc','created_desc','importance_desc'].includes(o.sort)&&
+    Number.isSafeInteger(o.offset)&&o.offset>=0&&o.offset<=SNAPSHOT_MAX_RECORDS&&o.offset%SNAPSHOT_BROWSER_PAGE_SIZE===0);
+  return o;
+}
+/** All filters are ANDed; query is case-sensitive literal CONTENT substring only.
+ * Empty query means no text filter; no trimming, regex, tokenization or IO.
+ * Pages contain metadata only. Query text is intentionally not echoed in results.
+ */
+export function queryMemorySnapshot(file,options={}){
+  if(!inspectedFiles.has(file))throw inspectionError('snapshot_not_inspected');
+  const o=browserOptions(options),snapshot=file.snapshot;
+  const rows=snapshot.memories.filter(r=>(!o.query||r.content.includes(o.query))&&
+    (!o.status||r.status===o.status)&&(!o.type||r.type===o.type)&&(!o.importance||r.importance===o.importance)&&
+    (!o.origin_kind||r.origin_kind===o.origin_kind)&&(!o.agent_id||r.agent_id===o.agent_id)&&
+    (o.project_scope==='all'||o.project_scope==='global'&&r.project_id===null||o.project_scope==='exact'&&r.project_id===o.project_id));
+  const rank={low:0,normal:1,high:2};
+  rows.sort((a,b)=>{
+    let order=0;
+    if(o.sort==='importance_desc')order=rank[b.importance]-rank[a.importance];
+    else if(o.sort==='updated_desc')order=a.updated_at<b.updated_at?1:a.updated_at>b.updated_at?-1:0;
+    else if(o.sort==='created_desc')order=a.created_at<b.created_at?1:a.created_at>b.created_at?-1:0;
+    return order||(a.id<b.id?-1:a.id>b.id?1:0);
+  });
+  if(o.offset&&o.offset>=rows.length)throw inspectionError('snapshot_page_out_of_range');
+  const metadata=r=>({id:r.id,type:r.type,status:r.status,importance:r.importance,origin_kind:r.origin_kind,
+    project_id:r.project_id,agent_id:r.agent_id,revision:r.revision,updated_at:r.updated_at});
+  return freezeSnapshot({format:'ultrabrain-snapshot-page-v1',read_only:true,identity_verified:false,
+    file_sha256:file.file_sha256,source_id:snapshot.source_id,record_count:snapshot.record_count,
+    matched_count:rows.length,page_size:SNAPSHOT_BROWSER_PAGE_SIZE,offset:o.offset,
+    previous_offset:o.offset?o.offset-SNAPSHOT_BROWSER_PAGE_SIZE:null,
+    next_offset:o.offset+SNAPSHOT_BROWSER_PAGE_SIZE<rows.length?o.offset+SNAPSHOT_BROWSER_PAGE_SIZE:null,
+    rows:rows.slice(o.offset,o.offset+SNAPSHOT_BROWSER_PAGE_SIZE).map(metadata)});
+}
+/** Exact local lookup only. The caller must separately authorize body disclosure.
+ * The returned original remains frozen; it is not a server read/edit capability.
+ */
+export function readMemorySnapshotRecord(file,id){
+  if(!inspectedFiles.has(file))throw inspectionError('snapshot_not_inspected');
+  const row=uuid(id)?file.snapshot.memories.find(r=>r.id===id):null;
+  if(!row)throw inspectionError('snapshot_record_missing');
+  return row;
+}

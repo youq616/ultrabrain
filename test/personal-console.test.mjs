@@ -75,3 +75,12 @@ test('local inspector is a fixed code-only asset, not a new data API',async t=>{
  assert.equal((await raw(s.origin,{method:'GET',path:'/snapshot-inspector-ui.js?file=secret'})).status,404);
  assert.equal(s.queries,1);
 });
+
+test('snapshot record browser is a fixed no-store asset and adds no data route',async t=>{
+ const s=await fixture(t),r=await raw(s.origin,{method:'GET',path:'/snapshot-explorer-ui.js'});
+ assert.equal(r.status,200);assert.equal(r.headers['cache-control'],'no-store');
+ assert.match(r.headers['content-security-policy'],/script-src 'self'/);
+ for(const forbidden of ['innerHTML','outerHTML','localStorage','sessionStorage',"api('","fetch('",'download('])assert.ok(!r.text.includes(forbidden));
+ for(const path of ['/snapshot-explorer-ui.js?file=private','/api/snapshot-explore'])assert.equal((await raw(s.origin,{method:'GET',path})).status,404);
+ assert.equal(s.queries,1);
+});
