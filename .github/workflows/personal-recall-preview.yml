@@ -87,6 +87,12 @@ jobs:
           ULTRABRAIN_BARRIER_REPORT: ${{ runner.temp }}/personal-job-recovery-barrier-report.json
           ULTRABRAIN_BARRIER_SCREENSHOT: ${{ runner.temp }}/personal-job-recovery-barrier.png
         run: bun test/personal-job-recovery-barrier-integration.mjs
+      - name: Consistent owner memory snapshot and explicit browser download
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_SNAPSHOT_REPORT: ${{ runner.temp }}/personal-snapshot-report.json
+          ULTRABRAIN_SNAPSHOT_SCREENSHOT: ${{ runner.temp }}/personal-snapshot.png
+        run: bun test/personal-snapshot-integration.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: personal-recall-preview-${{ github.sha }}
@@ -110,6 +116,8 @@ jobs:
             ${{ runner.temp }}/personal-job-recovery.png
             ${{ runner.temp }}/personal-job-recovery-barrier-report.json
             ${{ runner.temp }}/personal-job-recovery-barrier.png
+            ${{ runner.temp }}/personal-snapshot-report.json
+            ${{ runner.temp }}/personal-snapshot.png
           if-no-files-found: error
           retention-days: 14
       - name: Stop only the disposable database

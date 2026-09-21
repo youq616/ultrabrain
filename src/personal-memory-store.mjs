@@ -5,6 +5,7 @@ import {objectFields,personalId,memoryId,normalizePersonalMemory,contextQuery} f
 import {agentIdentity,memoryCommit} from './agent-memory-protocol.mjs';
 import {captureRequest,MAX_PERSONAL_JOBS} from './personal-consolidation-core.mjs';
 import {buildPersonalContext,taskTerms} from './personal-context-engine.mjs';
+import {SNAPSHOT_FORMAT,SNAPSHOT_SCOPE,SNAPSHOT_MAX_RECORDS,SNAPSHOT_MAX_BYTES,SNAPSHOT_EXCLUDES,verifyMemorySnapshot} from './personal-snapshot-contract.mjs';
 export {normalizePersonalMemory as normalizeMemory} from './personal-memory.mjs';
 export function personalPrincipal(ctx,write=false) {
   authorizeMemory(ctx,write);
@@ -228,6 +229,47 @@ export class PersonalMemoryStore {
     // Return the complete record or an error, never silently drop/truncate the one
     // selected entry. The bound also covers JSON escaping of legacy stored text.
     requireThat(Buffer.byteLength(JSON.stringify(result))<=1048576,'memory_read_too_large','Complete record exceeds the read limit');
+    return result;
+  }
+  /** All owned current rows, all lifecycle states, from ONE consistent read-only snapshot.
+   * This is a logical memory export, not a database backup or historical event replay.
+   * The bounded preflight returns no content; oversized exports fail whole.
+   */
+  async snapshot(input={}) {
+    objectFields(input,['request_id','consent']);memoryId(input.request_id);
+    requireThat(input.consent===true,'export_consent_required','Explicit consent required to export private memories');
+    const request=Object.freeze({...input});
+    const permitted=()=>requireThat(this.ctx.sourceId===this.source&&personalPrincipal(this.ctx)===this.actor,
+      'permission_denied','Snapshot identity changed');
+    permitted();
+    const result=await this.engine.transaction(async tx=>{
+      // Must precede the first SELECT. No session-global isolation change or owner lock.
+      await tx.executeRaw('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY');
+      await tx.executeRaw("SET LOCAL statement_timeout='5s'");
+      const [stamp]=await tx.executeRaw('SELECT statement_timestamp() AS snapshot_at');
+      const query=`SELECT ${projection} FROM ultrabrain.personal_memories m
+        WHERE m.source_id=$1 AND m.actor_key=$2 ORDER BY m.id LIMIT $3`;
+      const args=[this.source,this.actor,SNAPSHOT_MAX_RECORDS+1];
+      const [size]=await tx.executeRaw(`SELECT count(*)::integer AS record_count,
+        coalesce(sum(octet_length(row_to_json(bounded)::text)),0)::text AS byte_size FROM (${query}) bounded`,args);
+      requireThat(size&&Number.isSafeInteger(size.record_count)&&size.record_count>=0&&size.record_count<=SNAPSHOT_MAX_RECORDS&&
+        /^\d+$/.test(String(size.byte_size))&&Number(size.byte_size)<=SNAPSHOT_MAX_BYTES,
+        'memory_snapshot_too_large','Complete owned memory snapshot exceeds the export limit');
+      permitted();const rows=await tx.executeRaw(query,args);
+      requireThat(rows.length===size.record_count,'memory_snapshot_unconfirmed','Snapshot count changed');
+      // Canonical public view, including ISO dates and numeric confidence; never actor keys.
+      const memories=JSON.parse(JSON.stringify(rows.map(rowView)));
+      return {format:SNAPSHOT_FORMAT,scope:SNAPSHOT_SCOPE,source_id:this.source,request_id:request.request_id,
+        snapshot_at:new Date(stamp.snapshot_at).toISOString(),read_only:true,complete:true,record_count:memories.length,
+        excluded:[...SNAPSHOT_EXCLUDES],memories,memories_sha256:sha256(JSON.stringify(memories))};
+    });
+    requireThat(Buffer.byteLength(JSON.stringify(result))<=SNAPSHOT_MAX_BYTES,'memory_snapshot_too_large','Complete snapshot exceeds the byte limit');
+    try{await verifyMemorySnapshot(result,request,this.source,sha256,permitted);}
+    catch(error){
+      if(error.code==='memory_snapshot_unconfirmed')requireThat(false,error.code,'Complete snapshot failed integrity checks');
+      throw error;
+    }
+    permitted();
     return result;
   }
   async search(input={}) {

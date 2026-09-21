@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script></head>
 <body>
 <header><div><p class="eyebrow">ULTRABRAIN / PERSONAL</p><h1>个人记忆管理台</h1><p id="scope">仅本机访问 · 不自动采集 · 模型调用需明确授权</p></div><button id="logout" hidden>锁定管理台</button></header>
 <main>
@@ -26,7 +26,7 @@
 <label>按任务 ID 核对（留空按状态分页；填写后忽略状态筛选）<input id="job-id" maxlength="36" spellcheck="false" placeholder="完整小写 UUID"></label>
 <div class="row"><button type="submit">读取任务</button><button type="button" id="job-clear">取消读取／清除结果</button></div>
 <p class="note">原文与生成候选需点击后另行读取，可能已被修改或归档。失败或租约到期的恢复可能重复计费；取消不撤销已发生费用，也不是物理删除。</p>
-</form></div><p class="note" id="coverage">只展示当前身份可见的记录。</p><div id="results" aria-live="polite"></div><div class="row"><button id="prev" disabled>上一页</button><button id="next" disabled>下一页</button><button id="export" disabled>导出当前页</button></div></section>
+</form></div><p class="note" id="coverage">只展示当前身份可见的记录。</p><div id="results" aria-live="polite"></div><div class="row"><button id="prev" disabled>上一页</button><button id="next" disabled>下一页</button><button id="export" disabled>导出当前页</button><button id="snapshot-open" type="button">导出我的记忆快照</button></div></section>
 <section id="memory-panel" class="panel"><h2 id="editor-title">新建候选记忆</h2><p class="note">保存不会自动确认真实性。编辑已有记忆后，它会重新进入待确认状态。</p><form id="memory-form">
 <label>类型<select id="type"><option value="identity">身份信息</option><option value="preference" selected>偏好</option><option value="environment">环境</option><option value="project">项目</option><option value="decision">决策</option><option value="skill">技能</option><option value="error">错误经验</option><option value="goal">目标</option><option value="experience">经验</option></select></label>
 <label>内容<textarea id="content" rows="7" required placeholder="例如：配置文件请使用完整命令行修改，不要要求打开编辑器。"></textarea></label>
@@ -46,6 +46,11 @@
 <div class="row"><button type="button" id="comparison-adopt" disabled>采用新基准，保留草稿</button><button type="button" id="comparison-cancel" disabled>取消／清除对照</button></div>
 <p class="note">采用不是保存。仍需重新勾选表单的保存同意；保存成功后回到候选，启用还需明确确认。读取后如再次发生修改，旧版本保存仍会被拒绝。未确认提交必须先处理原事件，不能通过对照绕过。</p>
 </section></section></div>
+<section id="snapshot-panel" class="panel warning" hidden><h2>导出我的个人记忆快照</h2>
+<p class="note">一次性读取当前所有者全部项目、全部状态的记忆，包括候选、归档、明确采集的原文记录和文档片段。不是当前搜索页；不导出其他所有者的共享记忆。已保存记忆中若有秘密也会原样包含，不自动脱敏。最多 1000 条、响应 8 MiB，超过限制整体拒绝，不截断。</p>
+<p class="note">不含原始文档文件、任务和事件历史、服务配置或密钥，不能直接恢复数据库。完整恢复请使用已有恢复套件。下载文件含私有正文，请在本机妥善保护。</p>
+<label class="checkbox"><input id="snapshot-consent" type="checkbox">我明确同意导出当前所有者全部状态的记忆，理解它包含私有正文且不是完整备份。</label>
+<div class="row"><button type="button" id="snapshot-export" disabled>核对并下载记忆快照</button><button type="button" id="snapshot-cancel">取消导出</button></div></section>
 <section id="pending-panel" class="panel warning" hidden><h2>有一次提交尚未确认</h2><p id="pending-guidance">不要重新生成内容或新的事件编号。下面的重试会使用相同请求。刷新或关闭页面会丢失内存中的待确认请求；可以先将其保存到本机。</p><p id="pending-id"></p><div class="row"><button id="retry">重试原请求</button><button id="save-pending">保存待确认请求</button></div>
 <div id="pending-job-recovery" hidden><h3>核对原整理任务</h3>
 <p class="note">只读查询原任务，不发送原文、不重新调用模型。状态属于读取时刻，不证明原请求的交付或费用；不会恢复丢失的原回执。</p>
