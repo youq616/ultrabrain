@@ -1,0 +1,109 @@
+{
+  "base_commit": "d34bfb4eead75e611bc5e1e0fc1ce0d006ca00da",
+  "base_tree": "79926d3fca45d2e31ac3205a727c9e5f293d3350",
+  "independent_finding": {
+    "review": 5262361579,
+    "comment": 4058657819
+  },
+  "executed": {
+    "node": {
+      "tests": 1323,
+      "passed": 1323,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "exit": 0
+    },
+    "python": {
+      "tests": 683,
+      "passed": 683,
+      "seconds": 93.182,
+      "exit": 0
+    },
+    "focused_subset": 75,
+    "new_tests": 22,
+    "first_failure": {
+      "tests": 22,
+      "passed": 6,
+      "failed": 16
+    }
+  },
+  "candidate_ci": "pending at creation",
+  "candidate_independent_review": "pending at creation",
+  "files": [
+    {
+      "path": "web/personal/app.js",
+      "git_blob": "56a1370b2b15b7a36927bbe171ef716c2a581f27"
+    },
+    {
+      "path": ".github/workflows/client-portability.yml",
+      "git_blob": "5235e6efd9659a5b6417cdbbb60a50f5ea0c0921"
+    },
+    {
+      "path": ".github/workflows/personal-recall-preview.yml",
+      "git_blob": "e4bc277d240ec77a88e51b6221790f10857e1121"
+    },
+    {
+      "path": "test/personal-job-recovery-barrier.test.mjs",
+      "git_blob": "dcf21985bb38bbddd04212f7227abf3d754efb7a"
+    },
+    {
+      "path": "test/personal-job-recovery-barrier-integration.mjs",
+      "git_blob": "719e21a57aec77776df476e095c8005256b2b13e"
+    },
+    {
+      "path": "test/personal-job-recovery-barrier-browser.py",
+      "git_blob": "edafd9f07fde81eb9e8e5ab7f6343be8f11f0885"
+    },
+    {
+      "path": "docs/PERSONAL-JOB-RECOVERY.md",
+      "git_blob": "407ebd3b83e70fe7d2d7fefc70cb84c7e4564a6b"
+    },
+    {
+      "path": "docs/reviews/job-recovery-barrier/README.md",
+      "git_blob": "76a314b68b5e7791c21e090921250c6a1bf8c0d0"
+    },
+    {
+      "path": "docs/reviews/job-recovery-barrier/first-failure.log.gz",
+      "git_blob": "0a0f7d3331e78acdd46459b0b90a6aa07f03ec73"
+    }
+  ],
+  "logs": [
+    {
+      "file": "first-failure.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "first-failure.log",
+      "sha256": "ce525e5362f7f101e0fffd9526f21e63a4b56cc3563265dc6f990086367e5651"
+    },
+    {
+      "file": "implementation.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "implementation.log",
+      "sha256": "d84a19a532bd5917469b2cc2209310274fb988ac2212c6ffcefce118b427f7fa"
+    },
+    {
+      "file": "node-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-final.log",
+      "sha256": "cad09ed5321573b2c4b73001b4888c0e82bcff28ddaf95db42f525736f327f0d"
+    },
+    {
+      "file": "node-time-limited.log",
+      "sha256": "bbfd8ae2f766530aaee853ff8538dd99a615d97620ce0c9c68a70f61392a8d51"
+    },
+    {
+      "file": "python-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-final.log",
+      "sha256": "2b855e976ba8e59374e97ffd247977e72ca7490197b5323aa9242d6e77866669"
+    }
+  ]
+}

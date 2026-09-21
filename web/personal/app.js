@@ -15,7 +15,7 @@ function element(tag,text,cls){const node=document.createElement(tag);if(text!==
 function controls(){
   for(const b of document.querySelectorAll('[data-write],#save,#cancel-edit'))b.disabled=busy||!!pending;
   $('queue-personal').disabled=busy||!!pending||!!editing;$('retry').disabled=busy;$('pending-panel').hidden=!pending;$('logout').disabled=busy||!!pending;
-  $('pending-id').textContent=pending?'事件编号：'+(pending.input.event_id??pending.input.job_id??''):'';
+  $('pending-id').textContent=pending?(pending.operation==='consolidate'?'原任务 ID：':'事件／任务编号：')+(pending.input.event_id??pending.input.job_id??''):'';
   $('compare-current').disabled=busy||!!pending||!!comparisonController||!editableMemory(editing)||view==='recall';
   $('comparison-adopt').disabled=busy||!!pending||!comparison?.canAdopt||!$('comparison-consent').checked;
   $('comparison-cancel').disabled=!comparison&&!comparisonController;
@@ -28,7 +28,8 @@ function controls(){
   $('retry').disabled=busy||!!jobRecoveryController||(modelPending&&pending.delivery_unconfirmed&&
     (!recoveryCurrent(pending)||terminalJob(jobRecovery.row)||jobRecovery.row.attempts>=3));
   $('pending-guidance').textContent=modelPending?
-    '这是模型整理请求，不是幂等事件重放。先只读核对原任务状态；再次执行可能重复计费。刷新或关闭页面仍会丢失待确认请求。':
+    '这是模型整理请求，不是幂等事件重放。先只读核对原任务状态；再次执行可能重复计费。刷新或关闭页面仍会丢失待确认请求。'+
+      (pending.last_processing_outcome?' 最近一次无工作、未配置模型或租约丢失的响应不能确认此前请求；原请求仍保留。':''):
     '不要重新生成内容或新的事件编号。明确重试使用相同请求；刷新或关闭页面会丢失内存中的待确认请求，可先保存到本机。';
 }
 async function api(operation,input={},signal){
@@ -110,6 +111,7 @@ async function submitPending(modelRetry=false){
     (!modelRetry||!recoveryCurrent(request)||terminalJob(jobRecovery.row)||jobRecovery.row.attempts>=3)){
     message('先只读核对原任务状态；未重新调用模型。',true);return;
   }
+  const priorUnconfirmed=request.delivery_unconfirmed===true;
   invalidateJobRecovery();let submitted=false,acknowledged=false;busy=true;controls();
   const contextCurrent=()=>{
     if(pending!==request||!request.sessionCurrent())throw Object.assign(new Error('console_session_changed'),{unknown:true});
@@ -124,7 +126,15 @@ async function submitPending(modelRetry=false){
     request.authorize?.();contextCurrent();
     // Use the same frozen request for sending, validation and every explicit retry.
     submitted=true;const result=await api(request.operation,request.input);contextCurrent();
-    verifyWriteReceipt(request.operation,request.input,result,request.source_id,request.receipt_context);
+    const outcome=verifyWriteReceipt(request.operation,request.input,result,request.source_id,request.receipt_context);
+    // A valid reply acknowledges THIS invocation, not an earlier unknown one.
+    // No-work/disabled-model contain no job outcome; lease_lost is not terminal.
+    // Keep the exact request and require a new observation after every such retry.
+    if(request.operation==='consolidate'&&priorUnconfirmed&&['no_work','needs_model','lease_lost'].includes(outcome)){
+      request.delivery_unconfirmed=true;request.last_processing_outcome=outcome;
+      message('本次整理返回 '+outcome+'，但此前请求仍未确认。原请求与任务 ID 已保留；请只读核对原任务，终态需再次确认后才能结束本地追踪。',true);
+      return;
+    }
     const clearEditor=EDITOR_WRITES.has(request.operation)&&request.editorUnchanged();
     acknowledged=true;pending=null;
     if(clearEditor)resetEditor();
@@ -687,13 +697,13 @@ function verifyConsolidationReceipt(input,result,source,selected){
   valid(input.expected_source===source&&input.allow_model_call===true&&input.limit===1&&uuid(input.job_id)&&typeof input.retry==='boolean');
   valid(object(result)&&result.source_id===source&&result.dry_run!==true&&Array.isArray(result.results));
   if(result.state==='needs_model'){
-    valid(Object.keys(result).every(k=>['source_id','state','results','model_calls'].includes(k))&&result.results.length===0&&result.model_calls===0);return;
+    valid(Object.keys(result).every(k=>['source_id','state','results','model_calls'].includes(k))&&result.results.length===0&&result.model_calls===0);return 'needs_model';
   }
   valid(Object.keys(result).every(k=>['source_id','results','processed','model_requests_attempted','retry_policy'].includes(k))&&
     result.results.length<=1&&result.processed===result.results.length&&
     Number.isInteger(result.model_requests_attempted)&&result.model_requests_attempted>=0&&result.model_requests_attempted<=1&&
     typeof result.retry_policy==='string'&&result.retry_policy.length>0&&result.retry_policy.length<=1024);
-  if(result.results.length===0){valid(result.model_requests_attempted===0);return;}
+  if(result.results.length===0){valid(result.model_requests_attempted===0);return 'no_work';}
   const r=result.results[0];
   valid(object(r)&&r.job_id===input.job_id&&['completed','failed','stale','lease_lost'].includes(r.state)&&
     Object.keys(r).every(k=>['job_id','state','attempts','error','result','input_id','input_revision','retryable','lease_until','created_at','updated_at','assurance'].includes(k)));
@@ -703,13 +713,14 @@ function verifyConsolidationReceipt(input,result,source,selected){
     if(Object.hasOwn(r,'input_revision'))valid(r.input_revision===selected.input_revision);
     if(Object.hasOwn(r,'attempts'))valid(r.attempts>=selected.attempts);
   }
-  if(r.state==='lease_lost'){valid(r.result===null);return;}
+  if(r.state==='lease_lost'){valid(r.result===null);return 'lease_lost';}
   valid(attempts(r.attempts)&&(result.model_requests_attempted===0||r.attempts>=1));
   if(r.state==='completed'){
     valid(result.model_requests_attempted===1&&r.error===null);verifyCompletedJobReceipt(r.result,valid);
   }else valid(r.result===null&&typeof r.error==='string'&&/^[a-z_]{1,96}$/.test(r.error));
   // Skip rows can contain the pre-update lease/time metadata. The process endpoint
   // is not a status read; do not impose status-page invariants on those historical fields.
+  return r.state;
 }
 const terminalJob=row=>['completed','failed','stale'].includes(row.state);
 function recoveryCurrent(request){
