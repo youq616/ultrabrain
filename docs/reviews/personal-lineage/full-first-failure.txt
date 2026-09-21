@@ -1,0 +1,22 @@
+# Extract from actual first full Node run (not a complete log).
+# Subtest: lineage UI: revocation during read 3 after pending stops delivery/following
+not ok 1114 - lineage UI: revocation during read 3 after pending stops delivery/following
+  ---
+  duration_ms: 13.524727
+  type: 'test'
+  location: '/mnt/data/ultrabrain-source-proof/test/personal-lineage-ui.test.mjs:81:2'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(release)
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///mnt/data/ultrabrain-source-proof/test/personal-lineage-ui.test.mjs:83:87)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...

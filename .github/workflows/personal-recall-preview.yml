@@ -105,6 +105,12 @@ jobs:
           ULTRABRAIN_EXPLORER_REPORT: ${{ runner.temp }}/personal-snapshot-explorer-report.json
           ULTRABRAIN_EXPLORER_SCREENSHOT: ${{ runner.temp }}/personal-snapshot-explorer.png
         run: bun test/personal-snapshot-explorer-integration.mjs
+      - name: Explicit derived-memory source verification with PostgreSQL and Chromium
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_LINEAGE_REPORT: ${{ runner.temp }}/personal-lineage-report.json
+          ULTRABRAIN_LINEAGE_SCREENSHOT: ${{ runner.temp }}/personal-lineage.png
+        run: bun test/personal-lineage-integration.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: personal-recall-preview-${{ github.sha }}
@@ -134,6 +140,8 @@ jobs:
             ${{ runner.temp }}/personal-snapshot-inspector.png
             ${{ runner.temp }}/personal-snapshot-explorer-report.json
             ${{ runner.temp }}/personal-snapshot-explorer.png
+            ${{ runner.temp }}/personal-lineage-report.json
+            ${{ runner.temp }}/personal-lineage.png
           if-no-files-found: error
           retention-days: 14
       - name: Stop only the disposable database

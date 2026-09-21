@@ -84,3 +84,14 @@ test('snapshot record browser is a fixed no-store asset and adds no data route',
  for(const path of ['/snapshot-explorer-ui.js?file=private','/api/snapshot-explore'])assert.equal((await raw(s.origin,{method:'GET',path})).status,404);
  assert.equal(s.queries,1);
 });
+
+test('lineage inspector serves only fixed no-store scripts; no new data endpoint',async t=>{
+ const s=await fixture(t);
+ for(const path of ['/lineage-ui.js','/lineage-contract.mjs']){
+  const r=await raw(s.origin,{method:'GET',path});assert.equal(r.status,200);assert.equal(r.headers['cache-control'],'no-store');
+  assert.match(r.headers['content-security-policy'],/script-src 'self'/);
+  for(const v of ['innerHTML','outerHTML','localStorage','sessionStorage','document.cookie'])assert.ok(!r.text.includes(v));
+  assert.equal((await raw(s.origin,{method:'GET',path:path+'?file=private'})).status,404);
+ }
+ assert.equal((await raw(s.origin,{method:'GET',path:'/api/lineage'})).status,404);assert.equal(s.queries,1);
+});

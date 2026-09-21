@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script><script src="/snapshot-inspector-ui.js" defer></script><script src="/snapshot-explorer-ui.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script><script src="/snapshot-inspector-ui.js" defer></script><script src="/snapshot-explorer-ui.js" defer></script><script src="/lineage-ui.js" defer></script></head>
 <body>
 <header><div><p class="eyebrow">ULTRABRAIN / PERSONAL</p><h1>个人记忆管理台</h1><p id="scope">仅本机访问 · 不自动采集 · 模型调用需明确授权</p></div><button id="logout" hidden>锁定管理台</button></header>
 <main>
@@ -46,6 +46,21 @@
 <div class="row"><button type="button" id="comparison-adopt" disabled>采用新基准，保留草稿</button><button type="button" id="comparison-cancel" disabled>取消／清除对照</button></div>
 <p class="note">采用不是保存。仍需重新勾选表单的保存同意；保存成功后回到候选，启用还需明确确认。读取后如再次发生修改，旧版本保存仍会被拒绝。未确认提交必须先处理原事件，不能通过对照绕过。</p>
 </section></section></div>
+<section class="panel"><button type="button" id="lineage-open">核对记忆引用来源</button><p class="note">先按 ID 核对记忆可自动填入编号；也可直接输入。打开不发起查询，不读取草稿或文件。</p></section>
+<section id="lineage-panel" class="panel" hidden aria-label="记忆引用来源核对">
+<h2>记忆引用来源核对</h2>
+<label>待核对的记忆 ID<input id="lineage-id" maxlength="36" spellcheck="false" autocomplete="off" placeholder="完整小写 UUID"></label>
+<label class="checkbox"><input id="lineage-consent" type="checkbox">我同意读取这条记忆及其直接引用原文，用于核对；原文可能含私有内容。不是运行模型或同意修改记忆。</label>
+<div class="row"><button id="lineage-run" type="button" disabled>读取并核对来源</button><button id="lineage-close" type="button">取消／清除来源核对</button></div>
+<p class="note">仅核对结构化整理引用的一跳来源，不递归读取其他记录或文档文件。读取得到的是当前可见版本；历史原文缺失时不会从缓存补造，也不推断记录被删除。</p>
+<div id="lineage-result" hidden>
+<p id="lineage-status" role="status"></p><pre id="lineage-metadata" class="memory-content"></pre>
+<h3>本次读取的记忆内容</h3><pre id="lineage-memory" class="memory-content"></pre>
+<h3>生成时记录的引文（不代表真实性）</h3><pre id="lineage-quote" class="memory-content"></pre>
+<div class="row"><button id="lineage-show-source" type="button" disabled>显示本次读取的原文</button><button id="lineage-open-memory" type="button" disabled>打开当前记忆核对／纠错</button><button id="lineage-open-source" type="button" disabled>打开当前原文记录</button></div>
+<div id="lineage-original" hidden><h3>来源全文（本次观察，不持续刷新）</h3><button id="lineage-clear-source" type="button">清除来源全文</button><pre id="lineage-original-text" class="memory-content"></pre></div>
+<p class="note">版本、指纹与引用位置匹配只能证明这次观察中的引用一致，不能证明陈述真实或模型理解正确。跳转会重新读取记录，原有编辑、版本检查和启用确认仍需分别执行，不覆盖独立草稿。</p>
+</div></section>
 <section class="panel"><button type="button" id="inspector-open">核验／对照本地快照</button><p class="note">只读取明确选择的本地导出文件，不上传文件、不恢复或覆盖记忆。</p></section>
 <section id="inspector-panel" class="panel" hidden aria-label="本地快照核验与对照">
 <h2>本地快照核验与差异对照</h2>

@@ -1,0 +1,64 @@
+{
+  "format": 1,
+  "baseline_commit": "dcb489829bef6337f4e5572c28dc17adf1e254dc",
+  "baseline_tree": "458a1fb12fc0794af2bec9d62fd9c3f9d62afffa",
+  "executor_uid": 1000,
+  "node": {
+    "version": "22.16.0",
+    "pass": 1661,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "exit": 0
+  },
+  "python": {
+    "version": "3.13.5",
+    "pass": 683,
+    "test_seconds": 42.584,
+    "exit": 0
+  },
+  "initial_contract_tests": {
+    "pass": 0,
+    "fail": 31,
+    "reason": "new module did not exist"
+  },
+  "initial_full_node": {
+    "pass": 1660,
+    "fail": 1,
+    "reason": "test polling finished before WebCrypto gate; replaced by explicit gate signaling"
+  },
+  "ci": "PENDING at commit preparation",
+  "independent_review": "PENDING at commit preparation",
+  "sources": {
+    "src/personal-lineage-contract.mjs": "1b6a50a2a377f196a634abe4176ee442cfc995a8",
+    "web/personal/lineage-ui.js": "d3a52afb4290dd1765bf225e270dadf987a2db16",
+    "src/personal-console.mjs": "fb4ccd873b4c6bc6b624f9dcdcbe4055b08ba121",
+    "web/personal/index.html": "5a2cdcc317aa5312f78d09b5da6315d7e39e8768",
+    "test/personal-lineage.test.mjs": "718e765d17b7bbbb25e96ea4011ee146c00210c6",
+    "test/personal-lineage-ui.test.mjs": "28d87123a4a1f6cedcdde5e527ad2abac494827a",
+    "test/helpers/lineage-fixture.mjs": "d3252591f4b054f782e8122400f63d66a3f70df7",
+    "test/personal-lineage-browser.py": "e20da28607d0eb859290bf4e88af823e41d6cf1f",
+    "test/personal-lineage-integration.mjs": "e40d858d6694f4d44d92e886394055160565911d",
+    "test/personal-console.test.mjs": "3519adf218df29f688958a0737a1b47c8a25109c",
+    ".github/workflows/client-portability.yml": "9965e90f74b0c0b6d56bd9760a5ebae6d3c1c3c1",
+    ".github/workflows/personal-recall-preview.yml": "ca540b9366f4e9ed0a299799fa36a1d83c4e68d1"
+  },
+  "logs": {
+    "node-full.log": "3d42ec1add1043b6b89698ab4c6a7236e6b031b72bd98abf9d822918cd1fe7b6",
+    "focused.log": "51d712b3df99043a743e2e4ff3f427ba821c0f38cbd9d7fdba371ee4e1811671",
+    "focused.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "full-results.json": "b855c1ffcf4b4fe22ac58330b2b88804f62e30c851ad92c9cdd2fccd72221fbf",
+    "node-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "contract.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "node-first-full.log": "3d42ec1add1043b6b89698ab4c6a7236e6b031b72bd98abf9d822918cd1fe7b6",
+    "python-full.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "contract-baseline.log": "65cbd833387b3e2935ca888dc89b7a1c9c0144bb28a32366c7d89674cc8d9510",
+    "node-first-full.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "supervisor.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "node-final.log": "d5e55b274c95aafc33ef63761006f253d7c056dec463f04020d6ed5d1631134e",
+    "contract-baseline.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "python-full.log": "fc64beb0fb3c10c93992e1446740c775943c48f3f62a9c4dd5b18d1c12cc4616",
+    "node-full.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "contract.log": "6865ce1e0d203f7436cb332dfba6ae44cc9dda506181c84702cf74458f89a789"
+  }
+}
