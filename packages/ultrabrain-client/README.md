@@ -13,3 +13,12 @@ Automatic capture is disabled unless the trusted profile enables allow_capture, 
 ## Task-aware reads
 
 The task-context command accepts only an explicitly consented task/workspace JSON on stdin. A new allow_task_context profile opt-in, verified identity pins and bound workspace are mandatory; claude-task-hook additionally requires the separate automatic_task_context scope claude-user. Existing context/claude-hook and raw MCP tool contracts are unchanged. No capture, registration or model call is requested. Tasks are sent to the chosen server and may be subject to its operator logging policies. See docs/TASK-CONTEXT.md at the exact source commit for constraints and config/rollback instructions. This is not a new npm registry release or live Claude-model certification.
+
+## Explicit direct-source inspection
+
+The `lineage --profile PATH` command accepts one JSON stdin object with `memory_id`,
+`workspace`, `consent:true`, and optional `include_text` (default false). It requires
+observed instance/actor pins and workspace binding. It emits verified metadata by
+default, never captures text or calls a model. `dist/lineage.cjs` exports
+`inspectClientLineage(profile, request, {authorize, signal})` for explicit Node use.
+See `docs/CLIENT-LINEAGE.md` in the same repository commit for the complete contract.

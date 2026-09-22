@@ -45,6 +45,17 @@ jobs:
         env:
           ULTRABRAIN_TASK_CLIENT_ROOT: ${{ runner.temp }}/task-host/node_modules/ultrabrain-client
         run: bun test/personal-memory-read-integration.mjs && bun test/task-context-integration.mjs && bun test/client-proxy-lifecycle-integration.mjs
+      - name: Installed client direct-source verification, no model calls
+        env:
+          ULTRABRAIN_TASK_CLIENT_ROOT: ${{ runner.temp }}/task-host/node_modules/ultrabrain-client
+          ULTRABRAIN_CLIENT_LINEAGE_REPORT: ${{ runner.temp }}/client-lineage-report.json
+        run: bun test/client-lineage-integration.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-lineage-${{ github.sha }}
+          path: ${{ runner.temp }}/client-lineage-report.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Stop only isolated database
         if: always()
         run: bun src/cli.mjs db stop || true

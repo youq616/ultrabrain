@@ -1,0 +1,45 @@
+TAP version 13
+# Subtest: client lineage SDK: revocation during connection cleanup suppresses result delivery
+not ok 1 - client lineage SDK: revocation during connection cleanup suppresses result delivery
+  ---
+  duration_ms: 8.125792
+  type: 'test'
+  location: '/mnt/data/ub-next/test/client-lineage-runtime.test.mjs:65:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (file:///mnt/data/ub-next/test/client-lineage-runtime.test.mjs:69:6)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: client lineage SDK: transport handshake failure never returns its raw message
+not ok 2 - client lineage SDK: transport handshake failure never returns its raw message
+  ---
+  duration_ms: 2.19273
+  type: 'test'
+  location: '/mnt/data/ub-next/test/client-lineage-runtime.test.mjs:73:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    Error: PRIVATE_HANDSHAKE_DETAILS
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (file:///mnt/data/ub-next/test/client-lineage-runtime.test.mjs:75:2)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 125.666104

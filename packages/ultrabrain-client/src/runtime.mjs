@@ -1,4 +1,5 @@
 import {assertClientAuthorized,deliverClientRequest} from '../../../src/client-authorization.mjs';
+import {deliverClientLineage} from '../../../src/client-lineage.mjs';
 import {deliverTaskContext} from '../../../src/client-task-context.mjs';
 import {deliverDocumentImport,documentImportRequest} from '../../../src/client-document.mjs';
 /** Actual official MCP SDK client; profile command is trusted operator configuration. */
@@ -66,6 +67,11 @@ export async function connectClient(input,{signal,authorize=()=>{}}={}) {
           }});
       },
       async context(){await check();return clientContext(await invoke('ultra_personal_context',{limit:20,budget_bytes:profile.budgetBytes,...(profile.projectId?{project_id:profile.projectId}:{})}),profile);},
+      async lineage(p,{authorize:readAuthority=()=>{},signal:requestSignal}={}){
+        const activeSignal=requestSignal?AbortSignal.any([requestSignal,signal].filter(Boolean)):signal;
+        return deliverClientLineage(p,profile,{checkIdentity:check,invoke,signal:activeSignal,
+          authorize:()=>{allowed(activeSignal);return readAuthority();}});
+      },
       async taskContext(p,{authorize}={}){return deliverTaskContext(p,profile,{checkIdentity:check,invoke,signal,authorize});},
       async importDocument(p,{authorize}={}){return deliverDocumentImport(p,profile,{checkIdentity:check,invoke,signal,authorize});},
       async capture(p,{authorize}={}){return deliverCapture(p,profile,{checkIdentity:check,invoke,signal,authorize});},
