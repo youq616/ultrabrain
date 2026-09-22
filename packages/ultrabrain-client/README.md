@@ -50,3 +50,15 @@ metadata and separate revision/hash/quote comparisons, never body text. A succes
 exit reports completion, not absence of findings; inspect result.counts. No recursive
 graph, owner authentication, truth certification or automatic repair is implied.
 See docs/SNAPSHOT-SOURCE-AUDIT.md in the matching source commit.
+
+## Offline dependency impact
+
+`operation: "impact"` requires `consent: true`, one selected snapshot and an exact
+`memory_id` root. The same CLI and path/byte APIs report potential direct and
+transitive dependents, ordered by distance and ID. Stale references are included;
+malformed references, unsupported document origins and missing sources are
+reported as coverage gaps, not guessed relationships. Results never include
+bodies or quotes. No automatic invalidation, deletion, repair or server lookup
+occurs. `traversal_complete` covers known supported in-file edges only;
+`all_impacts_known`, `graph_verified`, `identity_verified` and `truth_verified`
+remain false. See `docs/SNAPSHOT-IMPACT.md` in the matching source commit.

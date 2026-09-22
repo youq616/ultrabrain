@@ -2,6 +2,7 @@
 import {setImmediate as yieldToEventLoop} from 'node:timers/promises';
 import {sha256,requireThat,UltraError} from './core.mjs';
 import {assertClientAuthorized} from './client-authorization.mjs';
+import {inspectMemorySnapshotImpact} from './snapshot-impact.mjs';
 import {auditMemorySnapshot,traceMemorySnapshot,SNAPSHOT_TRACE_DEFAULT_HOPS,validSnapshotTraceHops} from './snapshot-lineage-audit.mjs';
 import {
   inspectMemorySnapshotFile,compareMemorySnapshots,queryMemorySnapshot,readMemorySnapshotRecord,
@@ -24,13 +25,14 @@ export function snapshotRequest(input) {
   try { request = structuredClone(input); }
   catch { throw new UltraError('invalid_params','Cloneable snapshot request required'); }
   const choices = {inspect:['operation','consent'],compare:['operation','consent'],
-    audit:['operation','consent','memory_id'],trace:['operation','consent','memory_id','max_hops'],page:['operation','consent','options'],record:['operation','consent','memory_id','include_text']};
+    audit:['operation','consent','memory_id'],impact:['operation','consent','memory_id'],trace:['operation','consent','memory_id','max_hops'],page:['operation','consent','options'],record:['operation','consent','memory_id','include_text']};
   requireThat(object(request) && typeof request.operation === 'string' && Object.hasOwn(choices,request.operation) &&
     ownFields(request,choices[request.operation]),'invalid_params','Invalid offline snapshot operation');
   requireThat(request.consent === true,'snapshot_consent_required','Explicit local inspection consent required');
   if (request.operation === 'page') request.options = memorySnapshotQueryOptions(request.options === undefined ? {} : request.options);
   if (request.operation === 'audit') requireThat(request.memory_id === undefined || uuid(request.memory_id),
     'invalid_params','Invalid snapshot audit selection');
+  if (request.operation === 'impact') requireThat(uuid(request.memory_id),'invalid_params','A complete impact root ID is required');
   if (request.operation === 'trace') {
     request.max_hops = request.max_hops === undefined ? SNAPSHOT_TRACE_DEFAULT_HOPS : request.max_hops;
     requireThat(uuid(request.memory_id) && validSnapshotTraceHops(request.max_hops),
@@ -104,6 +106,7 @@ export async function inspectClientSnapshotBytes(input, inputs, {authorize=()=>{
     } else if (request.operation === 'compare') result = compareMemorySnapshots(files[0],files[1]);
     else if (request.operation === 'page') result = queryMemorySnapshot(files[0],request.options);
     else if (request.operation === 'audit') result = await auditMemorySnapshot(files[0],request.memory_id,allowed);
+    else if (request.operation === 'impact') result = await inspectMemorySnapshotImpact(files[0],request.memory_id,allowed);
     else if (request.operation === 'trace') result = await traceMemorySnapshot(files[0],request.memory_id,request.max_hops,allowed);
     else {
       const row = readMemorySnapshotRecord(files[0],request.memory_id);
@@ -116,6 +119,7 @@ export async function inspectClientSnapshotBytes(input, inputs, {authorize=()=>{
         expected_hash_verified:copies[index].expected_sha256 !== undefined})),result,
       limitations:['unsigned-self-declared-owner','no-live-database-check','absence-is-not-deletion',
         'no-chronology-inference','not-a-restore-plan','metadata-is-private',
+        request.operation === 'impact' ? 'same-file-potential-dependent-records-only' :
         request.operation === 'trace' ? 'same-file-bounded-matched-chain-only' :
           request.operation === 'audit' ? 'same-file-direct-reference-only' : 'no-source-following']};
     allowed(); return freezeSnapshotResult(report);

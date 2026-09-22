@@ -81,9 +81,26 @@ try{
     }
     assert.equal(run({memory_id:randomUUID()},mode,1).error,'snapshot_record_missing');pass();
   }
+  // Impact runs on those same six REAL consolidated rows; no fabricated graph
+  // or direct SQL mutation is used to pretend the server generated a chain.
+  let impactChecks=0;
+  for(const mode of ['cli','library','bytes'])for(const [state,f] of Object.entries(fixtures)){
+    const r=run({operation:'impact',memory_id:f.input},mode);
+    assert.deepEqual(r.result.counts,{direct:1,indirect:0,total:1});
+    assert.equal(r.result.entries[0].memory.id,f.id);
+    assert.equal(r.result.entries[0].direct_source_state,state);
+    assert.equal(r.result.entries[0].path_has_reference_findings,state!=='matched');
+    assert.equal(r.result.coverage.scanned_records,6);
+    assert.equal(r.result.all_impacts_known,false);assert.equal(r.result.text_included,false);
+    assert.equal(r.network_requests,0);assert.equal(r.memory_writes_requested,false);
+    assert.equal(r.identity_verified,false);assert.equal(r.truth_verified,false);pass();impactChecks++;
+    const leaf=run({operation:'impact',memory_id:f.id},mode);
+    assert.deepEqual(leaf.result.counts,{direct:0,indirect:0,total:0});
+    assert.equal(leaf.result.all_impacts_known,false);pass();impactChecks++;
+  }
   assert.deepEqual(await fingerprint(),before);assert.deepEqual([sha(readFileSync(path)),statSync(path).mtimeMs],fileBefore);pass();
-  const report={passed:true,checks,scope:'Real PostgreSQL/consolidator snapshot -> SDK-free installed Node audit CLI/library/bytes',
-    exported_records:6,injected_synthetic_generations:generations,external_model_calls:0,tables_unchanged_in_audit_phase:6,
+  const report={passed:true,checks,scope:'Real PostgreSQL/consolidator snapshot -> SDK-free installed Node audit, trace and impact CLI/library/bytes',
+    impact_checks:impactChecks,exported_records:6,injected_synthetic_generations:generations,external_model_calls:0,tables_unchanged_in_audit_phase:6,
     input_bytes_and_mtime_unchanged:true,bundle_hashes_checked:true,actual_user_host_verified:false};
   if(process.env.ULTRABRAIN_SNAPSHOT_AUDIT_REPORT)writeFileSync(process.env.ULTRABRAIN_SNAPSHOT_AUDIT_REPORT,JSON.stringify(report,null,2)+'\n');
   console.log(JSON.stringify(report,null,2));

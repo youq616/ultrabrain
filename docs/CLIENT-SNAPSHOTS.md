@@ -186,3 +186,10 @@ write/writev 和 FileHandle 修改。允许真实只读 IO 与 stdout/stderr；�
 遇到不一致、缺失、文档来源、循环或跳数上限时明确终止。默认 32 跳，可
 显式设置 `max_hops:1..128`；所有模式只输出元数据。完整请求、边界和
 结果解释见 [SNAPSHOT-SOURCE-TRACE.md](SNAPSHOT-SOURCE-TRACE.md)。
+
+## 离线依赖影响分析
+
+`impact` 要求一份文件、完整 `memory_id` 和显式 `consent:true`。先核验整份快照，
+再沿声明的反向依赖查找直接和间接记录。与 `trace` 只沿匹配来源向上追踪不同，
+它保留已修改、归档或不匹配的引用边，供人工排查。只返回元数据；
+成功生成报告不证明可以安全删除或所有影响已知。详见 [SNAPSHOT-IMPACT.md](SNAPSHOT-IMPACT.md)。

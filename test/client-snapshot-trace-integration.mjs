@@ -46,7 +46,9 @@ function run(path,memory_id,mode,extra={},status=0){
   assert.ifError(child.error);assert.equal(child.signal,null);assert.equal(child.status,status,child.stderr);assert.equal(child.stderr,'');
   for(const text of [dir,'TRACE_PRIVATE','OFFLINE_FORBIDDEN_OPERATION'])assert.ok(!child.stdout.includes(text));
   const r=JSON.parse(child.stdout);
-  if(status===0){assert.equal(r.result.graph_verified,false);assert.equal(r.result.historical_chain_verified,false);
+  if(status===0){assert.equal(r.result.graph_verified,false);
+    if(input.operation==='trace')assert.equal(r.result.historical_chain_verified,false);
+    else {assert.equal(r.operation,'impact');assert.equal(r.result.all_impacts_known,false);}
     assert.equal(r.identity_verified,false);assert.equal(r.truth_verified,false);assert.equal(r.result.text_included,false);}
   return r;
 }
@@ -84,8 +86,27 @@ try{
     assert.deepEqual(r.result.cycle,{entry_id:cycleIds[0],entry_index:0,closing_index:1});pass();
     assert.equal(run(original,randomUUID(),mode,{},1).error,'snapshot_record_missing');pass();
   }
+  // Reverse traversal deliberately retains stale edges that forward trace stops at.
+  // These relationships are the same explicitly seeded metadata above, not model ancestry.
+  let impactChecks=0;
+  for(const mode of ['cli','library','bytes']){
+    let r=run(original,ids[0],mode,{operation:'impact'});
+    assert.deepEqual(r.result.entries.map(e=>[e.memory.id,e.distance]),ids.slice(1).map((id,i)=>[id,i+1]));
+    assert.deepEqual(r.result.counts,{direct:1,indirect:2,total:3});pass();impactChecks++;
+    r=run(changed,ids[1],mode,{operation:'impact'});
+    assert.deepEqual(r.result.entries.map(e=>e.memory.id),ids.slice(2));
+    assert.equal(r.result.entries[0].direct_source_state,'changed');
+    assert.ok(r.result.entries.every(e=>e.path_has_reference_findings));pass();impactChecks++;
+    r=run(changed,ids[0],mode,{operation:'impact'});
+    // Explicit store.update removed record1's declared parent. Never recreate that edge.
+    assert.equal(r.result.counts.total,0);pass();impactChecks++;
+    r=run(cyclic,cycleIds[0],mode,{operation:'impact'});
+    assert.equal(r.result.root_in_cycle,true);assert.equal(r.result.counts.total,1);
+    assert.equal(r.result.entries[0].memory.id,cycleIds[1]);pass();impactChecks++;
+    r=run(original,ids[3],mode,{operation:'impact'});assert.equal(r.result.counts.total,0);pass();impactChecks++;
+  }
   assert.deepEqual(await fingerprint(),before);assert.deepEqual(paths.map(p=>[sha(readFileSync(p)),statSync(p).mtimeMs]),filesBefore);pass();
-  const report={passed:true,checks,scope:'Real PostgreSQL synthetic relationships -> actual export -> SDK-free built Node trace',
+  const report={passed:true,checks,impact_checks:impactChecks,scope:'Real PostgreSQL synthetic relationships -> actual export -> SDK-free built Node trace and impact',
     synthetic_relation_updates:injectedReferences,exported_record_counts:[4,4,6],external_model_calls:0,
     actual_model_job_history_verified:false,tables_unchanged_in_trace_phase:6,input_bytes_and_mtime_unchanged:true,
     bundle_hashes_checked:true,actual_user_host_verified:false};
