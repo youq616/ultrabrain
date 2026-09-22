@@ -123,8 +123,22 @@ with sync_playwright() as p:
         page.screenshot(path=os.environ['ULTRABRAIN_BARRIER_SCREENSHOT'], full_page=True)
     checks += 1
     control('ENABLE'); control('RELEASE_PRIMARY')
-    page.wait_for_function('window.primaryWireResult?.ok===true')
-    assert page.evaluate('window.primaryWireResult.result.results[0].state') == 'completed'
+    # Await the actual wire Promise directly. wait_for_function uses in-page eval,
+    # which can be refused by this console's strict CSP. Keep the original 30s bound
+    # and all result/unknown-delivery assertions; never relax CSP or resend a request.
+    primary_wire_result = page.evaluate("""async () => {
+      const completion=window.primaryWire;
+      if(!completion || typeof completion.then!=='function')throw Error('Primary wire missing');
+      let timer;
+      try {
+        await Promise.race([completion,new Promise((_,reject)=>{
+          timer=setTimeout(()=>reject(Error('Primary wire deadline exceeded')),30000);
+        })]);
+        return window.primaryWireResult;
+      } finally {clearTimeout(timer);}
+    }""")
+    assert primary_wire_result['ok'] is True
+    assert primary_wire_result['result']['results'][0]['state'] == 'completed'
     expect(page.locator('#pending-panel')).to_be_visible()
     inspect('completed'); finish()
     checks += 1

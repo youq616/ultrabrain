@@ -1,0 +1,10 @@
+# Selected original CI lines, not the complete remote log.
+# Candidate 213b42c51e1025f2cb8b4373b77f6938ac44ff09, run35669293556 attempt1, job106561925990.
+# Complete log was read via GitHub.fetch_workflow_job_logs; unchanged recovery-barrier stage failed before lineage.
+2026-09-21T23:58:51.5269874Z   File "/home/runner/work/ultrabrain/ultrabrain//test/personal-job-recovery-barrier-browser.py", line 126, in <module>
+2026-09-21T23:58:51.5270613Z     page.wait_for_function('window.primaryWireResult?.ok===true')
+2026-09-21T23:58:51.5293903Z playwright._impl._errors.Error: Page.wait_for_function: EvalError: Evaluating a string as JavaScript violates the following Content Security Policy directive because 'unsafe-eval' is not an allowed source of script: script-src 'self'".
+2026-09-21T23:58:51.5296072Z     at predicate (eval at evaluate (:290:30), <anonymous>:4:56)
+2026-09-21T23:58:51.7462706Z AssertionError: Recovery barrier Chromium failed
+2026-09-21T23:58:51.7547455Z ##[error]Process completed with exit code 1.
+# Snapshot export/inspection/explorer and lineage steps were skipped; no success claimed for them on attempt1.

@@ -118,3 +118,50 @@ for(const damage of ['foreign','malformed','wrong_job'])test('inconclusive retry
  assert.equal(f.run('pending'),saved);assert.equal(f.run('pending.last_processing_outcome'),undefined);
  assert.match(f.get('message').textContent,/console_receipt_unconfirmed/);
 });
+
+// CI 35669293556/job106561925990 rejected wait_for_function's internal eval
+// under the unchanged strict CSP. Exercise the actual replacement callback with
+// string code generation disabled; this VM check is not real-browser evidence.
+const barrierScript=readFileSync(new URL('./personal-job-recovery-barrier-browser.py',import.meta.url),'utf8');
+function wireWaitFixture(window){
+ const expression=/primary_wire_result = page\.evaluate\("""([\s\S]*?)"""\)/.exec(barrierScript)?.[1];
+ assert.ok(expression,'A bounded direct Promise wait must replace the CSP-dependent poller');
+ let timeout,cleared=0,timers=0;
+ const ctx=vm.createContext({window,
+  setTimeout(fn,ms){assert.equal(ms,30000);timeout=fn;timers++;return 7;},
+  clearTimeout(id){assert.equal(id,7);cleared++;}}, {codeGeneration:{strings:false,wasm:false}});
+ return {run:()=>vm.runInContext('('+expression+')()',ctx),expire:()=>timeout(),
+  get cleared(){return cleared;},get timers(){return timers;}};
+}
+test('CSP wire wait: retain strict security, completion and uncertainty assertions',()=>{
+ assert.ok(!barrierScript.includes('wait_for_function('));
+ assert.ok(!barrierScript.includes('bypass_csp'));
+ assert.ok(barrierScript.includes("assert primary_wire_result['ok'] is True"));
+ assert.ok(barrierScript.includes("assert primary_wire_result['result']['results'][0]['state'] == 'completed'"));
+ assert.ok(barrierScript.includes("expect(page.locator('#pending-panel')).to_be_visible()"));
+ const consoleCode=readFileSync(new URL('../src/personal-console.mjs',import.meta.url),'utf8');
+ assert.match(consoleCode,/script-src 'self'/);assert.ok(!consoleCode.includes('unsafe-eval'));
+});
+test('CSP wire wait: actual completed response resolves and clears the bounded timer',async()=>{
+ const response={ok:true,result:{results:[{state:'completed'}]}},window={primaryWire:Promise.resolve(),primaryWireResult:response};
+ const f=wireWaitFixture(window);assert.equal(await f.run(),response);assert.equal(f.cleared,1);assert.equal(f.timers,1);
+});
+test('CSP wire wait: stale result cannot bypass the actual in-flight completion',async()=>{
+ let release;const window={primaryWire:new Promise(r=>release=r),primaryWireResult:{ok:true}};
+ const f=wireWaitFixture(window);let finished=false;const work=f.run().then(value=>{finished=true;return value;});
+ await Promise.resolve();await Promise.resolve();assert.equal(finished,false);
+ const actual={ok:true,result:{results:[{state:'completed'}]}};window.primaryWireResult=actual;release();
+ assert.equal(await work,actual);assert.equal(f.cleared,1);
+});
+test('CSP wire wait: failed wire data is not converted into a successful acknowledgement',async()=>{
+ const failure={wireFailed:true},f=wireWaitFixture({primaryWire:Promise.resolve(),primaryWireResult:failure});
+ assert.equal(await f.run(),failure);assert.equal(f.cleared,1);
+});
+test('CSP wire wait: missing original Promise fails instead of accepting cached state',async()=>{
+ const f=wireWaitFixture({primaryWireResult:{ok:true}});
+ await assert.rejects(f.run(),/Primary wire missing/);assert.equal(f.timers,0);assert.equal(f.cleared,0);
+});
+test('CSP wire wait: stalled wire rejects at the existing 30-second deadline',async()=>{
+ const f=wireWaitFixture({primaryWire:new Promise(()=>{})});const work=f.run();f.expire();
+ await assert.rejects(work,/Primary wire deadline exceeded/);assert.equal(f.timers,1);assert.equal(f.cleared,1);
+});
