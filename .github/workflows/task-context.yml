@@ -82,6 +82,17 @@ jobs:
           path: ${{ runner.temp }}/snapshot-audit-report.json
           if-no-files-found: error
           retention-days: 14
+      - name: Bounded source trace on real PostgreSQL fixture exports
+        env:
+          ULTRABRAIN_TASK_CLIENT_ROOT: ${{ runner.temp }}/task-host/node_modules/ultrabrain-client
+          ULTRABRAIN_SNAPSHOT_TRACE_REPORT: ${{ runner.temp }}/snapshot-trace-report.json
+        run: bun test/client-snapshot-trace-integration.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-trace-${{ github.sha }}
+          path: ${{ runner.temp }}/snapshot-trace-report.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Stop only isolated database
         if: always()
         run: bun src/cli.mjs db stop || true

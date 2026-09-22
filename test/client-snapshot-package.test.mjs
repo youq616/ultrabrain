@@ -29,7 +29,7 @@ test('offline package: static import closure contains only approved builtins and
 });
 test('offline package: portability includes all new suites without dropping lineage or Windows',()=>{
   const flow=read('.github/workflows/client-portability.yml');
-  for(const name of ['client-snapshot-audit','client-snapshot-audit-cli','client-snapshot','client-snapshot-files','client-snapshot-races','client-snapshot-cli','client-snapshot-package','client-lineage','personal-snapshot-inspector'])
+  for(const name of ['client-snapshot-trace','client-snapshot-trace-cli','client-snapshot-audit','client-snapshot-audit-cli','client-snapshot','client-snapshot-files','client-snapshot-races','client-snapshot-cli','client-snapshot-package','client-lineage','personal-snapshot-inspector'])
     assert.ok(flow.includes('test/'+name+'.test.mjs'),name);
   assert.ok(flow.includes('windows-2025'));
 });

@@ -178,3 +178,11 @@ write/writev 和 FileHandle 修改。允许真实只读 IO 与 stdout/stderr；�
 
 新增 audit 操作复用上述文件、同意和完整校验边界。详细请求、九种状态、
 退出码与直接引用限制见 [SNAPSHOT-SOURCE-AUDIT.md](SNAPSHOT-SOURCE-AUDIT.md)。
+
+
+## 多级来源追踪
+
+`trace` 从必填 `memory_id` 开始，只沿同文件中完整匹配的直接来源继续，
+遇到不一致、缺失、文档来源、循环或跳数上限时明确终止。默认 32 跳，可
+显式设置 `max_hops:1..128`；所有模式只输出元数据。完整请求、边界和
+结果解释见 [SNAPSHOT-SOURCE-TRACE.md](SNAPSHOT-SOURCE-TRACE.md)。

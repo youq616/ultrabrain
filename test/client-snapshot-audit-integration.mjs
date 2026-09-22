@@ -73,6 +73,12 @@ try{
       const one=run({memory_id:f.id},mode);assert.equal(one.result.entries.length,1);
       assert.equal(one.result.entries[0].state,state);assert.equal(one.result.entries[0].reference.input_id,f.input);pass();
     }
+    for(const [state,f] of Object.entries(fixtures)){
+      const traced=run({operation:'trace',memory_id:f.id},mode);
+      assert.equal(traced.result.termination,state==='matched'?'unlinked':state);
+      assert.equal(traced.result.followed_hops,state==='matched'?1:0);
+      assert.equal(traced.result.historical_chain_verified,false);pass();
+    }
     assert.equal(run({memory_id:randomUUID()},mode,1).error,'snapshot_record_missing');pass();
   }
   assert.deepEqual(await fingerprint(),before);assert.deepEqual([sha(readFileSync(path)),statSync(path).mtimeMs],fileBefore);pass();

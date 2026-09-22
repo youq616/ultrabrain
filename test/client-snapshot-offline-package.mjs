@@ -43,11 +43,12 @@ try {
     assert.ok(!r.stdout.includes(dir)&&!r.stdout.includes('OFFLINE_FORBIDDEN_OPERATION'));
     return {report:JSON.parse(r.stdout),text:r.stdout};
   }
-  for(const mode of ['cli','library','bytes'])for(const operation of ['inspect','compare','page','record','audit']){
-    const input=request(operation,operation==='audit'?{memory_id:uuid(2)}:operation==='record'?{memory_id:uuid(1)}:operation==='page'?{options:{query:'PRIVATE_OFFLINE'}}:{});
+  for(const mode of ['cli','library','bytes'])for(const operation of ['inspect','compare','page','record','audit','trace']){
+    const input=request(operation,['audit','trace'].includes(operation)?{memory_id:uuid(2)}:operation==='record'?{memory_id:uuid(1)}:operation==='page'?{options:{query:'PRIVATE_OFFLINE'}}:{});
     const {report,text}=run(input,{mode});assert.equal(report.operation,operation);assert.equal(report.identity_verified,false);
     assert.ok(!text.includes(body)&&!text.includes(provenance)&&!text.includes('PRIVATE_OFFLINE'));
     if(operation==='audit'){assert.equal(report.result.entries[0].state,'matched');assert.equal(report.result.text_included,false);}
+    if(operation==='trace'){assert.equal(report.result.termination,'unlinked');assert.equal(report.result.followed_hops,1);}
     assert.equal(report.local_only,true);assert.equal(report.memory_writes_requested,false);pass();
   }
   for(const mode of ['cli','library','bytes']){
