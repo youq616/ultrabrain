@@ -1,0 +1,72 @@
+{
+  "format": 1,
+  "base_commit": "677eff98a1cb45389414b839ee6c2d631b1fabb5",
+  "base_tree": "130cac578d8f7bb49d83170a9bb0b126b86177ca",
+  "prior_local_tree": "33804d8d24957e00e9a65a841b203c2393bf9805",
+  "scope": "Fresh continuation: prior local attempt remains historical, new final SHA CI/review pending at creation",
+  "execution_user": "oai",
+  "umask": "022",
+  "node_version": "22.16.0",
+  "python_version": "3.13.5",
+  "results": {
+    "node": {
+      "tests": 1400,
+      "pass": 1400,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "exit": 0
+    },
+    "snapshot_subset": {
+      "tests": 77,
+      "pass": 77,
+      "exit": 0
+    },
+    "python": {
+      "tests": 683,
+      "pass": 683,
+      "duration_seconds": 41.941,
+      "exit": 0
+    }
+  },
+  "logs": [
+    {
+      "file": "focused-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "focused-final.log",
+      "sha256": "501050e21cdd7eead519a85267967e9511033dddb114a24f0514ce16bfe11501"
+    },
+    {
+      "file": "focused-final.time",
+      "sha256": "89646714257135d4cc84aa3b3d333573b5bba5b5808e59eac36934bd824d83b7"
+    },
+    {
+      "file": "node-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-final.log",
+      "sha256": "0912e43d548da136a3f442842ea1ec3631bbcc4b762f3368a1502c5618cd4061"
+    },
+    {
+      "file": "node-final.time",
+      "sha256": "2962737e684520d3b36f0deda5cd3e2b30e1e48af5d5ddbfe774342cb08d5fb1"
+    },
+    {
+      "file": "python-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-final.log",
+      "sha256": "839f51100e1fd044c635fee7162777a8825f96639789183f21c09936febb09b9"
+    },
+    {
+      "file": "python-final.time",
+      "sha256": "01d25050e8612fe39f5f7330f9ce1ba996d6d40a2b8f05f6cb105efe21917c94"
+    }
+  ],
+  "real_postgres_browser": "pending candidate CI",
+  "independent_final_review": "pending exact commit"
+}

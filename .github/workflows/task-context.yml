@@ -44,7 +44,55 @@ jobs:
       - name: Actual installed Node task/Claude-fixture CLI, stdio/HTTP, PostgreSQL and revocation
         env:
           ULTRABRAIN_TASK_CLIENT_ROOT: ${{ runner.temp }}/task-host/node_modules/ultrabrain-client
-        run: bun test/task-context-integration.mjs
+        run: bun test/personal-memory-read-integration.mjs && bun test/task-context-integration.mjs && bun test/client-proxy-lifecycle-integration.mjs
+      - name: Installed client direct-source verification, no model calls
+        env:
+          ULTRABRAIN_TASK_CLIENT_ROOT: ${{ runner.temp }}/task-host/node_modules/ultrabrain-client
+          ULTRABRAIN_CLIENT_LINEAGE_REPORT: ${{ runner.temp }}/client-lineage-report.json
+        run: bun test/client-lineage-integration.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-lineage-${{ github.sha }}
+          path: ${{ runner.temp }}/client-lineage-report.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Prove offline guard rejects descriptor writes and caught denials
+        run: node --test test/snapshot-offline-guard.test.mjs
+      - name: Standalone installed snapshot entries under the descriptor guard
+        run: node test/client-snapshot-offline-package.mjs "$RUNNER_TEMP/task-host/node_modules/ultrabrain-client"
+      - name: Installed offline snapshot toolbox on actual database exports
+        env:
+          ULTRABRAIN_TASK_CLIENT_ROOT: ${{ runner.temp }}/task-host/node_modules/ultrabrain-client
+          ULTRABRAIN_CLIENT_SNAPSHOT_REPORT: ${{ runner.temp }}/client-snapshot-report.json
+        run: bun test/client-snapshot-integration.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-snapshot-${{ github.sha }}
+          path: ${{ runner.temp }}/client-snapshot-report.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Offline source audit on real consolidated PostgreSQL exports
+        env:
+          ULTRABRAIN_TASK_CLIENT_ROOT: ${{ runner.temp }}/task-host/node_modules/ultrabrain-client
+          ULTRABRAIN_SNAPSHOT_AUDIT_REPORT: ${{ runner.temp }}/snapshot-audit-report.json
+        run: bun test/client-snapshot-audit-integration.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-audit-${{ github.sha }}
+          path: ${{ runner.temp }}/snapshot-audit-report.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Bounded source trace on real PostgreSQL fixture exports
+        env:
+          ULTRABRAIN_TASK_CLIENT_ROOT: ${{ runner.temp }}/task-host/node_modules/ultrabrain-client
+          ULTRABRAIN_SNAPSHOT_TRACE_REPORT: ${{ runner.temp }}/snapshot-trace-report.json
+        run: bun test/client-snapshot-trace-integration.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-trace-${{ github.sha }}
+          path: ${{ runner.temp }}/snapshot-trace-report.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Stop only isolated database
         if: always()
         run: bun src/cli.mjs db stop || true

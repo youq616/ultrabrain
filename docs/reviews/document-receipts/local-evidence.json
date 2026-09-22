@@ -1,0 +1,147 @@
+{
+  "format": 1,
+  "base": "9cbd37963006948d72a8794d884327791a29b3af",
+  "base_tree": "a0f55b7f37e13a9e62a148a99333bf6b8d31dbe3",
+  "source_tree_reconstruction_verified": true,
+  "local_execution_user": "oai",
+  "results": {
+    "first65": {
+      "pass": 4,
+      "fail": 61
+    },
+    "node": {
+      "tests": 974,
+      "pass": 974,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "exit_code": 0
+    },
+    "python": {
+      "tests": 683,
+      "pass": 683,
+      "duration_seconds": 40.764,
+      "exit_code": 0
+    },
+    "document_subset": {
+      "tests": 79,
+      "pass": 79
+    },
+    "browser_mock": "blocked before any operation by ERR_BLOCKED_BY_ADMINISTRATOR; not browser/PostgreSQL evidence",
+    "real_browser": "pending candidate CI",
+    "independent_review": "pending exact final commit"
+  },
+  "files": [
+    {
+      "path": "web/personal/app.js",
+      "git_blob": "854e08ff72e4ea896ff3fbb78af1405e379d7774"
+    },
+    {
+      "path": "test/personal-document-receipts.test.mjs",
+      "git_blob": "240cc39920434e860568a70118ccb8c2c9913030"
+    },
+    {
+      "path": "test/personal-document-receipts-browser.py",
+      "git_blob": "d49d053a7650af3f7b9063ebfb2192a4b0cc920b"
+    },
+    {
+      "path": "test/personal-recall-browser-fixture.mjs",
+      "git_blob": "195dede631390297bd57635f2c8e24ff1599892f"
+    },
+    {
+      "path": "test/personal-console-receipts.test.mjs",
+      "git_blob": "5f578a1a96325313411550bc63e6b69e0b81a076"
+    },
+    {
+      "path": ".github/workflows/personal-recall-preview.yml",
+      "git_blob": "7aae425ad05f05027ba495b045d522ff3047d137"
+    },
+    {
+      "path": ".github/workflows/client-portability.yml",
+      "git_blob": "b011e6e655e5730ccffa6063e0552da2a5f190e0"
+    },
+    {
+      "path": "docs/PERSONAL-DOCUMENT-RECEIPTS.md",
+      "git_blob": "18351b357708059ad991a4919cb95098b73b08b9"
+    },
+    {
+      "path": "docs/PERSONAL-CONSOLE-RECEIPTS.md",
+      "git_blob": "fc28be2070367fb2f22157aeacb6938749563f75"
+    },
+    {
+      "path": "docs/reviews/document-receipts/first-failure.log.gz",
+      "git_blob": "7e8307a75e08cae6c8302ad956438bf5155b890c"
+    },
+    {
+      "path": "docs/reviews/document-receipts/README.md",
+      "git_blob": "c20b3774cd060781dd42e13b6552f1d66e45b2bb"
+    }
+  ],
+  "logs": [
+    {
+      "file": "document-first-failure.log",
+      "sha256": "5365944f1ed880fc132e9b5783c3449a1ea05ef0157c4521ab70abf0eced0a78"
+    },
+    {
+      "file": "document-first-failure.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "document-implementation.log",
+      "sha256": "855c847a54808647900337e57963beb5ed173622c2285effddad3c310d84df42"
+    },
+    {
+      "file": "document-implementation.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-initial-full.log",
+      "sha256": "fa6295be9d00ae5247baeb8bb40445c2ef3195f33dd90216228efe5e4d3a27ff"
+    },
+    {
+      "file": "node-initial-full.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-final.log",
+      "sha256": "c0349186ce019f05c65f7cab41577a8225df8f2073cea5eac818da9112be5c57"
+    },
+    {
+      "file": "node-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "document-final.log",
+      "sha256": "c9edbc3143fb0e3a795b3c55d52eec0d819df4890d338d0853a2622b85f1c391"
+    },
+    {
+      "file": "document-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-final.log",
+      "sha256": "20b38e0d3b6ee9dbed15e4e1dde15fa5f081b72a911dfe367d05baf67e84953b"
+    },
+    {
+      "file": "python-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-time-limited.log",
+      "sha256": "8f60b68484bfa52e512a0e76021ca20dd9596816da5e824985c2e71bb444f4a7"
+    },
+    {
+      "file": "python-time-limited.txt",
+      "sha256": "4d44589b40598d2c7534b65766a683f4c5d32a8e3f48a6734f28ee19c5371d74"
+    },
+    {
+      "file": "browser-mock.log",
+      "sha256": "295777dd4119ded2d6f18d6fbfda2420dda4d6b2b5a01a28cfb0a0e7e0b0a731"
+    },
+    {
+      "file": "browser-mock.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    }
+  ],
+  "first_failure_uncompressed_sha256": "5365944f1ed880fc132e9b5783c3449a1ea05ef0157c4521ab70abf0eced0a78"
+}

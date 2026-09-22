@@ -1,0 +1,139 @@
+{
+  "baseline_commit": "3fe12777cd1e77deaa02e8c3837dd5aa91b2767d",
+  "baseline_tree": "f59d863083c9935e118f911dddacabe3fd75d297",
+  "node_version": "v22.16.0",
+  "node": {
+    "tests": 2066,
+    "batches": [
+      {
+        "tests": 479,
+        "pass": 479,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      {
+        "tests": 581,
+        "pass": 581,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      {
+        "tests": 472,
+        "pass": 472,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      {
+        "tests": 534,
+        "pass": 534,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    ],
+    "test_files": 96,
+    "disjoint_complete_file_coverage": true
+  },
+  "python": {
+    "tests": 683,
+    "batches": [
+      {
+        "part": 0,
+        "tests": 98,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 13.146
+      },
+      {
+        "part": 1,
+        "tests": 98,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 16.17
+      },
+      {
+        "part": 2,
+        "tests": 98,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 13.996
+      },
+      {
+        "part": 3,
+        "tests": 98,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 12.539
+      },
+      {
+        "part": 4,
+        "tests": 97,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 16.065
+      },
+      {
+        "part": 5,
+        "tests": 97,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 11.763
+      },
+      {
+        "part": 6,
+        "tests": 97,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 8.034
+      }
+    ],
+    "disjoint_complete_id_coverage": true
+  },
+  "syntax_and_workflow_preservation": true,
+  "local_platform": "linux",
+  "uid": 1000,
+  "independent_review": "PENDING",
+  "remote_ci_for_new_change": "PENDING",
+  "first_failure": {
+    "tests": 57,
+    "pass": 23,
+    "fail": 34,
+    "reason": "TDD before trace implementation; control rejections passed"
+  },
+  "interrupted_runs": [
+    "node-full-interrupted.tap",
+    "python-1-interrupted.log"
+  ],
+  "log_sha256": {
+    "node-0.tap": "482d5b07815b9f67c1bc0627b7ce6ca3b4d8a62de1f570058f009d9cac399d23",
+    "node-1.tap": "99df05ef48d864ba0abdf518be2b209fc451ba94512f8281b20336340340f3b6",
+    "node-2.tap": "7377c60547cd902623ca82e412e78a38baebdbd8375be6b9c425477dca4b828a",
+    "node-3.tap": "2344549f9250471fce66f67c9d0e47078d2e51009f6d816553384ffecbcdc1c8",
+    "node-full-interrupted.tap": "ede9fdc73f98d2cf4d718f379cffb5ca546b8fbfc666e5b4ec4831730d616317",
+    "python-0.log": "247cfd2dc7ba8758deb5fa3be9fb034f9f233d51afd20ff07f328296b0ac6124",
+    "python-1-interrupted.log": "78516a884df1d5512dcec7e01233fffcf5520abac7da0c60ece3b48f8ccc9d89",
+    "python-1.log": "ebdffa16480a3748175077f170164ed6245c477f5ae6385c12cb3479df599d44",
+    "python-2.log": "01cdebc6e385436026397e137fb513649bc813f4539d4dea754cadce0e740dbf",
+    "python-3.log": "f6df0af5065589b65a97121a6b79277aa054c0f61f1378f14f4c338cee4b693d",
+    "python-4.log": "4f2527832059359292af129c10e22c05bbbee1c603232f5a961b2a926853f8e9",
+    "python-5.log": "83b0152995b4b4f365077224c74643aeb5fcbe53330c3d91b4e5224f4d868fb8",
+    "python-6.log": "ff4e1e13afd8c88360493b695dba41d1fd0b70fec9e29392a368af4570392d3b",
+    "trace-cli-regression.tap": "ffdc1fdd852de7bae95e9ef3f35d828f6e4c30250b1e85c098f75eabc0c914e3",
+    "trace-first-failure.tap": "8a3cc3a014a3d30bd86f80252b0e6141ec0d4171171a0eae6f6acdc0f84db4db",
+    "trace-implemented.tap": "315068608583f3cba7e828e8f91317f3f3c09f03b76728c887e93be7f9a6d38d"
+  }
+}

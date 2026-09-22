@@ -1,0 +1,66 @@
+{
+  "format": 1,
+  "base_commit": "8626cffce2240fb98338c54485eaafb50c1f4222",
+  "review": "implementation self-review only; independent review PENDING",
+  "source_blobs": {
+    "scripts/personal-init.py": "32bc3f143cc6635a5b64bfce166a233f3f3d538d",
+    "test/test_personal_init_contract.py": "d45490d7911557c734d95e752c7f09f5a719afb9",
+    "test/personal-init-integration.mjs": "b55b4e53577b1faf81ca508358c0331e222592ec",
+    "docs/PERSONAL-INIT.md": "70b8f1a89bc7a3bef2f005223d9141f70497fb92"
+  },
+  "local_logs": [
+    {
+      "file": "first-failure.log",
+      "sha256": "8007abad5b6e08e6344756cdbd73dcd64c2470d35f04dab514a8c8a370ab87ab"
+    },
+    {
+      "file": "focused-final.log",
+      "sha256": "524f1acc31898feb26d984058e042c4de2653374d29550550fd5bf11296018d8"
+    },
+    {
+      "file": "node-full.log",
+      "sha256": "dd765f2229eabe33718f03255fa70bb3f9984a8befc85d711d03a46550d16749"
+    },
+    {
+      "file": "optimized-init.log",
+      "sha256": "1998d7b39b256cee821023a3b8759d7a41fa2b5f11236a4716c05b6976668b45"
+    },
+    {
+      "file": "python-full.log",
+      "sha256": "0439d5a71e479d1d3406699c50c262a15a52bd4c4a542204794753929233d2ee"
+    }
+  ],
+  "tests": {
+    "node_full": {
+      "tests": 615,
+      "pass": 615,
+      "fail": 0,
+      "skipped": 0
+    },
+    "python_full": {
+      "tests": 589,
+      "pass": 589,
+      "fail": 0
+    },
+    "focused": {
+      "tests": 12,
+      "pass": 12,
+      "fail": 0
+    },
+    "optimized_init": {
+      "tests": 43,
+      "pass": 43,
+      "fail": 0
+    },
+    "before_fix": {
+      "test_methods": 12,
+      "failed_assertions_including_subtests": 30
+    }
+  },
+  "local_integration": "not executed; CI required",
+  "candidate_ci": "pending at commit time",
+  "first_failure": {
+    "repository_file": "contract-first-failure.log.gz",
+    "uncompressed_sha256": "8007abad5b6e08e6344756cdbd73dcd64c2470d35f04dab514a8c8a370ab87ab"
+  }
+}

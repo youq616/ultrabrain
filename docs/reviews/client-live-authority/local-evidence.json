@@ -1,0 +1,96 @@
+{
+  "format": 1,
+  "application_base": "9ff749ad1ea790e71292a090af88507db72d33a0",
+  "review_base": "491bf6fd702d8b88d30d65acb23b259a99242fcb",
+  "review": "implementation self-review only; independent review pending at creation",
+  "results": {
+    "node": {
+      "tests": 694,
+      "pass": 694,
+      "fail": 0,
+      "skipped": 0
+    },
+    "python": {
+      "tests": 683,
+      "pass": 683
+    },
+    "original_runtime_sdk_doubles": {
+      "tests": 18,
+      "pass": 2,
+      "fail": 16
+    },
+    "new_real_mcp_postgres": "pending CI at creation"
+  },
+  "files": [
+    {
+      "path": ".github/workflows/client-portability.yml",
+      "git_blob": "cade5bf1024e4809f9d5c74fd1ce49c80f8a0bce"
+    },
+    {
+      "path": ".github/workflows/task-context.yml",
+      "git_blob": "82915bf09c4c14cdb1f2c8c913c3e4396b20a30a"
+    },
+    {
+      "path": "packages/ultrabrain-client/src/cli.mjs",
+      "git_blob": "c377717f031b9d8901a61175f4818209fb6af940"
+    },
+    {
+      "path": "packages/ultrabrain-client/src/proxy.mjs",
+      "git_blob": "ad23a9959d6d7714f6bea7b46e93b8d935aaf1eb"
+    },
+    {
+      "path": "packages/ultrabrain-client/src/runtime.mjs",
+      "git_blob": "c053215c2f776f0202cdc48c74ae5aedfc6f57ef"
+    },
+    {
+      "path": "src/client-authorization.mjs",
+      "git_blob": "15b55b2a7930a1066321d3c2cd69c5f3695730c5"
+    },
+    {
+      "path": "src/client-profile-file.mjs",
+      "git_blob": "8ae4fab4154c8bbd99c15f6ddde523951059185b"
+    },
+    {
+      "path": "test/client-authorization.test.mjs",
+      "git_blob": "808b5950ff71ac18af9756d5ff880ba8c9c377f3"
+    },
+    {
+      "path": "test/client-profile-authorization.test.mjs",
+      "git_blob": "f776d72e2f22df7c1083dc6f1c440245a5960ed0"
+    },
+    {
+      "path": "test/client-proxy-lifecycle-integration.mjs",
+      "git_blob": "6bddd0781ccbcac2540fe6d17a2f5d1a8f2c3644"
+    },
+    {
+      "path": "test/client-request-authorization.test.mjs",
+      "git_blob": "98839b60dc1547a31780b84504e08e75848b5ad8"
+    },
+    {
+      "path": "test/fixtures/client-sdk-loader.mjs",
+      "git_blob": "9eddf7c0bbb702551e1d32a47794eef029e01ad3"
+    },
+    {
+      "path": "test/fixtures/client-sdk-stub.mjs",
+      "git_blob": "3f64e15d2a1334bb19c53a4ad8aff3fb319703e6"
+    }
+  ],
+  "logs": [
+    {
+      "file": "proxy-before.log",
+      "sha256": "9f64fc64627ffc9c3fe31493d6c93f16ac9d2578d6f751aa6bca125a05d4ecb7"
+    },
+    {
+      "file": "proxy-after.log",
+      "sha256": "892fd547f90834220d996fe2faddef9153990ef5c54afc7820926111f781a168"
+    },
+    {
+      "file": "node-final.log",
+      "sha256": "c0a7c8b1a18ce43932cc65bda5ed91cb838897780eaff0980f26640db0672dea"
+    },
+    {
+      "file": "python-final.log",
+      "sha256": "a55a6d8eebe1af36733db387b99e0394bdaf981ae9f682c486fbaac88db00041"
+    }
+  ]
+}

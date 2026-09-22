@@ -1,0 +1,90 @@
+{
+  "format": 1,
+  "reviewed_base": "1bf428d0694dd20c981323b0d2d5fe3b07ef908f",
+  "review_id": 5258535272,
+  "review_comment_id": 4055400401,
+  "reviewer": "chatgpt-codex-connector[bot]",
+  "reviewer_actor_id": 199175422,
+  "finding": "P1 HTTP-success complete negative envelope discarded pending event",
+  "before": {
+    "tests": 7,
+    "pass": 1,
+    "fail": 6
+  },
+  "after": {
+    "node": {
+      "tests": 894,
+      "pass": 894,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    "python": {
+      "tests": 683,
+      "pass": 683
+    },
+    "receipt_focused": {
+      "tests": 69,
+      "pass": 69
+    },
+    "new_real_browser": "pending final candidate CI; 10 receipt checks defined",
+    "independent_final_review": "pending final commit"
+  },
+  "files": [
+    {
+      "path": "web/personal/app.js",
+      "git_blob": "525e70d0b14e9160698a80cb96b0bd42fca5cee5"
+    },
+    {
+      "path": "test/personal-console-receipts.test.mjs",
+      "git_blob": "205b3b54dfb9b9861c5ee9926cc1f6d86e06a353"
+    },
+    {
+      "path": "test/personal-console-receipts-browser.py",
+      "git_blob": "b42253e29d288b30d23af07c4f6edbb83b861792"
+    },
+    {
+      "path": "test/personal-recall-browser-fixture.mjs",
+      "git_blob": "3e27ea5aa45b75c7c4a0ef48c0b82cb0ca003ec3"
+    },
+    {
+      "path": "docs/reviews/console-receipts/reviewer-first-failure.log.gz",
+      "git_blob": "d2fd048ef952e270bb59d935f73ccf516e82ddcf"
+    }
+  ],
+  "logs": [
+    {
+      "file": "reviewer-first-failure.log",
+      "sha256": "51425ec18c7187a023ee33b17db5ad519c5300c80bb8ec2e9cb3651a64b936c5"
+    },
+    {
+      "file": "reviewer-first-failure.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "reviewer-focused.log",
+      "sha256": "7369c11bb14311a6b9f7e2fbe2f70ac1eed0fdfd41ac456edcee1524fc9a1ca2"
+    },
+    {
+      "file": "reviewer-focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-reviewed-final.log",
+      "sha256": "e362584e33c7f9107494298d064d3c506edfa0bf6bc62328121d49b8c53a5beb"
+    },
+    {
+      "file": "node-reviewed-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-reviewed-final.log",
+      "sha256": "106ff7bdee13ceb2605c432a911e6d3b32cb69a839b5707f0a0fd855c781fb84"
+    },
+    {
+      "file": "python-reviewed-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    }
+  ],
+  "first_failure_uncompressed_sha256": "51425ec18c7187a023ee33b17db5ad519c5300c80bb8ec2e9cb3651a64b936c5"
+}

@@ -1,0 +1,158 @@
+{
+  "format": 1,
+  "base_commit": "bff36ca5da5f46f527a5b9704dcc004175af4277",
+  "base_tree": "268338562a4d045bbd6bb2ebd076b07f8307bb17",
+  "independent_finding": {
+    "review_id": 5261072091,
+    "comment_id": 4057434213,
+    "severity": "P1",
+    "issue": "consolidation receipt bypass clears uncertain request"
+  },
+  "local": {
+    "user": "oai",
+    "node": {
+      "tests": 1301,
+      "pass": 1301,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "exit": 0
+    },
+    "new_subset": {
+      "tests": 53,
+      "pass": 53
+    },
+    "first_failure": {
+      "tests": 28,
+      "pass": 8,
+      "fail": 20,
+      "exit": 1
+    },
+    "python": {
+      "tests": 683,
+      "pass": 683,
+      "reported_duration_seconds": 39.98,
+      "exit": 0
+    }
+  },
+  "real_browser_and_database": "pending exact candidate CI",
+  "independent_final_review": "pending exact candidate review",
+  "files": [
+    {
+      "path": "web/personal/app.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "49a5e080f54eb484388e668342025e92a2dccb7e"
+    },
+    {
+      "path": "web/personal/index.html",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bb1d039e581f9dcd71e29185adf061e9abe801ee"
+    },
+    {
+      "path": "src/personal-console.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "77e89814306e0f287961c7c554c487a81ff755d1"
+    },
+    {
+      "path": "test/personal-job-recovery.test.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "627d3c0b31ca1a8e8a114d3eeddba0d196a0f904"
+    },
+    {
+      "path": "test/personal-job-recovery-integration.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c9facc933cc476a6863ee0c77e3054200b5681f9"
+    },
+    {
+      "path": "test/personal-job-recovery-browser.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "762fca0cfa5a78bc68091627cc0255117b38f224"
+    },
+    {
+      "path": ".github/workflows/personal-recall-preview.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "82b153d64247e92ca919b2cbbb49b553379e9ea1"
+    },
+    {
+      "path": ".github/workflows/client-portability.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "66734a7a642bc3040d906bd5c00d293dfab8b10f"
+    },
+    {
+      "path": "docs/PERSONAL-JOB-RECOVERY.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "df77e798f634e489d1e1a37ebd1dbb7e1fea4e83"
+    },
+    {
+      "path": "docs/reviews/job-recovery/README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "504f8b2c723f08fc95540102f0209474b5cca0f3"
+    },
+    {
+      "path": "docs/reviews/job-recovery/first-failure.log.gz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "89d4d2300f1e88b9140c0c405160c342c95bee6f"
+    }
+  ],
+  "logs": [
+    {
+      "file": "first-failure.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "first-failure.log",
+      "sha256": "10bee11dc73e7fbc2b1cd49466ec0d5d4e20d61bad92221b19616f4313fd102e"
+    },
+    {
+      "file": "initial-fixed.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "initial-fixed.log",
+      "sha256": "3f7c00133aa6046a1fcf1d4221715eb0435a32da1e316a5d14134f5b7cafab86"
+    },
+    {
+      "file": "node-full.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-full.log",
+      "sha256": "00e32e1f3d3c7cf2be59d3c3ead75aba7e0a121cd61601549ba5a555083e0d06"
+    },
+    {
+      "file": "python-full.log",
+      "sha256": "7b947bf9f72e2c2150d9e9c00114b65a93441464235db07efa66e881e3c9e4b1"
+    },
+    {
+      "file": "python-verified.duration",
+      "sha256": "576053bab313c32a1b94a9425487f113809c396851d11454a6632084fcf4c09e"
+    },
+    {
+      "file": "python-verified.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-verified.log",
+      "sha256": "a4941efa137c511be936f3c0d3794794b29db1923956a6bc89ce62bb12a1465c"
+    },
+    {
+      "file": "recovery-expanded.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "recovery-expanded.log",
+      "sha256": "368db5987aa9b0138d84236a2613676ba3e8a70202b76c44e4509c5227a30198"
+    }
+  ]
+}

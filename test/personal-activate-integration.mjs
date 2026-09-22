@@ -292,7 +292,20 @@ export async function verifyPersonalActivation({engine,spec,current,run,unrelate
    await stopped();pass();
   }finally{await releaseLock();}
   assert.deepEqual(coordination(),beforePlan,'Rejected or lock-blocked operations must not create transaction files');
-  const reviewed=await plan(),started=await success('start_owned_console',['apply',...base,'--expected-plan',reviewed]);
+  // First-run composition uses the public prepare route, not a guessed UUID.
+  // Its only database session is the real read-only managed identity observation.
+  const preparationArgs=base.slice(0,-2); // --expected-instance is forbidden for prepare.
+  const prepared=await success('prepare_owned_console',['prepare',...preparationArgs]);
+  assert.equal(prepared.arguments.expected_instance,identity.instance_id);
+  assert.equal(prepared.arguments.expected_current,current);unchanged(prepared);
+  assert.deepEqual(prepared,await success('manual_plan_equivalence',['plan',...base]));
+  assert.deepEqual(coordination(),beforePlan,'Preparation must not create activation records');
+  assert.deepEqual(await snapshot(),baseline,'Preparation must not change data, token or services');
+  await stopped();pass();
+  // Feed exactly the observed identity and canonical plan hash to explicit apply.
+  base[base.length-1]=prepared.arguments.expected_instance;
+  const reviewed=prepared.activation_plan_sha256;
+  const started=await success('start_owned_console',['apply',...base,'--expected-plan',reviewed]);
   assert.equal(started.application_ready,true);assert.equal(started.dispatch_state,'acknowledged');unchanged(started);
   const first=await live();assert.equal((await status()).pending_sha256,null);pass();
   await refused('running_console_plan',['plan',...base]);
@@ -346,6 +359,7 @@ export async function verifyPersonalActivation({engine,spec,current,run,unrelate
   assert.deepEqual(await snapshot(),baseline,
    'Activation cases must preserve database identity, installed generation, private data, config, token and enablement');pass();
   return {checks,systemd:'actual-disposable-user-manager',database:'actual-managed-postgresql',
+   preparation:'public-prepare-with-real-managed-identity-and-no-start',
    activation:'direct-console-start-with-target-inactive',recovery:'actual-process-exit-and-observation-only-recovery',
    checkpoints,source_removed_after_dispatch_refused:true,same_console_after_source_restoration:true,
    fixture_between_cases:'stop-and-reset-failed-only-the-verified-owned-console',

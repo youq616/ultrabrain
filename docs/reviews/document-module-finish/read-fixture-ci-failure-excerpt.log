@@ -1,0 +1,7 @@
+2026-09-20T13:49:56.0818203Z PASS 10 real Chromium document receipt checks; 8 synthetic events including concurrent archival
+2026-09-20T13:49:56.1012900Z PASS document receipt DB deltas: 8 events, 3 documents, 2 fragments, 2 stale zero-attempt jobs; replays/dedup do not duplicate records
+2026-09-20T13:49:56.4563681Z Traceback (most recent call last):
+2026-09-20T13:49:56.4564270Z   File "/home/runner/work/ultrabrain/ultrabrain//test/personal-document-read-browser.py", line 26, in <module>
+2026-09-20T13:49:56.4564679Z     assert len(rows) == 2 and all(r['status'] == 'archived' for r in rows)
+2026-09-20T13:49:56.4564948Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-09-20T13:49:56.4565139Z AssertionError

@@ -1,14 +1,33 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script><script src="/snapshot-inspector-ui.js" defer></script><script src="/snapshot-explorer-ui.js" defer></script><script src="/lineage-ui.js" defer></script></head>
 <body>
 <header><div><p class="eyebrow">ULTRABRAIN / PERSONAL</p><h1>个人记忆管理台</h1><p id="scope">仅本机访问 · 不自动采集 · 模型调用需明确授权</p></div><button id="logout" hidden>锁定管理台</button></header>
 <main>
 <section id="login" class="panel narrow"><h2>连接你的个人记忆</h2><p>在服务器上读取启动命令提示的私有令牌文件，将令牌粘贴到此处。它只保存在当前页面内存中，不写入浏览器存储。</p><form id="login-form"><label>管理台令牌<input id="token" type="password" autocomplete="off" required spellcheck="false"></label><button type="submit">连接</button></form><p class="note">远程 Linux 服务请通过 SSH 隧道访问；不要把这个管理端口暴露到公网。此令牌不是模型 API Key，也不是 MCP 令牌。</p></section>
 <div id="workspace" hidden>
-<nav aria-label="视图"><button data-view="candidate">待确认记忆</button><button data-view="active">当前记忆</button><button data-view="archived">已归档</button><button data-view="profile">个人偏好</button><button data-view="documents">导入文档</button><button data-view="jobs">整理任务</button><button data-view="agents">已登记 Agent</button></nav>
-<div class="columns"><section class="panel"><div class="section-head"><h2 id="view-title">待确认记忆</h2><button id="refresh">刷新</button></div><form id="search-form"><label class="sr-only" for="query">搜索文字</label><input id="query" placeholder="文字搜索（不是语义搜索）" maxlength="4096"><button type="submit">搜索</button></form><p class="note" id="coverage">只展示当前身份可见的记录。</p><div id="results" aria-live="polite"></div><div class="row"><button id="prev" disabled>上一页</button><button id="next" disabled>下一页</button><button id="export" disabled>导出当前页</button></div></section>
-<section class="panel"><h2 id="editor-title">新建候选记忆</h2><p class="note">保存不会自动确认真实性。编辑已有记忆后，它会重新进入待确认状态。</p><form id="memory-form">
+<nav aria-label="视图"><button data-view="candidate">待确认记忆</button><button data-view="active">当前记忆</button><button data-view="archived">已归档</button><button data-view="profile">个人偏好</button><button data-view="recall">任务召回预览</button><button data-view="lookup">按 ID 核对</button><button data-view="documents">导入文档</button><button data-view="jobs">整理任务</button><button data-view="agents">已登记 Agent</button></nav>
+<div class="columns"><section class="panel"><div class="section-head"><h2 id="view-title">待确认记忆</h2><button id="refresh">刷新</button></div><form id="search-form"><label class="sr-only" for="query">搜索文字</label><input id="query" placeholder="文字搜索（不是语义搜索）" maxlength="4096"><button type="submit">搜索</button></form><div id="recall-panel" hidden><form id="recall-form" autocomplete="off">
+<p class="note">只查询本机所有者可见且已启用的记忆，不调用模型、不保存任务为记忆。其他 MCP 身份的结果可能不同。字面匹配不是语义搜索；可用空格分隔关键词。</p>
+<label>本次任务或关键词<textarea id="recall-task" rows="3" maxlength="4096" placeholder="例如：Docker 配置 备份" spellcheck="false"></textarea></label>
+<label>召回项目（留空只查全局；填写后包含全局与该项目）<input id="recall-project" maxlength="96" pattern="[A-Za-z0-9_-]+" placeholder="ultrabrain" autocomplete="off"></label>
+<div class="row fields"><label>最多条数<select id="recall-limit"><option value="5">5</option><option value="10">10</option><option value="20" selected>20</option></select></label><label>响应预算（UTF-8 字节）<select id="recall-budget"><option value="2048">2048</option><option value="6000" selected>6000</option><option value="8192">8192</option></select></label></div>
+<label class="checkbox"><input id="recall-consent" type="checkbox">我同意将此任务发送到当前本机记忆服务查询，已排除秘密。</label>
+<div class="row"><button id="recall-submit" type="submit">预览本次召回</button><button id="recall-cancel" type="button" disabled>取消预览</button></div>
+<p class="note">任务最多 4096 UTF-8 字节。修改条件或撤回同意会清除旧结果并取消等待；已到达服务器的查询不能撤回。需要纠错时，点击结果中的“核对最新记录”，重新读取版本后再明确编辑并确认。</p>
+</form></div><div id="lookup-panel" hidden><form id="lookup-form" autocomplete="off">
+<p class="note">按完整记忆 ID 读取当前可见版本，不调用模型、不修改内容。自己的候选及归档记录仍可核对；其他人的记录只有仍在有效共享范围内才可见。ID 不是授权凭据。</p>
+<label>记忆 ID<input id="lookup-id" maxlength="36" spellcheck="false" placeholder="完整小写 UUID"></label>
+<div class="row"><button id="lookup-submit" type="submit">读取当前记录</button><button id="lookup-cancel" type="button" disabled>取消／清除核对</button></div>
+<p class="note">从召回卡片点击“核对最新记录”会重新读取，不直接编辑旧预览。核对不会改动右侧未保存的内容；明确点击“编辑”才填入所读版本。</p>
+</form></div><div id="job-panel" hidden><form id="job-form" autocomplete="off">
+<p class="note">只读取当前本机所有者的任务元数据；不会自动读取原文、采集内容或运行模型。</p>
+<label>任务状态<select id="job-state"><option value="any">全部</option><option value="queued">等待整理</option><option value="processing">处理中</option><option value="failed">处理失败</option><option value="completed">已整理</option><option value="stale">已取消或来源失效</option></select></label>
+<label>按任务 ID 核对（留空按状态分页；填写后忽略状态筛选）<input id="job-id" maxlength="36" spellcheck="false" placeholder="完整小写 UUID"></label>
+<div class="row"><button type="submit">读取任务</button><button type="button" id="job-clear">取消读取／清除结果</button></div>
+<p class="note">原文与生成候选需点击后另行读取，可能已被修改或归档。失败或租约到期的恢复可能重复计费；取消不撤销已发生费用，也不是物理删除。</p>
+</form></div><p class="note" id="coverage">只展示当前身份可见的记录。</p><div id="results" aria-live="polite"></div><div class="row"><button id="prev" disabled>上一页</button><button id="next" disabled>下一页</button><button id="export" disabled>导出当前页</button><button id="snapshot-open" type="button">导出我的记忆快照</button></div></section>
+<section id="memory-panel" class="panel"><h2 id="editor-title">新建候选记忆</h2><p class="note">保存不会自动确认真实性。编辑已有记忆后，它会重新进入待确认状态。</p><form id="memory-form">
 <label>类型<select id="type"><option value="identity">身份信息</option><option value="preference" selected>偏好</option><option value="environment">环境</option><option value="project">项目</option><option value="decision">决策</option><option value="skill">技能</option><option value="error">错误经验</option><option value="goal">目标</option><option value="experience">经验</option></select></label>
 <label>内容<textarea id="content" rows="7" required placeholder="例如：配置文件请使用完整命令行修改，不要要求打开编辑器。"></textarea></label>
 <label>来源说明<input id="provenance" value="用户在个人管理台明确输入" required maxlength="2048"></label>
@@ -16,14 +35,90 @@
 <label>项目标识（可留空，留空表示全局）<input id="project" maxlength="96" pattern="[A-Za-z0-9_-]+" placeholder="ultrabrain"></label>
 <p class="note">排队整理会先保存一份私有原文，模型另行明确运行。编辑已有记录时不能排队新原文。</p><p class="note">共享记忆只有明确激活后才对同源其他身份可读。Agent 名称不是身份认证。</p>
 <label class="checkbox"><input id="consent" type="checkbox">我同意保存上述内容，并已排除不应保存的秘密。</label>
-<div class="row"><button type="submit" id="save">保存候选</button><button type="button" id="queue-personal" data-write="true">将内容作为原文排队整理</button><button type="button" id="cancel-edit" hidden>取消编辑</button></div></form></section></div>
-<section id="pending-panel" class="panel warning" hidden><h2>有一次提交尚未确认</h2><p>不要重新生成内容或新的事件编号。下面的重试会使用相同请求。刷新或关闭页面会丢失内存中的待确认请求；可以先将其保存到本机。</p><p id="pending-id"></p><div class="row"><button id="retry">重试原请求</button><button id="save-pending">保存待确认请求</button></div></section>
+<div class="row"><button type="submit" id="save">保存候选</button><button type="button" id="queue-personal" data-write="true">将内容作为原文排队整理</button><button type="button" id="cancel-edit" hidden>取消编辑</button><button type="button" id="compare-current" disabled>读取当前版本对照</button></div></form>
+<section id="comparison-panel" hidden aria-label="记忆版本与草稿对照"><h3>人工核对版本差异</h3>
+<p class="note">这里只读查询，不保存草稿。请逐项核对内容、项目、可见性、来源、重要性和可信度估计。采用新基准会保留草稿全部字段，不自动合并他人改动。修改草稿会清除本次对照；完成修改后可再次读取。</p>
+<h4>开始编辑时的版本</h4><pre id="comparison-original"></pre>
+<h4>数据库本次读取的版本</h4><pre id="comparison-latest"></pre>
+<h4>我的待保存草稿（全部字段）</h4><pre id="comparison-draft"></pre>
+<p class="note" id="comparison-note" role="status"></p>
+<label class="checkbox"><input id="comparison-consent" type="checkbox">我已逐项核对以上三个区域，确认保留草稿全部字段，并采用本次读取版本作为新的保存基准。</label>
+<div class="row"><button type="button" id="comparison-adopt" disabled>采用新基准，保留草稿</button><button type="button" id="comparison-cancel" disabled>取消／清除对照</button></div>
+<p class="note">采用不是保存。仍需重新勾选表单的保存同意；保存成功后回到候选，启用还需明确确认。读取后如再次发生修改，旧版本保存仍会被拒绝。未确认提交必须先处理原事件，不能通过对照绕过。</p>
+</section></section></div>
+<section class="panel"><button type="button" id="lineage-open">核对记忆引用来源</button><p class="note">先按 ID 核对记忆可自动填入编号；也可直接输入。打开不发起查询，不读取草稿或文件。</p></section>
+<section id="lineage-panel" class="panel" hidden aria-label="记忆引用来源核对">
+<h2>记忆引用来源核对</h2>
+<label>待核对的记忆 ID<input id="lineage-id" maxlength="36" spellcheck="false" autocomplete="off" placeholder="完整小写 UUID"></label>
+<label class="checkbox"><input id="lineage-consent" type="checkbox">我同意读取这条记忆及其直接引用原文，用于核对；原文可能含私有内容。不是运行模型或同意修改记忆。</label>
+<div class="row"><button id="lineage-run" type="button" disabled>读取并核对来源</button><button id="lineage-close" type="button">取消／清除来源核对</button></div>
+<p class="note">仅核对结构化整理引用的一跳来源，不递归读取其他记录或文档文件。读取得到的是当前可见版本；历史原文缺失时不会从缓存补造，也不推断记录被删除。</p>
+<div id="lineage-result" hidden>
+<p id="lineage-status" role="status"></p><pre id="lineage-metadata" class="memory-content"></pre>
+<h3>本次读取的记忆内容</h3><pre id="lineage-memory" class="memory-content"></pre>
+<h3>生成时记录的引文（不代表真实性）</h3><pre id="lineage-quote" class="memory-content"></pre>
+<div class="row"><button id="lineage-show-source" type="button" disabled>显示本次读取的原文</button><button id="lineage-open-memory" type="button" disabled>打开当前记忆核对／纠错</button><button id="lineage-open-source" type="button" disabled>打开当前原文记录</button></div>
+<div id="lineage-original" hidden><h3>来源全文（本次观察，不持续刷新）</h3><button id="lineage-clear-source" type="button">清除来源全文</button><pre id="lineage-original-text" class="memory-content"></pre></div>
+<p class="note">版本、指纹与引用位置匹配只能证明这次观察中的引用一致，不能证明陈述真实或模型理解正确。跳转会重新读取记录，原有编辑、版本检查和启用确认仍需分别执行，不覆盖独立草稿。</p>
+</div></section>
+<section class="panel"><button type="button" id="inspector-open">核验／对照本地快照</button><p class="note">只读取明确选择的本地导出文件，不上传文件、不恢复或覆盖记忆。</p></section>
+<section id="inspector-panel" class="panel" hidden aria-label="本地快照核验与对照">
+<h2>本地快照核验与差异对照</h2>
+<p class="note">使用“导出我的记忆快照”生成的 JSON。左侧必选，右侧可选；每文件最多16 MiB，解析后的紧凑快照最多8 MiB／1000条。整个文件先核验，再展示结果；不把部分文件当完整快照。</p>
+<label>左侧快照<input id="inspector-left" type="file" accept=".json,application/json"></label>
+<label>右侧快照（可选）<input id="inspector-right" type="file" accept=".json,application/json"></label>
+<label class="checkbox"><input id="inspector-consent" type="checkbox">我有权在本机查看这些文件，并同意读取到当前页面内存。它们可能含秘密；文件内容不会上传或自动脱敏。</label>
+<div class="row"><button type="button" id="inspector-run" disabled>核验所选文件</button><button type="button" id="inspector-cancel">取消／清除本地核验</button></div>
+<pre id="inspector-summary" class="memory-content" aria-live="polite"></pre>
+<button type="button" id="explorer-open" disabled>浏览已核验快照</button>
+<section id="explorer-panel" class="panel" hidden aria-label="快照记忆浏览器">
+<h3>快照记忆浏览器</h3>
+<p class="note">浏览完整已核验文件，不是当前服务器列表。索引默认隐藏正文；筛选只在当前页面进行，不上传关键词、不调用模型。每页20条，可浏览全部匹配记录。</p>
+<label>浏览哪份文件<select id="explorer-side"><option value="left">左侧快照</option><option value="right" id="explorer-side-right" disabled>右侧快照</option></select></label>
+<div class="row fields"><label>状态<select id="explorer-status"><option value="">全部状态</option><option value="candidate">待确认</option><option value="active">已启用</option><option value="archived">已归档</option></select></label><label>重要性<select id="explorer-importance"><option value="">全部</option><option value="low">低</option><option value="normal">普通</option><option value="high">高</option></select></label></div>
+<div class="row fields"><label>类型（精确匹配，留空为全部）<input id="explorer-type" maxlength="32" spellcheck="false" placeholder="例如 preference、goal"></label><label>来源类型<select id="explorer-origin"><option value="">全部</option><option value="agent">Agent记录</option><option value="document_fragment">文档片段</option></select></label></div>
+<div class="row fields"><label>项目范围<select id="explorer-project-scope"><option value="all">所有项目及全局</option><option value="global">仅全局</option><option value="exact">仅指定项目</option></select></label><label>精确项目标识<input id="explorer-project" maxlength="96" spellcheck="false" disabled></label></div>
+<label>Agent标识（精确匹配，留空为全部）<input id="explorer-agent" maxlength="96" spellcheck="false" autocomplete="off"></label>
+<label>正文中的连续文字<input id="explorer-query" maxlength="4096" spellcheck="false" autocomplete="off" placeholder="区分大小写，保留空格；不是正则或语义搜索"></label>
+<p class="note">条件之间为“并且”。仅搜索正文，不搜索来源说明或派生引用；精确项目不包含全局记录。查询上限4096 UTF-8字节。修改条件会清除旧结果，需再次明确读取；更换左右文件需重新同意。</p>
+<label>排序<select id="explorer-sort"><option value="id_asc">记忆ID升序</option><option value="updated_desc">更新时间降序</option><option value="created_desc">创建时间降序</option><option value="importance_desc">重要性降序</option></select></label>
+<label class="checkbox"><input id="explorer-consent" type="checkbox">我同意浏览所选文件的记忆索引，并在明确点击某条记录时显示其完整正文与元数据。</label>
+<div class="row"><button type="button" id="explorer-run" disabled>筛选／读取索引</button><button type="button" id="explorer-close">关闭／清除浏览</button></div>
+<p id="explorer-summary" class="note" role="status"></p><div id="explorer-results" aria-live="polite"></div>
+<div class="row"><button type="button" id="explorer-prev" disabled>上一页记录</button><button type="button" id="explorer-next" disabled>下一页记录</button></div>
+<section id="explorer-detail" hidden><h4>所选本地记录（不读取当前数据库）</h4><p id="explorer-detail-id" class="meta"></p><button type="button" id="explorer-detail-clear">清除此条正文</button><pre id="explorer-detail-text" class="memory-content"></pre></section>
+<p class="note">文件中的状态、所有者及时间都是快照数据，不是当前权限或真实性认证。此处不能编辑、启用或恢复记录；关闭浏览不删除原文件。索引中的ID和项目标识仍属私有数据。</p>
+</section>
+
+<p class="note">指纹通过只说明文件内部一致，不是数字签名、数据库完整性或所有者身份认证。原格式没有导出主体标识；相同来源不证明同一所有者。只比较这两个文件，不推断时间先后，也不查询当前数据库。</p>
+<label class="checkbox"><input id="inspector-compare-consent" type="checkbox">我确认所选文件适合互相对照；仅一侧存在不等于新增或删除，同版本字段不同也不自动判定损坏。</label>
+<button type="button" id="inspector-compare" disabled>比较已核验文件</button>
+<p id="inspector-diff-summary" class="note" aria-live="polite"></p><div id="inspector-differences"></div>
+<div class="row"><button type="button" id="inspector-prev" disabled>上一页差异</button><button type="button" id="inspector-next" disabled>下一页差异</button><button type="button" id="inspector-export" disabled>导出差异清单（无正文）</button></div>
+<p class="note">清单仍含私有 ID 和指纹，不是恢复计划。正文仅在明确点击某条差异后显示；不会自动导入或启用记录。</p>
+<section id="inspector-details" hidden><h3>所选条目：纯文本核对</h3><button type="button" id="inspector-detail-clear">清除正文</button><h4>左侧文件</h4><pre id="inspector-detail-left" class="memory-content"></pre><h4>右侧文件</h4><pre id="inspector-detail-right" class="memory-content"></pre></section>
+</section>
+<section id="snapshot-panel" class="panel warning" hidden><h2>导出我的个人记忆快照</h2>
+<p class="note">一次性读取当前所有者全部项目、全部状态的记忆，包括候选、归档、明确采集的原文记录和文档片段。不是当前搜索页；不导出其他所有者的共享记忆。已保存记忆中若有秘密也会原样包含，不自动脱敏。最多 1000 条、响应 8 MiB，超过限制整体拒绝，不截断。</p>
+<p class="note">不含原始文档文件、任务和事件历史、服务配置或密钥，不能直接恢复数据库。完整恢复请使用已有恢复套件。下载文件含私有正文，请在本机妥善保护。</p>
+<label class="checkbox"><input id="snapshot-consent" type="checkbox">我明确同意导出当前所有者全部状态的记忆，理解它包含私有正文且不是完整备份。</label>
+<div class="row"><button type="button" id="snapshot-export" disabled>核对并下载记忆快照</button><button type="button" id="snapshot-cancel">取消导出</button></div></section>
+<section id="pending-panel" class="panel warning" hidden><h2>有一次提交尚未确认</h2><p id="pending-guidance">不要重新生成内容或新的事件编号。下面的重试会使用相同请求。刷新或关闭页面会丢失内存中的待确认请求；可以先将其保存到本机。</p><p id="pending-id"></p><div class="row"><button id="retry">重试原请求</button><button id="save-pending">保存待确认请求</button></div>
+<div id="pending-job-recovery" hidden><h3>核对原整理任务</h3>
+<p class="note">只读查询原任务，不发送原文、不重新调用模型。状态属于读取时刻，不证明原请求的交付或费用；不会恢复丢失的原回执。</p>
+<div class="row"><button type="button" id="pending-job-inspect">核对原任务状态（不调用模型）</button><button type="button" id="pending-job-clear">取消核对／清除状态</button></div>
+<pre id="pending-job-status"></pre>
+<label class="checkbox"><input type="checkbox" id="pending-job-consent">我已核对当前任务，理解这里只结束本地待确认追踪，不代表原请求得到回执，也不撤销费用。</label>
+<button type="button" id="pending-job-finish" disabled>重新核对终态并结束本地追踪</button>
+<p class="note">只有任务已完成、失败或失效才能结束追踪，点击后还会重新查询。等待或处理中保持原请求；重试需先核对状态并再次确认可能重复计费。失败任务结束追踪后，从任务卡片明确恢复。</p>
+</div></section>
 <section id="document-panel" class="panel" hidden><h2>导入个人文本文件</h2>
+<label>文档列表状态<select id="document-status"><option value="any" selected>全部文档</option><option value="active">使用中</option><option value="archived">已归档</option></select></label>
 <p class="note">只导入你在这个表单里明确选择的 UTF-8 文本文件（TXT / MD / JSON / CSV / LOG，≤128 KiB）。文件按原始字节保存，不会自动执行或解析其中内容，也不会自动排队整理。超过上限或编码非法的文件会被整体拒绝，不会截断保存。JSON/CSV 仅作为不可信文本保存。</p>
 <label>选择文件<input id="document-file" type="file" accept=".txt,.md,.json,.csv,.log,text/plain,application/json,text/csv"></label>
 <p class="note" id="document-file-info">尚未选择文件。</p>
 <label class="checkbox"><input id="document-consent" type="checkbox">我确认此文件由我本人选择，内容不含不应保存的秘密，同意按原始字节保存到我的个人记忆库。</label>
-<div class="row"><button type="button" id="document-import" data-write="true">导入此文件</button></div>
+<div class="row"><button type="button" id="document-import" data-write="true">导入此文件</button><button type="button" id="document-read-cancel" disabled>清除原文／取消读取</button></div>
 <p class="note">排队整理会从原文生成候选记忆片段（每段 ≤32 KiB，区间以 UTF-8 字节计），生成结果仍需逐条确认。归档会使相关片段退出当前使用范围并使派生记忆失效，但原始文件保留，不等于物理擦除。浏览器仅以纯文本展示原文；下载必须点击“下载原文”才会发生。</p>
 <div id="document-original" hidden><h3 id="document-original-title">原文（纯文本预览）</h3><pre id="document-original-text"></pre></div>
 </section>

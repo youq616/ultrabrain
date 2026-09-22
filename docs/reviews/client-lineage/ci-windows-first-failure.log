@@ -1,0 +1,11 @@
+# Selected original CI lines; not the complete remote job log.
+# Candidate35a381a64a492adc9ea6f07ccd7cd71d7ded1bde, run35684457913, Windows job106608206411.
+# The complete job log was read. New CLI child setup failed before product assertions.
+2026-09-22T03:54:21.7231884Z # Subtest: client lineage CLI: metadata default and explicit text selection
+2026-09-22T03:54:21.7232744Z not ok 88 - client lineage CLI: metadata default and explicit text selection
+2026-09-22T03:54:21.7346728Z   error: 'Unexpected end of JSON input'
+2026-09-22T03:54:22.3165689Z Error [ERR_UNSUPPORTED_ESM_URL_SCHEME]: Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs. Received protocol 'd:'
+2026-09-22T03:54:27.0835929Z # tests 715
+2026-09-22T03:54:27.0836825Z # pass 708
+2026-09-22T03:54:27.0837315Z # fail 7
+2026-09-22T03:54:27.1304775Z ##[error]Process completed with exit code 1.

@@ -73,14 +73,15 @@ with sync_playwright() as p:
     page.locator('#consent').check()
     page.locator('#save').click()
     expect(page.locator('#results article')).to_have_count(1)
-    expect(page.locator('.memory-content')).to_have_text(malicious)
+    # Result cards, not the independently styled snapshot inspector text panels.
+    expect(page.locator('#results .memory-content')).to_have_text(malicious)
     assert page.locator('#results img').count() == 0
     assert page.evaluate('typeof window.consoleInjected') == 'undefined'
     passed()
     page.get_by_role('button', name='确认启用', exact=True).click()
     expect(page.locator('#results article')).to_have_count(0)
     page.locator('[data-view="profile"]').click()
-    expect(page.locator('.memory-content')).to_have_text(malicious)
+    expect(page.locator('#results .memory-content')).to_have_text(malicious)
     passed()
     page.get_by_role('button', name='编辑', exact=True).click()
     page.locator('#content').fill('合成偏好：修改后需要重新确认。')
@@ -89,7 +90,7 @@ with sync_playwright() as p:
     expect(page.locator('#message')).to_contain_text('操作已确认')
     expect(page.locator('#results article')).to_have_count(0)
     page.locator('[data-view="candidate"]').click()
-    expect(page.locator('.memory-content')).to_have_text('合成偏好：修改后需要重新确认。')
+    expect(page.locator('#results .memory-content')).to_have_text('合成偏好：修改后需要重新确认。')
     passed()
     # Intervene through the real API after the editor captured a revision.
     page.get_by_role('button', name='编辑', exact=True).click()
@@ -105,7 +106,7 @@ with sync_playwright() as p:
     page.locator('#save').click()
     expect(page.locator('#message')).to_contain_text('revision_conflict')
     page.locator('[data-view="active"]').click()
-    expect(page.locator('.memory-content')).to_have_text('合成偏好：修改后需要重新确认。')
+    expect(page.locator('#results .memory-content')).to_have_text('合成偏好：修改后需要重新确认。')
     passed()
     page.get_by_role('button', name='归档', exact=True).click()
     expect(page.locator('#results article')).to_have_count(0)
@@ -127,6 +128,15 @@ with sync_playwright() as p:
     expect(page.locator('#results article')).to_have_count(1)
     if os.environ.get('ULTRABRAIN_BROWSER_SCREENSHOT'):
         page.screenshot(path=os.environ['ULTRABRAIN_BROWSER_SCREENSHOT'], full_page=True)
+    # Archiving another action no longer discards the independent stale editor.
+    # Finish that editor explicitly before starting a NEW commit scenario.
+    expect(page.locator('#content')).to_have_value('这个过时的编辑不能覆盖已确认版本')
+    expect(page.locator('#cancel-edit')).to_be_visible()
+    page.locator('#cancel-edit').click()
+    expect(page.locator('#editor-title')).to_have_text('新建候选记忆')
+    expect(page.locator('#content')).to_have_value('')
+    expect(page.locator('#consent')).not_to_be_checked()
+    passed()
     # Drop the response only after the real server committed it; retry must reuse the event.
     page.locator('[data-view="candidate"]').click()
     expect(page.locator('#results article')).to_have_count(0)
@@ -146,6 +156,8 @@ with sync_playwright() as p:
     page.route('**/api/call', interrupt_ack)
     page.locator('#save').click()
     expect(page.locator('#pending-panel')).to_be_visible()
+    expect(page.locator('#message')).to_contain_text('network_unconfirmed')
+    assert len(attempts) == 1, 'The real commit must reach the injected lost-response boundary'
     expect(page.locator('#save')).to_be_disabled()
     page.locator('#consent').uncheck()
     page.locator('#retry').click()

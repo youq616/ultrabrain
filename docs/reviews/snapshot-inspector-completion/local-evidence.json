@@ -1,0 +1,156 @@
+{
+  "format": 1,
+  "base_commit": "caf605ae591dea5b58b9322113d7781806d149bd",
+  "base_tree": "b0f1cffb277a757b1c71b6df41a5f854887117cd",
+  "independent_finding": {
+    "review_id": 5265555599,
+    "comment_id": 4061276373,
+    "severity": "P2",
+    "summary": "decoded non-finite derivation numbers can be confused with null"
+  },
+  "previous_ci_failures": [
+    {
+      "run": 35588946647,
+      "job": 106298705820,
+      "cause": "native File method returned from page.evaluate called unbound"
+    },
+    {
+      "run": 35588946746,
+      "job": 106299121619,
+      "cause": "legacy result selector also matched inspector panels",
+      "downstream_n8n": "skipped"
+    }
+  ],
+  "local": {
+    "execution_user": "oai",
+    "node": {
+      "tests": 1481,
+      "pass": 1481,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "exit": 0
+    },
+    "python": {
+      "tests": 683,
+      "pass": 683,
+      "exit": 0,
+      "test_seconds": 57.958
+    },
+    "focused_subset": {
+      "tests": 80,
+      "pass": 80
+    },
+    "reproduced_baseline": {
+      "tests": 19,
+      "pass": 5,
+      "fail": 14,
+      "exit": 1
+    },
+    "browser_smoke": "unavailable executable; no assertions executed"
+  },
+  "candidate_ci": "pending at creation",
+  "candidate_independent_review": "pending final SHA",
+  "browser_checks_defined": 17,
+  "files": [
+    {
+      "path": "docs/PERSONAL-SNAPSHOT-INSPECTOR.md",
+      "git_blob": "c93f5d22d441b865f616ca1a37597b6309d72b37"
+    },
+    {
+      "path": "docs/reviews/snapshot-inspector-completion/README.md",
+      "git_blob": "57b01794a519a7b56bc33e78a259e0761954d7a0"
+    },
+    {
+      "path": "docs/reviews/snapshot-inspector-completion/ci-first-failures.log",
+      "git_blob": "4144cac06ab2b4f0a6df87293e11b181f8f1abaf"
+    },
+    {
+      "path": "docs/reviews/snapshot-inspector-completion/first-failure.log.gz",
+      "git_blob": "dc3c4452590c6ba8a62c65bcaddb4ac046ac0d0a"
+    },
+    {
+      "path": "src/personal-snapshot-contract.mjs",
+      "git_blob": "5fa8273024449d733c5af9725942d125ac8b4201"
+    },
+    {
+      "path": "test/personal-console-browser.py",
+      "git_blob": "11652b7e036d29e91fb9b3ae0be31a7fc4e80ecb"
+    },
+    {
+      "path": "test/personal-snapshot-inspector-browser.py",
+      "git_blob": "79f7a7fd02e68e6346d738007c7836904cf45a15"
+    },
+    {
+      "path": "test/personal-snapshot-inspector-ui.test.mjs",
+      "git_blob": "9133473ff424b1febae4900a4428b4a898bafda8"
+    },
+    {
+      "path": "test/personal-snapshot-inspector.test.mjs",
+      "git_blob": "f28c1ff2294e8154d3ed2bb11c157308fece8aff"
+    }
+  ],
+  "logs": [
+    {
+      "file": "baseline-reproduced.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "baseline-reproduced.log",
+      "sha256": "9dca70ac99e111cbbb6b899bf73584ed84bb362dc18d0c5fa4ad77712bbe604f"
+    },
+    {
+      "file": "browser-smoke-unavailable.txt",
+      "sha256": "2b157ec1370bc5420747688cf25ea1ba406e1e34d5f4200fcc8c5f5d3ac21a5c"
+    },
+    {
+      "file": "corrected-focused.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "corrected-focused.log",
+      "sha256": "34524a5da0d2320567b102cfc5791edbab0b21464d25af42ccfad035b7e052ef"
+    },
+    {
+      "file": "first-failure.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "first-failure.log",
+      "sha256": "4bd5863f5b6301c29114b5edf6f8b019cb894e64ad6ac255a4067e0dda80f5b7"
+    },
+    {
+      "file": "full-results.json",
+      "sha256": "e583e1f1150a5b4e917eb1fea5d22a370923f1a8cd124c121b1f4b82e0ea9603"
+    },
+    {
+      "file": "inspector-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "inspector-final.log",
+      "sha256": "84efeaa27f58c89d44ea8acfad831646d83df40e3f25c3267687d6e0c5779594"
+    },
+    {
+      "file": "node-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-final.log",
+      "sha256": "848070df3fe84b4cc7ec58e188be12cf60e3f8edbcb9685e02f0092976028bf5"
+    },
+    {
+      "file": "python-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-final.log",
+      "sha256": "06a7980a73363a371bb9d8c638d9f91f931833e1f7c6c52edb0f0624f536f4eb"
+    },
+    {
+      "file": "supervisor.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "first_failure_uncompressed_sha256": "9dca70ac99e111cbbb6b899bf73584ed84bb362dc18d0c5fa4ad77712bbe604f"
+}

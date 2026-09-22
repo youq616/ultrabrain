@@ -67,3 +67,31 @@ test('served JS does not use HTML insertion or browser token storage',async t=>{
  assert.equal(r.status,200);for(const text of ['innerHTML','outerHTML','insertAdjacentHTML','localStorage','sessionStorage','document.cookie'])assert.ok(!r.text.includes(text),text);
  assert.match(r.text,/textContent/);assert.match(r.text,/crypto\.randomUUID/);
 });
+
+test('local inspector is a fixed code-only asset, not a new data API',async t=>{
+ const s=await fixture(t),r=await raw(s.origin,{method:'GET',path:'/snapshot-inspector-ui.js'});
+ assert.equal(r.status,200);assert.equal(r.headers['cache-control'],'no-store');
+ for(const forbidden of ['innerHTML','localStorage','sessionStorage',"api('","fetch('"])assert.ok(!r.text.includes(forbidden));
+ assert.equal((await raw(s.origin,{method:'GET',path:'/snapshot-inspector-ui.js?file=secret'})).status,404);
+ assert.equal(s.queries,1);
+});
+
+test('snapshot record browser is a fixed no-store asset and adds no data route',async t=>{
+ const s=await fixture(t),r=await raw(s.origin,{method:'GET',path:'/snapshot-explorer-ui.js'});
+ assert.equal(r.status,200);assert.equal(r.headers['cache-control'],'no-store');
+ assert.match(r.headers['content-security-policy'],/script-src 'self'/);
+ for(const forbidden of ['innerHTML','outerHTML','localStorage','sessionStorage',"api('","fetch('",'download('])assert.ok(!r.text.includes(forbidden));
+ for(const path of ['/snapshot-explorer-ui.js?file=private','/api/snapshot-explore'])assert.equal((await raw(s.origin,{method:'GET',path})).status,404);
+ assert.equal(s.queries,1);
+});
+
+test('lineage inspector serves only fixed no-store scripts; no new data endpoint',async t=>{
+ const s=await fixture(t);
+ for(const path of ['/lineage-ui.js','/lineage-contract.mjs']){
+  const r=await raw(s.origin,{method:'GET',path});assert.equal(r.status,200);assert.equal(r.headers['cache-control'],'no-store');
+  assert.match(r.headers['content-security-policy'],/script-src 'self'/);
+  for(const v of ['innerHTML','outerHTML','localStorage','sessionStorage','document.cookie'])assert.ok(!r.text.includes(v));
+  assert.equal((await raw(s.origin,{method:'GET',path:path+'?file=private'})).status,404);
+ }
+ assert.equal((await raw(s.origin,{method:'GET',path:'/api/lineage'})).status,404);assert.equal(s.queries,1);
+});

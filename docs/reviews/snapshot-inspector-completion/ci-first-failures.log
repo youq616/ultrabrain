@@ -1,0 +1,13 @@
+# Selected original log excerpts, NOT complete job logs. Source SHA caf605ae591dea5b58b9322113d7781806d149bd.
+# Personal recall preview run35588946647 / browser-postgres106298705820. Transcribed exception excerpt; timestamps omitted.
+  File "/home/runner/work/ultrabrain/ultrabrain//test/personal-snapshot-inspector-browser.py", line 124, in <module>
+    page.evaluate('File.prototype.arrayBuffer=window.originalInspectBuffer')
+playwright._impl._errors.Error: Page.evaluate: TypeError: Failed to execute 'arrayBuffer' on 'Blob': Illegal invocation
+# Validate ultrabrain run35588946746 / n8n-engine106299121619. Subsequent n8n install/execute steps were SKIPPED.
+2026-09-21T10:32:59.5518879Z   File "/home/runner/work/ultrabrain/ultrabrain//test/personal-console-browser.py", line 76, in <module>
+2026-09-21T10:32:59.5520119Z     expect(page.locator('.memory-content')).to_have_text(malicious)
+2026-09-21T10:32:59.5552566Z Error: strict mode violation: locator(".memory-content") resolved to 4 elements:
+2026-09-21T10:32:59.5555618Z     2) <pre aria-live="polite" id="inspector-summary" class="memory-content"></pre> aka locator("#inspector-summary")
+2026-09-21T10:32:59.5556947Z     3) <pre class="memory-content" id="inspector-detail-left"></pre> aka locator("#inspector-detail-left")
+2026-09-21T10:32:59.5558381Z     4) <pre class="memory-content" id="inspector-detail-right"></pre> aka locator("#inspector-detail-right")
+2026-09-21T10:32:59.5941752Z ##[error]Process completed with exit code 1.

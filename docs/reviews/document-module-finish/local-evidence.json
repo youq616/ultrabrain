@@ -1,0 +1,115 @@
+{
+  "format": 1,
+  "base": "98451ebeba7b279c2ed95202c22b6608b5156b21",
+  "base_tree": "2a7ab81baebf651cca99919ddf79fa860342740a",
+  "independent_findings": [
+    4056915947,
+    4056915948
+  ],
+  "local_results": {
+    "node": {
+      "total": 1144,
+      "pass": 1144,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "python": {
+      "total": 683,
+      "pass": 683,
+      "exit": 0
+    },
+    "timestamp_before": {
+      "total": 21,
+      "pass": 5,
+      "fail": 16
+    },
+    "linkage_mutations": 27
+  },
+  "ci": "pending corrected commit",
+  "independent_final_review": "pending corrected commit",
+  "files": [
+    {
+      "path": "web/personal/app.js",
+      "git_blob": "f7232ca237947b2cd4ce5b9c172842e29c7bdcd1"
+    },
+    {
+      "path": "test/personal-document-module.test.mjs",
+      "git_blob": "b3d62105a54ae5d3698857b4d16363c7ff99e0b7"
+    },
+    {
+      "path": "test/personal-document-read.test.mjs",
+      "git_blob": "1fd12d96ddd789af7c35fb2560a4cba640e0f6df"
+    },
+    {
+      "path": "test/personal-document-module-browser.py",
+      "git_blob": "44257cf4875b83cf3d7e697cfe54798e1170b4a2"
+    },
+    {
+      "path": "test/personal-document-module-integration.mjs",
+      "git_blob": "6b7140b756dc2b2822d9e590c792a0c7f798c961"
+    },
+    {
+      "path": "test/fixtures/document-module-state.mjs",
+      "git_blob": "b948eb080f545fb79878c35210bce4656c52cc7d"
+    },
+    {
+      "path": "test/personal-document-module-state.test.mjs",
+      "git_blob": "dc28b983e06be606c347b395351fa979131b846c"
+    }
+  ],
+  "logs": [
+    {
+      "file": "linkage-focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "linkage-focused.log",
+      "sha256": "e57b78c953c021da6e6caf74ce7351136132f1b29993c44ebb4298aff9d12b85"
+    },
+    {
+      "file": "metadata-focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "metadata-focused.log",
+      "sha256": "f6b74573c934eb54f21fcec1d06505a6fa5c4a47d754d45611dc20a147839a9e"
+    },
+    {
+      "file": "node-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-final.log",
+      "sha256": "b900f463a0bfa0095abe6e33d6d4ee0ddbfe297637b9e81d4986acf4170a7973"
+    },
+    {
+      "file": "node-root-attempt.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "node-root-attempt.log",
+      "sha256": "6989fab050c42b392e5b8352142c7c92215b94b648f1dab9e5683c5446a56da0"
+    },
+    {
+      "file": "python-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-final.log",
+      "sha256": "b069a136fc9e10f057940632d3cd35eba26bad7328971f6fb4ab4284a27fef2b"
+    },
+    {
+      "file": "python-timeout.log",
+      "sha256": "8f60b68484bfa52e512a0e76021ca20dd9596816da5e824985c2e71bb444f4a7"
+    },
+    {
+      "file": "timestamp-first-failure.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "timestamp-first-failure.log",
+      "sha256": "e29eb6271ffc19dc07c1b5836950ae6476e36b5367aa2c14233d62be778d864e"
+    }
+  ]
+}

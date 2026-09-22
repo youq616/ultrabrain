@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "base_commit": "b6a6e84f4ab510f76f54da6caf3c505ad11914b6",
+  "base_tree": "bfee9e63263418f3f417f612d23f5e597940926c",
+  "local": {
+    "uid": 1000,
+    "node": "22.16.0",
+    "python": "3.13.5",
+    "node_tests": 1766,
+    "node_fail": 0,
+    "node_skipped": 0,
+    "node_cancelled": 0,
+    "python_tests": 683,
+    "python_test_seconds": 41.545,
+    "node_exit": 0,
+    "python_exit": 0,
+    "added_node_tests": 86,
+    "focused_subset": 86
+  },
+  "self_audit_before_fix": {
+    "tests": 2,
+    "fail": 2,
+    "exit": 1
+  },
+  "logs_sha256": {
+    "initial-unimplemented.log": "9b413db55bdc5706daa620a8c2b85fcae17eab6509204d340ae2b073adb9f6ba",
+    "client-all-focused.log": "e8a9345cf7191a565b7067aebe849607ef37a4ba12622fc63912bf8ec079d060",
+    "self-audit-red.log": "bf3909c457019353a884604bf371b7b835d3380965391218e796b683b90d8311",
+    "cli-guard-focused.log": "d6546b46e9ddb8c491bd77fe72a3b5be03d4f55dc1a737c0205c9538f7717b8f",
+    "node-full.log": "bc6a55ccf5f14cab3497d4ad6c167f04f43e651bc679c3b21ac2202351742987",
+    "python-full.log": "afe606f36023532f4da707498bd76db0b512aa70ac7bffbef2375702075b52b2",
+    "node-full.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "python-full.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "results.json": "83af908f32434bafab15a8370489fea9792aef3914f789bee091d42644e2d43d"
+  },
+  "candidate_ci": "pending",
+  "independent_review": "pending"
+}

@@ -31,6 +31,7 @@ def sibling(name, filename):
 
 READY = sibling('activate_readiness', 'personal-ready.py')
 MANAGER = sibling('activate_manager', 'personal_activate_manager.py')
+IDENTITY = sibling('activate_identity', 'personal-identity.py')
 DEPLOY, FS, SERVICES, PREFLIGHT = READY.DEPLOY, READY.FS, READY.SERVICES, READY.PREFLIGHT
 ActivateError, need = FS.DeployError, FS.need
 ROOT = Path(__file__).resolve().parents[1]
@@ -172,6 +173,38 @@ class Context(READY.Context):
         self.deadline = time.monotonic()+30
         with self._held():
             return self._plan(args, service_plan)
+
+    def prepare(self, *, bun, source, port, expected_current):
+        """Observe identity and prepare the existing plan, never dispatch a start.
+
+        Hold the existing reader lock across both operations. Compare the whole
+        stopped binding before/after identity SQL; an intervening restart, token
+        replacement or deployment change cannot yield a usable prepared plan.
+        This is not an API for replacing a caller's already trusted instance pin.
+        """
+        bun = str(FS.absolute(bun))
+        FS.sha(expected_current)
+        service_plan = SERVICES.plan(str(self.root), str(self.home), bun, source=source, port=port)
+        options = {'bun': bun, 'source': source, 'port': port, 'expected_current': expected_current}
+        self.deadline = time.monotonic()+30
+        with self._held():
+            need(self._reservation() is None, 'activation_pending')
+            before = self._observe(options, service_plan, state='stopped')
+            identity = IDENTITY.observe(str(self.home), source, root=self.root, deadline=self.deadline)
+            need(isinstance(identity, dict) and type(identity.get('format')) is int
+                 and identity['format'] == 1 and identity.get('ok') is True
+                 and identity.get('source_id') == source and identity.get('identity_verified') is True
+                 and identity.get('database_process_binding_verified') is True
+                 and identity.get('transport') == 'private-unix-socket'
+                 and identity.get('authentication') == 'os-peer-and-scram-sha-256',
+                 'instance_identity_unverified')
+            args, _ = self._arguments(**options, expected_instance=identity.get('instance_id'))
+            plan = self._plan(args, service_plan)
+            after = plan['observation']
+            need(before['database'] == after['database'], 'database_changed_during_check')
+            need(before == after, 'preparation_binding_changed')
+            READY.remaining(self.deadline)
+            return plan
 
     def _op_path(self, operation):
         return self.activation/'operations'/FS.sha(operation)
@@ -446,9 +479,8 @@ def main(argv=None, *, context_factory=Context):
     try:
         argv = list(sys.argv[1:] if argv is None else argv)
         parser = Parser(description=__doc__, allow_abbrev=False)
-        parser.add_argument('action', choices=('plan', 'apply', 'status', 'recover'))
-        parser.add_argument('--home', default=os.environ.get('ULTRABRAIN_HOME',
-                            str(Path(pwd.getpwuid(os.geteuid()).pw_dir)/'.local/share/ultrabrain')))
+        parser.add_argument('action', choices=('prepare', 'plan', 'apply', 'status', 'recover'))
+        parser.add_argument('--home')
         parser.add_argument('--bun')
         parser.add_argument('--source')
         parser.add_argument('--port', type=int)
@@ -460,10 +492,12 @@ def main(argv=None, *, context_factory=Context):
         need(len(flags) == len(set(flags)), 'invalid_arguments')
         args = parser.parse_args(argv)
         common = {'--home'}
+        if args.action in ('prepare', 'plan', 'apply'):
+            common |= {'--bun', '--source', '--port', '--expected-current'}
+            need(args.bun is not None and args.expected_current is not None, 'invalid_arguments')
         if args.action in ('plan', 'apply'):
-            common |= {'--bun', '--source', '--port', '--expected-current', '--expected-instance'}
-            need(args.bun is not None and args.expected_current is not None
-                 and args.expected_instance is not None, 'invalid_arguments')
+            common.add('--expected-instance')
+            need(args.expected_instance is not None, 'invalid_arguments')
         if args.action == 'apply':
             common.add('--expected-plan'); need(args.expected_plan is not None, 'invalid_arguments')
         if args.action == 'recover':
@@ -471,20 +505,30 @@ def main(argv=None, *, context_factory=Context):
         need(set(flags) <= common, 'invalid_arguments')
         need(sys.platform == 'linux' and os.getuid() == os.geteuid() != 0,
              'ordinary_linux_account_required')
-        context = context_factory(args.home)
-        if args.action in ('plan', 'apply'):
+        # Resolve the account default only after argument/platform validation,
+        # and only when neither an explicit nor environment home was supplied.
+        home = args.home if args.home is not None else os.environ.get('ULTRABRAIN_HOME')
+        if home is None:
+            home = str(Path(pwd.getpwuid(os.geteuid()).pw_dir)/'.local/share/ultrabrain')
+        context = context_factory(home)
+        if args.action in ('prepare', 'plan', 'apply'):
             options = {'bun': args.bun, 'source': args.source if args.source is not None else 'default',
                        'port': args.port if args.port is not None else 3132,
-                       'expected_current': args.expected_current, 'expected_instance': args.expected_instance}
-            result = (context.plan(**options) if args.action == 'plan' else
-                      context.apply(expected_plan=args.expected_plan, **options))
+                       'expected_current': args.expected_current}
+            if args.action == 'prepare':
+                result = context.prepare(**options)
+            else:
+                options['expected_instance'] = args.expected_instance
+                result = (context.plan(**options) if args.action == 'plan' else
+                          context.apply(expected_plan=args.expected_plan, **options))
         else:
             result = context.status() if args.action == 'status' else context.recover(args.expected_pending)
         print(json.dumps({'ok': True, 'result': result}, ensure_ascii=True))
         return 0
     except Exception as error:
         known = isinstance(error, (ActivateError, MANAGER.ActivateManagerError, PREFLIGHT.PreflightError,
-                                   SERVICES.ServicePlanError, READY.PROCESS.ReadyError))
+                                   SERVICES.ServicePlanError, READY.PROCESS.ReadyError, IDENTITY.IdentityError,
+                                   IDENTITY.PREFLIGHT.PreflightError, IDENTITY.FS.DeployError))
         code = str(error) if known and re.fullmatch('[a-z][a-z_]{0,79}', str(error)) else 'personal_activation_failed'
         # Error output never guesses whether a dispatched request took effect.
         print(json.dumps({'ok': False, 'error': code, 'application_ready': False,

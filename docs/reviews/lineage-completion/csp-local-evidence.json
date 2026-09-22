@@ -1,0 +1,110 @@
+{
+  "format": 1,
+  "parent_candidate": "213b42c51e1025f2cb8b4373b77f6938ac44ff09",
+  "parent_tree": "5bdfff5ef6ebf9c5c46ef9afa9a69a964c9a8a8d",
+  "ci_failure": {
+    "run_id": 35669293556,
+    "job_id": 106561925990,
+    "stage": "Uncertain processing across real live leases and no-effect retries",
+    "outcome": "CSP EvalError in wait_for_function; later lineage stage skipped"
+  },
+  "results": {
+    "uid": 1000,
+    "node": "v22.16.0",
+    "python": "Python 3.13.5",
+    "runs": [
+      {
+        "name": "node-csp-final",
+        "exit": 0,
+        "seconds": 54.581
+      },
+      {
+        "name": "python-csp-final",
+        "exit": 0,
+        "seconds": 75.983
+      }
+    ]
+  },
+  "node_tests": 1680,
+  "python_tests": 683,
+  "python_test_seconds": 73.796,
+  "focused_subset": 132,
+  "added_since_parent": 6,
+  "added_since_c4": 19,
+  "regression_before_fix": {
+    "tests": 6,
+    "pass": 0,
+    "fail": 6,
+    "exit": 1
+  },
+  "files": [
+    {
+      "path": "test/personal-job-recovery-barrier-browser.py",
+      "blob": "f39e6438267eca3efc670330d0e9b5904ce9ece8"
+    },
+    {
+      "path": "test/personal-job-recovery-barrier.test.mjs",
+      "blob": "5eb83c2b8e78c95586e27923557f4f4d9548d0fc"
+    },
+    {
+      "path": "docs/reviews/lineage-completion/CSP-ACCEPTANCE.md",
+      "blob": "5748820ef55a3e8006ec3839b177501bf16b96f2"
+    },
+    {
+      "path": "docs/reviews/lineage-completion/ci-csp-first-failure.log",
+      "blob": "683538734bfddb0d31ead0ca2503171d55b7634e"
+    },
+    {
+      "path": "docs/reviews/lineage-completion/csp-first-failure.log.gz",
+      "blob": "7ebebad8dae6da9be3e4ba069337636db611c577"
+    }
+  ],
+  "logs": [
+    {
+      "file": "csp-first-failure.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "csp-first-failure.log",
+      "sha256": "e6bb5200d5f1b204b5200db935c3476546df4d47a02969e7106a7461ef98c7ab"
+    },
+    {
+      "file": "csp-focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "csp-focused.log",
+      "sha256": "e29e7744609830959e9e1c8dd4d74bb8f91a485ac2d8ef3d5e72ab8e23efe97a"
+    },
+    {
+      "file": "csp-results-progress.json",
+      "sha256": "13bae8585707d33fd67a20474c0b3d2b3474d353f29d1042b7157786bf632166"
+    },
+    {
+      "file": "csp-results.json",
+      "sha256": "13bae8585707d33fd67a20474c0b3d2b3474d353f29d1042b7157786bf632166"
+    },
+    {
+      "file": "csp-supervisor.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "node-csp-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-csp-final.log",
+      "sha256": "3c05dbe91e54796a0c3d3b8d525dc93cc88d98181701f777e2dc68a4cd156632"
+    },
+    {
+      "file": "python-csp-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-csp-final.log",
+      "sha256": "9ec633ae163ff3ceb428e0730941799c429c988fb00ad3012eb43856466f553b"
+    }
+  ],
+  "final_ci": "pending at commit creation",
+  "independent_final_review": "pending at commit creation; prior213 verdict not reused"
+}

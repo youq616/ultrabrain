@@ -48,7 +48,7 @@ test('context never truncates individual instructions to satisfy its serialized 
 });
 test('personal tools have real handlers and consistent read/write scopes',()=>{
   class E extends Error{constructor(code,msg){super(msg);this.code=code;}}
-  const operations=[];assert.equal(registerPersonalPlugin(operations,{OperationError:E}).length,17); // 12 memory/job tools + 5 document tools
+  const operations=[];assert.equal(registerPersonalPlugin(operations,{OperationError:E}).length,18); // 13 memory/job tools (including exact read) + 5 document tools
   assert.deepEqual(operations.map(x=>x.name),PERSONAL_TOOL_NAMES);
   assert.ok(operations.every(x=>typeof x.handler==='function'&&x.mutating===(x.scope==='write')));
   assert.throws(()=>registerPersonalPlugin(operations,{OperationError:E}),{code:'upstream_contract_changed'});

@@ -6,7 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {requireThat,integer,sha256} from './core.mjs';
 import {objectFields,memoryId} from './personal-memory.mjs';
 import {personalPrincipal,lockPersonal,PERSONAL_DERIVATION_CURRENT} from './personal-memory-store.mjs';
-import {personalProfileHash,generatePersonalCandidates,MAX_PERSONAL_ATTEMPTS} from './personal-consolidation-core.mjs';
+import {personalProfileHash,generatePersonalCandidates,MAX_PERSONAL_ATTEMPTS,jobStatusQuery} from './personal-consolidation-core.mjs';
 import {configuredPersonalModel} from './adapters/personal-model.mjs';
 const safeErrors=new Set(['invalid_personal_output','personal_model_timeout','model_unavailable','model_profile_changed','stale_source']);
 const publicJob=row=>({job_id:row.id,input_id:row.input_id,input_revision:row.input_revision,state:row.state,
@@ -18,14 +18,19 @@ export class PersonalConsolidator {
     this.ctx=ctx;this.source=ctx.sourceId;this.actor=personalPrincipal(ctx);this.engine=ctx.engine;this.configure=configure;
   }
   async status(input={}) {
-    objectFields(input,['job_id','limit','offset']);if(input.job_id!==undefined)memoryId(input.job_id);
-    const limit=integer(input.limit,20,1,100),offset=integer(input.offset,0,0,1000000);
-    const rows=await this.engine.executeRaw(`SELECT id::text,input_id::text,input_revision,state,attempts,lease_until,result,error_code,created_at,updated_at
-      FROM ultrabrain.personal_consolidations WHERE source_id=$1 AND actor_key=$2 AND ($3::uuid IS NULL OR id=$3::uuid)
-      ORDER BY created_at DESC,id LIMIT $4 OFFSET $5`,[this.source,this.actor,input.job_id??null,limit,offset]);
-    if(input.job_id)requireThat(rows.length===1,'not_found','Personal job not found under this identity');
-    return {source_id:this.source,jobs:rows.map(publicJob),next_offset:rows.length===limit?offset+rows.length:null};
+    const p=jobStatusQuery(input);
+    const rows=await this.engine.transaction(async tx=>{
+      await tx.executeRaw('SET LOCAL transaction_read_only=on');
+      await tx.executeRaw("SET LOCAL statement_timeout='5s'");
+      return tx.executeRaw(`SELECT id::text,input_id::text,input_revision,state,attempts,lease_until,result,error_code,created_at,updated_at
+        FROM ultrabrain.personal_consolidations WHERE source_id=$1 AND actor_key=$2 AND ($3::uuid IS NULL OR id=$3::uuid)
+        AND ($6::text IS NULL OR state=$6)
+        ORDER BY created_at DESC,id LIMIT $4 OFFSET $5`,[this.source,this.actor,p.job_id,p.limit,p.offset,p.state]);
+    });
+    if(p.job_id)requireThat(rows.length===1,'not_found','Personal job not found under this identity');
+    return {source_id:this.source,jobs:rows.map(publicJob),next_offset:!p.job_id&&rows.length===p.limit&&p.offset+rows.length<=1000000?p.offset+rows.length:null};
   }
+
   async cancel(input) {
     objectFields(input,['job_id']);memoryId(input.job_id);personalPrincipal(this.ctx,true);
     if(this.ctx.dryRun)return {dry_run:true,storage:'not_stored'};

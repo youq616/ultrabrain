@@ -1,0 +1,75 @@
+Excerpt from the baseline run using the final 79-test file. Not the full log.
+Full log SHA256: 95488a9891cd0e682d1388cea19af20ba8d215409c9698d106106a22c1454d2f
+Full original is retained in the delivered evidence archive.
+
+# Subtest: read fails closed on foreign source
+not ok 8 - read fails closed on foreign source
+  ---
+  duration_ms: 2.163703
+  type: 'test'
+  location: '/mnt/data/ultrabrain-read-baseline/test/personal-document-read.test.mjs:67:79'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    noExposure (file:///mnt/data/ultrabrain-read-baseline/test/personal-document-read.test.mjs:41:9)
+    TestContext.<anonymous> (file:///mnt/data/ultrabrain-read-baseline/test/personal-document-read.test.mjs:69:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: download fails closed on foreign source
+not ok 9 - download fails closed on foreign source
+  ---
+  duration_ms: 2.323774
+  type: 'test'
+  location: '/mnt/data/ultrabrain-read-baseline/test/personal-document-read.test.mjs:67:79'
+  failureType: 'testCodeFailure'
+
+# Subtest: latest selection wins read A then read B
+not ok 70 - latest selection wins read A then read B
+  ---
+  duration_ms: 1.652122
+  type: 'test'
+  location: '/mnt/data/ultrabrain-read-baseline/test/personal-document-read.test.mjs:101:80'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'DOCUMENT_1'
+    - 'DOCUMENT_2'
+                ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'DOCUMENT_2'
+  actual: 'DOCUMENT_1'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///mnt/data/ultrabrain-read-baseline/test/personal-document-read.test.mjs:105:29)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: latest selection wins read A then download B
+not ok 71 - latest selection wins read A then download B
+  ---
+  duration_ms: 1.369435
+  type: 'test'
+
+1..79
+# tests 79
+# suites 0
+# pass 16
+# fail 63
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 192.328319

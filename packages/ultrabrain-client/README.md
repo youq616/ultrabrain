@@ -13,3 +13,52 @@ Automatic capture is disabled unless the trusted profile enables allow_capture, 
 ## Task-aware reads
 
 The task-context command accepts only an explicitly consented task/workspace JSON on stdin. A new allow_task_context profile opt-in, verified identity pins and bound workspace are mandatory; claude-task-hook additionally requires the separate automatic_task_context scope claude-user. Existing context/claude-hook and raw MCP tool contracts are unchanged. No capture, registration or model call is requested. Tasks are sent to the chosen server and may be subject to its operator logging policies. See docs/TASK-CONTEXT.md at the exact source commit for constraints and config/rollback instructions. This is not a new npm registry release or live Claude-model certification.
+
+## Explicit direct-source inspection
+
+The `lineage --profile PATH` command accepts one JSON stdin object with `memory_id`,
+`workspace`, `consent:true`, and optional `include_text` (default false). It requires
+observed instance/actor pins and workspace binding. It emits verified metadata by
+default, never captures text or calls a model. `dist/lineage.cjs` exports
+`inspectClientLineage(profile, request, {authorize, signal})` for explicit Node use.
+See `docs/CLIENT-LINEAGE.md` in the same repository commit for the complete contract.
+
+## Offline snapshot tools
+
+`ultrabrain-snapshot` (or `node dist/snapshot-cli.cjs`) accepts an explicit JSON
+request on stdin: `inspect`, `compare`, `page`, or `record`, `consent:true`, and
+one local file selection (`compare` requires two). This is a separate offline
+executable: it does not load MCP, open a profile, contact a server, restore data,
+or call a model. `dist/snapshot.cjs` exports `inspectClientSnapshots` for selected
+paths and `inspectClientSnapshotBytes` for caller-supplied byte buffers.
+
+Each file is completely checked using the existing snapshot contract. A selection
+may pin `expected_sha256`. Metadata is the default; only an explicit `record`
+request with `include_text:true` returns body/provenance/derivation. File metadata
+is still private, matching source labels do not prove the same owner, and absence
+in a comparison is not deletion. Local paths may reside on a network-mounted
+filesystem; no application network API is used. Full schema and examples are in
+`docs/CLIENT-SNAPSHOTS.md` at the exact source commit. A prior package with the
+same version string may not have this entry: identify builds by commit and hash.
+
+### Offline source audit
+
+`ultrabrain-snapshot` also accepts `operation: "audit"`, with `consent: true` and
+one explicitly selected file. Optional `memory_id` limits the audit to one record;
+whole-file integrity is always checked. Reports contain direct same-file source
+metadata and separate revision/hash/quote comparisons, never body text. A successful
+exit reports completion, not absence of findings; inspect result.counts. No recursive
+graph, owner authentication, truth certification or automatic repair is implied.
+See docs/SNAPSHOT-SOURCE-AUDIT.md in the matching source commit.
+
+## Offline dependency impact
+
+`operation: "impact"` requires `consent: true`, one selected snapshot and an exact
+`memory_id` root. The same CLI and path/byte APIs report potential direct and
+transitive dependents, ordered by distance and ID. Stale references are included;
+malformed references, unsupported document origins and missing sources are
+reported as coverage gaps, not guessed relationships. Results never include
+bodies or quotes. No automatic invalidation, deletion, repair or server lookup
+occurs. `traversal_complete` covers known supported in-file edges only;
+`all_impacts_known`, `graph_verified`, `identity_verified` and `truth_verified`
+remain false. See `docs/SNAPSHOT-IMPACT.md` in the matching source commit.

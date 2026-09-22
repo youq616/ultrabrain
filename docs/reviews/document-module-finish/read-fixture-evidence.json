@@ -1,0 +1,65 @@
+{
+  "format": 1,
+  "parent": "93ea57a33d49fce7bd8898f5d207caa49e75a4e0",
+  "parent_tree": "c3e00767b6bd08a2a953b4b60fe7145f9786a117",
+  "ci_failure": {
+    "run": 35514520032,
+    "job": 106088090534,
+    "full_log_read": true,
+    "saved_log": "excerpt only",
+    "complete_module_step": "skipped"
+  },
+  "application_changed": false,
+  "local_results": {
+    "node": {
+      "pass": 1165,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "exit": 0
+    },
+    "python": {
+      "pass": 683,
+      "seconds": 23.9,
+      "exit": 0
+    },
+    "fixture_ast_only": {
+      "valid": 1,
+      "invalid_rejected": 6
+    }
+  },
+  "final_ci": "pending new SHA",
+  "independent_final_review": "pending new SHA",
+  "files": [
+    {
+      "path": "test/personal-document-read-browser.py",
+      "git_blob": "6473e420142a81f715001a5f52736d2d52ad595c"
+    },
+    {
+      "path": "docs/reviews/document-module-finish/read-fixture-ci-failure-excerpt.log",
+      "git_blob": "97a5adf5c473ebefa3f2ee76952cf71e5b795ffb"
+    }
+  ],
+  "logs": [
+    {
+      "file": "fixture-preconditions.json",
+      "sha256": "874d09ef897f4b5a9b71d4ec24e8f9561540f027557350cae6f3e79a14324831"
+    },
+    {
+      "file": "node-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-final.log",
+      "sha256": "6802f9f30312ba5c3c64171a416118e0c60e9b5ac14612d2f876431d8e286f53"
+    },
+    {
+      "file": "python-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-final.log",
+      "sha256": "1c5fc7e3b490ef7aff69ce3699c26c8ccb2f13244c7685917b9eb95eccb5ee5e"
+    }
+  ]
+}

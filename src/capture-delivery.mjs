@@ -3,6 +3,7 @@
  * identity/registration step, immediately before starting a new write request.
  * It cannot retract a request already sent to the server.
  */
+import {ensureOwnedAgent} from './client-agent.mjs';
 import {captureRequest} from './client-kit.mjs';
 import {objectFields} from './personal-memory.mjs';
 import {requireThat} from './core.mjs';
@@ -28,8 +29,7 @@ export async function deliverCapture(input,profile,{checkIdentity,invoke,signal,
     requireThat(!signal?.aborted,'aborted','Capture cancelled during authorization');
   };
   allowed();await checkIdentity();
-  allowed();
-  await invoke('ultra_agent_register',{agent_id:request.agent_id,agent_type:'custom'});
+  await ensureOwnedAgent(request.agent_id,profile,{checkIdentity,invoke,assertAuthorized:allowed});
   await checkIdentity();
   allowed();
   return invoke('ultra_personal_capture',request);

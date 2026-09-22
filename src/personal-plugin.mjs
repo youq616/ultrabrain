@@ -1,5 +1,6 @@
 /** Personal MCP tools are registered in compatibility mode; governed enterprise allowlist stays frozen. */
 import {PersonalConsolidator} from './personal-consolidation.mjs';
+import {PERSONAL_JOB_STATES} from './personal-consolidation-core.mjs';
 import {configuredPersonalModel} from './adapters/personal-model.mjs';
 import {PersonalMemoryStore} from './personal-memory-store.mjs';
 import {PersonalDocumentStore,PERSONAL_DOCUMENT_FORMATS,PERSONAL_DOCUMENT_MAX_BYTES,PERSONAL_FRAGMENT_MAX_BYTES,PERSONAL_DOCUMENT_FRAGMENT_LIMIT} from './personal-documents.mjs';
@@ -15,13 +16,14 @@ const revision={memory_id:str('Full memory UUID',true),expected_revision:num('La
 const definitions=[
  ['ultra_personal_capture','capture',true,{agent_id:str('Registered label',true),event_id:str('Stable capture event id',true),transcript:str('Explicitly consented raw text, at most 32 KiB',true),consent:{type:'boolean',required:true},project_id:str('Optional project label')},'Atomically retain a private source entry and queue it for personal consolidation. Does not call a model or activate memory.'],
  ['ultra_personal_consolidate','job_process',true,{expected_source:str('Must match authenticated source',true),allow_model_call:{type:'boolean',required:true},limit:num('1..4 jobs, default 1'),retry:{type:'boolean'},job_id:str('Optional owned job UUID')},'Process explicitly queued owned personal jobs using a separately enabled host model. Produces quoted private candidates only. Model costs may repeat after explicit recovery.'],
- ['ultra_personal_jobs','job_status',false,{job_id:str('Optional owned job UUID'),limit:num('1..100'),offset:num('Live list offset')},'Inspect owned personal consolidation state without transcript content, credentials or model calls.'],
+ ['ultra_personal_jobs','job_status',false,{job_id:str('Optional owned job UUID; exact reads cannot be paged or state-filtered'),state:{...str('Optional lifecycle filter; default any'),enum:['any',...PERSONAL_JOB_STATES]},limit:num('1..100'),offset:num('Live list offset')},'Inspect owned personal consolidation state without transcript content, credentials or model calls.'],
  ['ultra_personal_cancel','job_cancel',true,{job_id:str('Owned incomplete job UUID',true)},'Fence an incomplete consolidation job. Retain its original input; cannot undo a submitted provider call or charge.'],
  ['ultra_agent_register','register',true,{agent_id:str('Caller-owned client label',true),agent_type:{...str('Self-described type'),enum:AGENT_TYPES},
    capabilities:{type:'array',items:{type:'string'}},workspace:str('Optional descriptive path, never executed'),expected_revision:num('0 to create; current revision for metadata changes')},'Register a client label under the authenticated source/principal, not a self-asserted identity.'],
  ['ultra_agent_list','agents',false,{limit:num('1..100'),offset:num('Live page offset')},'List only this principal registered client labels.'],
  ['ultra_memory_commit','commit',true,{agent_id:str('Registered label owned by this principal',true),event_id:str('Immutable request id',true),consent:{type:'boolean',required:true},
    summary:str('Optional experience candidate instead of a memories array'),memories:{type:'array',items:{type:'object'},description:'1..16 typed items: type, content, confidence(optional caller estimate), importance, provenance, visibility(private/source), project_id'}},'Atomically store explicitly consented candidate memories. No automatic confirmation or model call.'],
+ ['ultra_memory_read','read',false,{memory_id:str('Full UUID of one currently authorized entry; not an ownership grant',true)},'Read one complete current entry by ID. Owned candidates/archives remain inspectable; others require current active source sharing. Not a historical snapshot or permission to update.'],
  ['ultra_memory_search','search',false,query,'Search authorized personal entries. Private by default; source-shared active entries require explicit sharing.'],
  ['ultra_personal_context','context',false,query,'Return bounded active personal context for current source/principal and optional project. Not semantic ranking or truth certification.'],
  ['ultra_memory_profile','profile',false,{limit:num('1..100'),budget_bytes:num('512..131072 UTF-8 bytes')},'Read explicitly active identity, preference, environment and goal entries.'],

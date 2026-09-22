@@ -1,0 +1,166 @@
+{
+  "format": 1,
+  "base_commit": "4d07e39dcfc2815901111c4ac0dd4934799d5be3",
+  "base_tree": "75830bc325127108a09b1f7ab0851cee0d50ae54",
+  "source_artifact": 10631810455,
+  "source_archive_sha256": "7014b4b5cd8aaf5497978269ac7ca6aa80be0c1a08f6f3d46680b64d9fa97c0e",
+  "source_tree_reconstructed": true,
+  "environment": {
+    "uid": 1000,
+    "umask": "022",
+    "node": "v22.16.0",
+    "python": "Python 3.13.5"
+  },
+  "results": {
+    "first_missing_module": {
+      "tests": 4,
+      "pass": 0,
+      "fail": 4,
+      "exit": 1,
+      "scope": "four requested feature tests before implementation, not four legacy defects"
+    },
+    "node": {
+      "tests": 1462,
+      "pass": 1462,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "exit": 0
+    },
+    "python": {
+      "tests": 683,
+      "pass": 683,
+      "duration_seconds": 43.345,
+      "exit": 0
+    },
+    "inspector_subset": {
+      "tests": 61,
+      "pass": 61,
+      "exit": 0
+    },
+    "additional_existing_console_test": 1,
+    "new_node_total": 62,
+    "candidate_ci": "pending exact final commit",
+    "independent_review": "pending exact final commit"
+  },
+  "files": [
+    {
+      "path": ".github/workflows/client-portability.yml",
+      "git_blob": "fa71d2b53c3555e0614009b8b29583c4835a62e7"
+    },
+    {
+      "path": ".github/workflows/personal-recall-preview.yml",
+      "git_blob": "7c3972bdd3d8675245aa50449e7373d9ce850804"
+    },
+    {
+      "path": "docs/PERSONAL-SNAPSHOT-INSPECTOR.md",
+      "git_blob": "7fe2069f5bfeed8fc41b1f2e582ae4603d3e2346"
+    },
+    {
+      "path": "docs/reviews/snapshot-inspector/README.md",
+      "git_blob": "c0951c881e48176d0dfbdf9e843266bfe3468d3d"
+    },
+    {
+      "path": "docs/reviews/snapshot-inspector/first-missing-module.log.gz",
+      "git_blob": "aeecace1dabdfeedb768a2afc9bbc97b612c4c90"
+    },
+    {
+      "path": "src/personal-console.mjs",
+      "git_blob": "c1920f0e05346c118b24c7732dae40514549f5d7"
+    },
+    {
+      "path": "src/personal-snapshot-contract.mjs",
+      "git_blob": "c1004b271b4abb2ffa9d3549fe28f4b31cb63085"
+    },
+    {
+      "path": "test/helpers/snapshot-audit-fixture.mjs",
+      "git_blob": "c6989e16ecf965efadf5ede5d7375c150928f62e"
+    },
+    {
+      "path": "test/personal-console.test.mjs",
+      "git_blob": "2430682a6db81028de9a19ec07f293ef22884de7"
+    },
+    {
+      "path": "test/personal-snapshot-inspector-browser.py",
+      "git_blob": "e3d41c68d8f7faa6e4ea0b65ae51a485f81291b6"
+    },
+    {
+      "path": "test/personal-snapshot-inspector-integration.mjs",
+      "git_blob": "404efabdc17b71c55b20c32d833eca2a716f5af3"
+    },
+    {
+      "path": "test/personal-snapshot-inspector-ui.test.mjs",
+      "git_blob": "d59d60e2ab42298d0d70a90beee3d00646bb8d60"
+    },
+    {
+      "path": "test/personal-snapshot-inspector.test.mjs",
+      "git_blob": "0e54a069dc391d8f7fd666d0b8f049ece2c6a34b"
+    },
+    {
+      "path": "web/personal/index.html",
+      "git_blob": "c1ca7942051318b75006b8b38e07af01107bce85"
+    },
+    {
+      "path": "web/personal/snapshot-inspector-ui.js",
+      "git_blob": "83635c3719ca4881f733c26399341e0bc5341850"
+    }
+  ],
+  "logs": [
+    {
+      "file": "first-missing-module.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "first-missing-module.log",
+      "sha256": "01180b943223ae30119e6591de3e2327d6566f16f4159a2e2b7c7488e3613f24"
+    },
+    {
+      "file": "focused-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "focused-final.log",
+      "sha256": "a378bb7bf09d35f6552cc8db0e5f6e44ca9ca346485dedc70ed7f4cc4a276a44"
+    },
+    {
+      "file": "focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "focused.log",
+      "sha256": "ed3ae2b66d68d3d5b6f46d8d8e9ac1adf676932d7196040c82a4185b107c2b16"
+    },
+    {
+      "file": "node-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-final.log",
+      "sha256": "b22a26e4010a705ebca2916344a96cfa35087b48d7fc2c2c5cc6bab96c707350"
+    },
+    {
+      "file": "node-full.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "node-full.log",
+      "sha256": "21e7e52ec809aa94d97cd735e38dbdeda2a5f6d506430e3ce63e9b8f2a2cc54d"
+    },
+    {
+      "file": "python-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-final.log",
+      "sha256": "7b7c17a6cd252f28020de663d6e0cfbabefd8c6aec88f8a61be10886ebccd9be"
+    },
+    {
+      "file": "python-full.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-full.log",
+      "sha256": "ec91a3576b6e853719bd786040bfd86448c3325db1ef9881426468148aa84b7b"
+    }
+  ]
+}

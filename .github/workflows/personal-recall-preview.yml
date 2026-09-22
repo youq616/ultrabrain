@@ -1,0 +1,150 @@
+name: Personal recall preview
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: personal-recall-preview-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  browser-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      ULTRABRAIN_HOME: /home/runner/ultrabrain-task-context-test
+      ULTRABRAIN_TEST_ALLOW_WRITE: '1'
+      ULTRABRAIN_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Archive exact tracked source before creating runtime data
+        run: git archive --format=tar.gz --output="$RUNNER_TEMP/document-module-source.tgz" HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: document-module-source-${{ github.sha }}
+          path: ${{ runner.temp }}/document-module-source.tgz
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Native prerequisites on disposable runner
+        run: sudo apt-get update && sudo apt-get install -y build-essential bison flex libssl-dev zlib1g-dev pkg-config
+      - run: install -d -m 0700 "$ULTRABRAIN_HOME"
+      - uses: actions/cache@v4
+        with:
+          path: /home/runner/ultrabrain-task-context-test/runtime
+          key: native-ubuntu24-v1-${{ hashFiles('upstreams.lock.json', 'scripts/build-postgres.sh') }}
+      - name: Bootstrap only the disposable managed database
+        run: bash scripts/bootstrap-linux.sh
+      - name: Isolated browser dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/recall-browser-venv"
+          "$RUNNER_TEMP/recall-browser-venv/bin/pip" install playwright==1.57.0
+          "$RUNNER_TEMP/recall-browser-venv/bin/python" -m playwright install --with-deps chromium
+      - name: Chromium read-only previews, exact-ID corrections and explicit conflict comparison
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_BROWSER_REPORT: ${{ runner.temp }}/personal-recall-browser-report.json
+          ULTRABRAIN_BROWSER_SCREENSHOT: ${{ runner.temp }}/personal-recall-preview.png
+          ULTRABRAIN_LOOKUP_REPORT: ${{ runner.temp }}/personal-memory-lookup-report.json
+          ULTRABRAIN_LOOKUP_SCREENSHOT: ${{ runner.temp }}/personal-memory-lookup.png
+          ULTRABRAIN_RECEIPT_REPORT: ${{ runner.temp }}/personal-console-receipts-report.json
+          ULTRABRAIN_RECEIPT_SCREENSHOT: ${{ runner.temp }}/personal-console-receipts.png
+          ULTRABRAIN_DOCUMENT_RECEIPT_REPORT: ${{ runner.temp }}/personal-document-receipts-report.json
+          ULTRABRAIN_DOCUMENT_RECEIPT_SCREENSHOT: ${{ runner.temp }}/personal-document-receipts.png
+          ULTRABRAIN_DOCUMENT_READ_REPORT: ${{ runner.temp }}/personal-document-read-report.json
+          ULTRABRAIN_DOCUMENT_READ_SCREENSHOT: ${{ runner.temp }}/personal-document-read.png
+          ULTRABRAIN_COMPARISON_SCREENSHOT: ${{ runner.temp }}/personal-memory-comparison.png
+        run: bun test/personal-recall-browser-fixture.mjs
+      - name: Complete personal document module with real pagination and lifecycle
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_MODULE_REPORT: ${{ runner.temp }}/personal-document-module-report.json
+          ULTRABRAIN_MODULE_SCREENSHOT: ${{ runner.temp }}/personal-document-module.png
+        run: bun test/personal-document-module-integration.mjs
+      - name: Complete task management with PostgreSQL, native MCP and Chromium
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_JOB_REPORT: ${{ runner.temp }}/personal-job-manager-report.json
+          ULTRABRAIN_JOB_SCREENSHOT: ${{ runner.temp }}/personal-job-manager.png
+        run: bun test/personal-job-manager-integration.mjs
+      - name: Processing acknowledgement and explicit same-job recovery
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_JOB_RECOVERY_REPORT: ${{ runner.temp }}/personal-job-recovery-report.json
+          ULTRABRAIN_JOB_RECOVERY_SCREENSHOT: ${{ runner.temp }}/personal-job-recovery.png
+        run: bun test/personal-job-recovery-integration.mjs
+      - name: Uncertain processing across real live leases and no-effect retries
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_BARRIER_REPORT: ${{ runner.temp }}/personal-job-recovery-barrier-report.json
+          ULTRABRAIN_BARRIER_SCREENSHOT: ${{ runner.temp }}/personal-job-recovery-barrier.png
+        run: bun test/personal-job-recovery-barrier-integration.mjs
+      - name: Consistent owner memory snapshot and explicit browser download
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_SNAPSHOT_REPORT: ${{ runner.temp }}/personal-snapshot-report.json
+          ULTRABRAIN_SNAPSHOT_SCREENSHOT: ${{ runner.temp }}/personal-snapshot.png
+        run: bun test/personal-snapshot-integration.mjs
+      - name: Local snapshot inspection and difference review without data upload
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_INSPECTOR_REPORT: ${{ runner.temp }}/personal-snapshot-inspector-report.json
+          ULTRABRAIN_INSPECTOR_SCREENSHOT: ${{ runner.temp }}/personal-snapshot-inspector.png
+        run: bun test/personal-snapshot-inspector-integration.mjs
+      - name: Browse complete local snapshot records without data upload or mutation
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_EXPLORER_REPORT: ${{ runner.temp }}/personal-snapshot-explorer-report.json
+          ULTRABRAIN_EXPLORER_SCREENSHOT: ${{ runner.temp }}/personal-snapshot-explorer.png
+        run: bun test/personal-snapshot-explorer-integration.mjs
+      - name: Explicit derived-memory source verification with PostgreSQL and Chromium
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_LINEAGE_REPORT: ${{ runner.temp }}/personal-lineage-report.json
+          ULTRABRAIN_LINEAGE_SCREENSHOT: ${{ runner.temp }}/personal-lineage.png
+        run: bun test/personal-lineage-integration.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: personal-recall-preview-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/personal-recall-browser-report.json
+            ${{ runner.temp }}/personal-recall-preview.png
+            ${{ runner.temp }}/personal-memory-lookup-report.json
+            ${{ runner.temp }}/personal-memory-lookup.png
+            ${{ runner.temp }}/personal-memory-comparison.png
+            ${{ runner.temp }}/personal-console-receipts-report.json
+            ${{ runner.temp }}/personal-console-receipts.png
+            ${{ runner.temp }}/personal-document-receipts-report.json
+            ${{ runner.temp }}/personal-document-receipts.png
+            ${{ runner.temp }}/personal-document-read-report.json
+            ${{ runner.temp }}/personal-document-read.png
+            ${{ runner.temp }}/personal-document-module-report.json
+            ${{ runner.temp }}/personal-document-module.png
+            ${{ runner.temp }}/personal-job-manager-report.json
+            ${{ runner.temp }}/personal-job-manager.png
+            ${{ runner.temp }}/personal-job-recovery-report.json
+            ${{ runner.temp }}/personal-job-recovery.png
+            ${{ runner.temp }}/personal-job-recovery-barrier-report.json
+            ${{ runner.temp }}/personal-job-recovery-barrier.png
+            ${{ runner.temp }}/personal-snapshot-report.json
+            ${{ runner.temp }}/personal-snapshot.png
+            ${{ runner.temp }}/personal-snapshot-inspector-report.json
+            ${{ runner.temp }}/personal-snapshot-inspector.png
+            ${{ runner.temp }}/personal-snapshot-explorer-report.json
+            ${{ runner.temp }}/personal-snapshot-explorer.png
+            ${{ runner.temp }}/personal-lineage-report.json
+            ${{ runner.temp }}/personal-lineage.png
+          if-no-files-found: error
+          retention-days: 14
+      - name: Stop only the disposable database
+        if: always()
+        run: bun src/cli.mjs db stop || true
+      # No tokens, user tasks, private configs, database dumps or raw service logs uploaded.

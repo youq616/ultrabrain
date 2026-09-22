@@ -1,0 +1,174 @@
+=== first-failure-cli.log (complete local log) ===
+TAP version 13
+# Subtest: personal-init rejects unknown, missing, duplicate and abbreviated options before side effects
+not ok 1 - personal-init rejects unknown, missing, duplicate and abbreviated options before side effects
+  ---
+  duration_ms: 56.232503
+  type: 'test'
+  location: '/mnt/data/ub-init-work/test/personal-init-cli.test.mjs:24:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'ultrabrain: ENOENT; Run db init and check private file permissions.\n' +
+    +   "ENOENT: no such file or directory, lstat '/tmp/ub-init-cli-7MDPL1/absent/gbrain'\n"
+    - ''
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ''
+  actual: |-
+    ultrabrain: ENOENT; Run db init and check private file permissions.
+    ENOENT: no such file or directory, lstat '/tmp/ub-init-cli-7MDPL1/absent/gbrain'
+    
+  operator: 'strictEqual'
+  stack: |-
+    call (file:///mnt/data/ub-init-work/test/personal-init-cli.test.mjs:18:38)
+    TestContext.<anonymous> (file:///mnt/data/ub-init-work/test/personal-init-cli.test.mjs:29:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: personal-init on an absent installation cannot bootstrap or create token/service state
+not ok 2 - personal-init on an absent installation cannot bootstrap or create token/service state
+  ---
+  duration_ms: 47.900573
+  type: 'test'
+  location: '/mnt/data/ub-init-work/test/personal-init-cli.test.mjs:31:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'ultrabrain: ENOENT; Run db init and check private file permissions.\n' +
+    +   "ENOENT: no such file or directory, lstat '/tmp/ub-init-cli-8bP4JO/absent/gbrain'\n"
+    - ''
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ''
+  actual: |-
+    ultrabrain: ENOENT; Run db init and check private file permissions.
+    ENOENT: no such file or directory, lstat '/tmp/ub-init-cli-8bP4JO/absent/gbrain'
+    
+  operator: 'strictEqual'
+  stack: |-
+    call (file:///mnt/data/ub-init-work/test/personal-init-cli.test.mjs:18:38)
+    TestContext.<anonymous> (file:///mnt/data/ub-init-work/test/personal-init-cli.test.mjs:32:67)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: personal-init uses isolated distro Python and does not execute an ambient interpreter
+not ok 3 - personal-init uses isolated distro Python and does not execute an ambient interpreter
+  ---
+  duration_ms: 52.936975
+  type: 'test'
+  location: '/mnt/data/ub-init-work/test/personal-init-cli.test.mjs:34:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'ultrabrain: ENOENT; Run db init and check private file permissions.\n' +
+    +   "ENOENT: no such file or directory, lstat '/tmp/ub-init-cli-78b9Gw/absent/gbrain'\n"
+    - ''
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ''
+  actual: |-
+    ultrabrain: ENOENT; Run db init and check private file permissions.
+    ENOENT: no such file or directory, lstat '/tmp/ub-init-cli-78b9Gw/absent/gbrain'
+    
+  operator: 'strictEqual'
+  stack: |-
+    call (file:///mnt/data/ub-init-work/test/personal-init-cli.test.mjs:18:38)
+    TestContext.<anonymous> (file:///mnt/data/ub-init-work/test/personal-init-cli.test.mjs:40:2)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 0
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 212.542021
+
+
+=== self-review-first-failure.log (complete local log) ===
+test_actual_process_death_leaves_incomplete_token_and_releases_directory_lock (test_personal_init.InitializationTests.test_actual_process_death_leaves_incomplete_token_and_releases_directory_lock) ... ok
+test_bad_runtime_pin_marker_binary_or_cluster_major_prevents_token (test_personal_init.InitializationTests.test_bad_runtime_pin_marker_binary_or_cluster_major_prevents_token) ... ok
+test_concurrent_cli_creation_keeps_one_token_and_refusals_are_explicit (test_personal_init.InitializationTests.test_concurrent_cli_creation_keeps_one_token_and_refusals_are_explicit) ... ok
+test_config_changes_during_creation_are_detected (test_personal_init.InitializationTests.test_config_changes_during_creation_are_detected) ... ok
+test_creates_only_fixed_owner_private_token_and_never_echoes_secrets (test_personal_init.InitializationTests.test_creates_only_fixed_owner_private_token_and_never_echoes_secrets) ... ok
+test_disk_full_retains_partial_file_and_retry_does_not_rotate (test_personal_init.InitializationTests.test_disk_full_retains_partial_file_and_retry_does_not_rotate) ... ok
+test_empty_malformed_oversized_and_nonascii_tokens_are_not_replaced (test_personal_init.InitializationTests.test_empty_malformed_oversized_and_nonascii_tokens_are_not_replaced) ... ok
+test_error_envelope_never_claims_no_write_or_prints_raw_exception (test_personal_init.InitializationTests.test_error_envelope_never_claims_no_write_or_prints_raw_exception) ... ok
+test_existing_token_is_reused_byte_exact_without_any_write_or_random_generation (test_personal_init.InitializationTests.test_existing_token_is_reused_byte_exact_without_any_write_or_random_generation) ... ok
+test_existing_token_replacement_after_read_is_detected (test_personal_init.InitializationTests.test_existing_token_replacement_after_read_is_detected) ... ok
+test_fifo_directory_or_wide_token_is_refused_without_blocking_or_repair (test_personal_init.InitializationTests.test_fifo_directory_or_wide_token_is_refused_without_blocking_or_repair) ... ok
+test_foreign_creator_wins_without_second_write_or_overwrite (test_personal_init.InitializationTests.test_foreign_creator_wins_without_second_write_or_overwrite) ... ok
+test_fsync_failure_is_not_success_and_preserves_complete_file_for_inspection (test_personal_init.InitializationTests.test_fsync_failure_is_not_success_and_preserves_complete_file_for_inspection) ... ok
+test_home_links_and_wide_permissions_are_never_repaired (test_personal_init.InitializationTests.test_home_links_and_wide_permissions_are_never_repaired) ... ok
+test_init_does_not_probe_dependencies_or_open_network_connections (test_personal_init.InitializationTests.test_init_does_not_probe_dependencies_or_open_network_connections) ... ok
+test_initializer_flock_contention_never_creates_token_or_lock_file (test_personal_init.InitializationTests.test_initializer_flock_contention_never_creates_token_or_lock_file) ... ok
+test_linked_or_corrupt_deployment_history_is_not_treated_as_absent (test_personal_init.InitializationTests.test_linked_or_corrupt_deployment_history_is_not_treated_as_absent) ... ok
+test_malformed_duplicate_or_foreign_database_config_is_refused_without_mutation (test_personal_init.InitializationTests.test_malformed_duplicate_or_foreign_database_config_is_refused_without_mutation) ... ok
+test_missing_home_or_missing_required_config_never_creates_anything (test_personal_init.InitializationTests.test_missing_home_or_missing_required_config_never_creates_anything) ... ok
+test_missing_status_reads_only_and_is_not_ready (test_personal_init.InitializationTests.test_missing_status_reads_only_and_is_not_ready) ... ok
+test_missing_token_with_deployment_history_requires_recovery_not_new_secret (test_personal_init.InitializationTests.test_missing_token_with_deployment_history_requires_recovery_not_new_secret) ... ok
+test_new_token_mode_is_correct_even_with_overrestrictive_umask (test_personal_init.InitializationTests.test_new_token_mode_is_correct_even_with_overrestrictive_umask) ... ok
+test_os_random_failure_precedes_path_creation (test_personal_init.InitializationTests.test_os_random_failure_precedes_path_creation) ... ok
+test_path_swap_after_create_is_not_accepted_or_written_via_new_home (test_personal_init.InitializationTests.test_path_swap_after_create_is_not_accepted_or_written_via_new_home) ... ok
+test_public_cli_missing_create_and_reuse_exit_contract (test_personal_init.InitializationTests.test_public_cli_missing_create_and_reuse_exit_contract) ... ok
+test_relative_traversal_control_and_repository_overlap_are_refused (test_personal_init.InitializationTests.test_relative_traversal_control_and_repository_overlap_are_refused) ... ok
+test_root_foreign_platform_and_uid_mismatch_refused_before_private_inspection (test_personal_init.InitializationTests.test_root_foreign_platform_and_uid_mismatch_refused_before_private_inspection) ... ok
+test_short_writes_are_completed_and_file_then_directory_are_synced (test_personal_init.InitializationTests.test_short_writes_are_completed_and_file_then_directory_are_synced) ... ok
+test_symlink_and_hardlink_tokens_are_refused_and_preserved (test_personal_init.InitializationTests.test_symlink_and_hardlink_tokens_are_refused_and_preserved) ... ok
+test_valid_but_substituted_token_bytes_cannot_be_reported_as_our_creation (test_personal_init.InitializationTests.test_valid_but_substituted_token_bytes_cannot_be_reported_as_our_creation) ... FAIL
+test_zero_write_is_rejected_and_empty_file_is_retained (test_personal_init.InitializationTests.test_zero_write_is_rejected_and_empty_file_is_retained) ... ok
+
+======================================================================
+FAIL: test_valid_but_substituted_token_bytes_cannot_be_reported_as_our_creation (test_personal_init.InitializationTests.test_valid_but_substituted_token_bytes_cannot_be_reported_as_our_creation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ub-init-work/test/test_personal_init.py", line 317, in test_valid_but_substituted_token_bytes_cannot_be_reported_as_our_creation
+    with self.assertRaisesRegex(m.PREFLIGHT.PreflightError,'token_changed_during_init'):self.run_init()
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PreflightError not raised
+
+----------------------------------------------------------------------
+Ran 31 tests in 0.542s
+
+FAILED (failures=1)
+
+
+=== python-all-first-failure.log (error and summary excerpt; full log in supplemental archive) ===
+======================================================================
+ERROR: test_cli_root_and_nonlinux_refuse_without_manager_or_file_mutation (test_personal_deploy.DeploymentFixtureTests.test_cli_root_and_nonlinux_refuse_without_manager_or_file_mutation) (platform='win32', uid=1001)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ub-init-work/test/test_personal_deploy.py", line 1159, in test_cli_root_and_nonlinux_refuse_without_manager_or_file_mutation
+    result = m.main(['status'])
+  File "/mnt/data/ub-init-work/scripts/personal-deploy.py", line 748, in main
+    str(Path(pwd.getpwuid(os.geteuid()).pw_dir)/'.local/share/ultrabrain')))
+             ~~~~~~~~~~~~^^^^^^^^^^^^^^
+KeyError: 'getpwuid(): uid not found: 1001'
+
+----------------------------------------------------------------------
+Ran 573 tests in 14.432s
+
+FAILED (errors=1)

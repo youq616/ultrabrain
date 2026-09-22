@@ -1,0 +1,47 @@
+TDD run before audit implementation; expected missing-feature failures.
+
+TAP version 13
+# Subtest: snapshot audit: complete metadata-only report uses canonical direct-source comparison
+not ok 1 - snapshot audit: complete metadata-only report uses canonical direct-source comparison
+  ---
+  duration_ms: 3.435791
+  type: 'test'
+  location: '/mnt/data/ultrabrain-dev/test/client-snapshot-audit.test.mjs:21:1'
+  failureType: 'testCodeFailure'
+  error: 'Offline snapshot operation was not confirmed'
+  code: 'invalid_params'
+  name: 'UltraError'
+  stack: |-
+    snapshotFailure (file:///mnt/data/ultrabrain-dev/src/client-snapshot.mjs:45:10)
+    inspectClientSnapshotBytes (file:///mnt/data/ultrabrain-dev/src/client-snapshot.mjs:110:27)
+    audit (file:///mnt/data/ultrabrain-dev/test/client-snapshot-audit.test.mjs:11:54)
+    TestContext.<anonymous> (file:///mnt/data/ultrabrain-dev/test/client-snapshot-audit.test.mjs:22:17)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: snapshot audit: independent relationship dimension revision
+not ok 2 - snapshot audit: independent relationship dimension revision
+  ---
+  duration_ms: 0.348398
+  type: 'test'
+  location: '/mnt/data/ultrabrain-dev/test/client-snapshot-audit.test.mjs:36:3'
+  failureType: 'testCodeFailure'
+  error: 'Offline snapshot operation was not confirmed'
+  code: 'invalid_params'
+  name: 'UltraError'
+  stack: |-
+    snapshotFailure (file:///mnt/data/ultrabrain-dev/src/client-snapshot.mjs:45:10)
+    inspect
+...
+  ...
+1..50
+# tests 50
+# suites 0
+# pass 11
+# fail 39
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 253.733036

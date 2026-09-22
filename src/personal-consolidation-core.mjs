@@ -1,10 +1,21 @@
 /** Bounded transcript -> typed candidates. Quotes verify location, never truth/entailment. */
 import {requireThat,text,integer,sha256,UltraError} from './core.mjs';
-import {objectFields,personalId,normalizePersonalMemory,PERSONAL_MEMORY_TYPES} from './personal-memory.mjs';
+import {objectFields,personalId,memoryId,normalizePersonalMemory,PERSONAL_MEMORY_TYPES} from './personal-memory.mjs';
 export const PERSONAL_CONSOLIDATION_PROTOCOL='personal-candidates-v1';
 export const MAX_CAPTURE_BYTES=32768;
 export const MAX_PERSONAL_JOBS=256;
 export const MAX_PERSONAL_ATTEMPTS=3;
+export const PERSONAL_JOB_STATES=Object.freeze(['queued','processing','completed','failed','stale']);
+/** Canonical selectors for metadata-only job lists and exact owned-job reads. */
+export function jobStatusQuery(input={}) {
+  objectFields(input,['job_id','state','limit','offset']);
+  const job=input.job_id===undefined?null:memoryId(input.job_id);
+  const state=input.state===undefined?'any':input.state;
+  requireThat(state==='any'||PERSONAL_JOB_STATES.includes(state),'invalid_params','Unknown personal job state');
+  const limit=integer(input.limit,20,1,100),offset=integer(input.offset,0,0,1000000);
+  requireThat(!job||(offset===0&&state==='any'),'invalid_params','An exact job read cannot be paged or filtered by state');
+  return {job_id:job,state:state==='any'?null:state,limit,offset};
+}
 export function captureRequest(input) {
   objectFields(input,['agent_id','event_id','transcript','consent','project_id']);
   requireThat(typeof input.transcript==='string'&&input.transcript.isWellFormed(),'invalid_params','Transcript must be well-formed Unicode');

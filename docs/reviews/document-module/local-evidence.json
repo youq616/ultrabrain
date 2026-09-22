@@ -1,0 +1,104 @@
+{
+  "format": 1,
+  "base": "2ed1e2a23715c8cbe6bf3b95225c9dd81116c96a",
+  "base_tree": "7e4aebd55dad12a801e32583493e1d4c78ba0ac4",
+  "exact_parent_application_blobs": {
+    "app.js": "16680925b9a275f9c1b37ea4176ba6274738c897",
+    "index.html": "89f55b502d57b4c5e7419b5dbe347ca7a88049d4"
+  },
+  "results": {
+    "before": {
+      "tests": 43,
+      "pass": 7,
+      "fail": 36
+    },
+    "module_subset": {
+      "tests": 43,
+      "pass": 43
+    },
+    "combined_subsets": {
+      "tests": 192,
+      "pass": 192,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "exact_final_local_full": "pending exact CI source archive",
+    "real_browser_and_db": "pending candidate CI",
+    "independent_review": "pending new full SHA"
+  },
+  "files": [
+    {
+      "path": "web/personal/app.js",
+      "git_blob": "8a154717c0cdcf856ca724dd7b450102240c3fc1"
+    },
+    {
+      "path": "web/personal/index.html",
+      "git_blob": "2f704a14af61194be7f056bca15903e087944729"
+    },
+    {
+      "path": "test/personal-document-module.test.mjs",
+      "git_blob": "5032ba6a786dee50d6cc3bd62a67705ab0ba965a"
+    },
+    {
+      "path": "test/personal-document-module-integration.mjs",
+      "git_blob": "6bf4de0c3201aa1217a64b4b75641332416e2e22"
+    },
+    {
+      "path": "test/personal-document-module-browser.py",
+      "git_blob": "16aad27efcd77427588d682fefb5274c91aff444"
+    },
+    {
+      "path": ".github/workflows/client-portability.yml",
+      "git_blob": "484392fb8485661b2871308c81d288faef836f3a"
+    },
+    {
+      "path": ".github/workflows/personal-recall-preview.yml",
+      "git_blob": "01c31358ba0f4c0801a3d289c8ae076415c16bd7"
+    },
+    {
+      "path": "docs/PERSONAL-DOCUMENT-MODULE.md",
+      "git_blob": "f402f083864744bc9bc56296623d1cae768c1e08"
+    },
+    {
+      "path": "docs/reviews/document-module/README.md",
+      "git_blob": "5a0a1b49ca147323892eaac9642e614dbf9593f8"
+    },
+    {
+      "path": "docs/reviews/document-module/first-failure.log.gz",
+      "git_blob": "c5f06a274efc4ef6f727f87ee857836754ad7d8c"
+    }
+  ],
+  "logs": [
+    {
+      "file": "module-after.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "module-after.log",
+      "sha256": "c43fd2e59c1ec211ab45d38d4d1a95ce268025845d8630e9056858532d7e8798"
+    },
+    {
+      "file": "module-first-failure.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "module-first-failure.log",
+      "sha256": "7566e088bf598171ce329620334b346f70c4627b05c31248da67d8726ab056c1"
+    },
+    {
+      "file": "module-focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "module-focused.log",
+      "sha256": "bd7ba5c05573f05717109a9b2e0f76db5b86db92f0a5e255d7189623907f17d5"
+    }
+  ],
+  "first_failure_excerpt": {
+    "file": "first-failure.log.gz",
+    "complete_log": false,
+    "uncompressed_sha256": "07082013689cccde7b6c6abcef5bb74136d1b7425338003711fbddb57300917f",
+    "full_log_sha256": "7566e088bf598171ce329620334b346f70c4627b05c31248da67d8726ab056c1"
+  }
+}

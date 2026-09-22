@@ -1,0 +1,99 @@
+{
+  "format": 1,
+  "source_base": "a72bed5cf7f27e42cb3eca6754b4dfe9712870cf",
+  "snapshot_artifact": 10581721075,
+  "snapshot_sha256": "ec7c81ddadb4654f831c68cd48f044cd8512a97c187a9eb2ca6683555a1a02e1",
+  "execution": "ordinary oai account (UID 1000), isolated disposable container",
+  "runtime": {
+    "node": "22.16.0",
+    "python": "3.13.5"
+  },
+  "results": {
+    "node_baseline": {
+      "tests": 615,
+      "passed": 615
+    },
+    "node_final": {
+      "tests": 618,
+      "passed": 618,
+      "failed": 0,
+      "skipped": 0
+    },
+    "python_final": {
+      "tests": 627,
+      "passed": 627
+    },
+    "python_optimized_final": {
+      "tests": 33,
+      "passed": 33
+    },
+    "first_failure": {
+      "methods": 29,
+      "failing_subtests": 3,
+      "findings": 1
+    },
+    "python_interrupted": "incomplete; retained; not a passing run",
+    "real_database_ci": "PENDING",
+    "independent_review": "PENDING; implementer self-review is not independent"
+  },
+  "commands": {
+    "node": "node --test test/*.test.mjs",
+    "python": "/usr/bin/python3 -B -m unittest discover -s test -p test_*.py -v",
+    "optimized": "/usr/bin/python3 -OO -B -m unittest discover -s test -p test_personal_identity.py -v"
+  },
+  "candidate_blobs": {
+    "scripts/personal-identity.py": "acbe2336f97595be23db571f9f1710863dd511a2",
+    "src/cli.mjs": "8b43504090c9aebe1f8b850488deaf7306561e17",
+    "test/test_personal_identity.py": "84c5443ce8a15e6b9d13f043b78ecc5f3000e2ea",
+    "test/personal-identity-cli.test.mjs": "fc4fe8111f5fd00ca63508734c846c9c0d480fd4",
+    "test/personal-identity-integration.mjs": "3f82c091fdef0dcd83148f5ab8c09834c073c966",
+    ".github/workflows/personal-identity.yml": "79c23ec5b3520adee705b5d6b302521c2b1bb655"
+  },
+  "logs": {
+    "identity-first-run.log": {
+      "sha256": "6582ff695bdbe4240903ef7bd0f20b06b23053f74f274ebc95e608c1a6354fb4",
+      "bytes": 4605
+    },
+    "loader-path-first-failure.log": {
+      "sha256": "33085fbc3bdddf511a7e1bf2f8ebadff2b19f6c63678ca4de50d1cd77086daf9",
+      "bytes": 7662
+    },
+    "node-baseline.log": {
+      "sha256": "43f8298d1495ab7be0d10d0f782513f9ab39935ec4f0cd9df8cfb83a81a9ca2e",
+      "bytes": 130525
+    },
+    "node-candidate.log": {
+      "sha256": "7ae80c3066bdf69ed1d87a8b5df36aa251a0500a760d844f73c39c39ebac9e35",
+      "bytes": 131230
+    },
+    "node-final.log": {
+      "sha256": "fc26082217bf664a2c1265c18199711af02b6a40ed4aaa5df2087c761d1fdd88",
+      "bytes": 131235
+    },
+    "python-candidate.log": {
+      "sha256": "253a13e287f1120bb5713dc1197c7cc4874e91d28cf208ba3a20cb20363e43ca",
+      "bytes": 98261
+    },
+    "python-final.log": {
+      "sha256": "0062bdeb1acd4c1ed1f82ea49d412ac369105111e390aa59ae7e4076f27cd481",
+      "bytes": 98775
+    },
+    "python-interrupted.log": {
+      "sha256": "15034c5af23d8a8bed818b8bdd6a23d9822d4354cd01a5744c1df40dd1070779",
+      "bytes": 88041
+    },
+    "python-optimized-final.log": {
+      "sha256": "a16ad65f617813394bffb831d91e87299f5d880b131c1155db329520542f4047",
+      "bytes": 5275
+    },
+    "python-optimized.log": {
+      "sha256": "22da35796052e9c4dc5593500e7b65ef2a8642688e78bfa848105a79dc1dfc2f",
+      "bytes": 4761
+    }
+  },
+  "repository_first_failure": {
+    "path": "docs/reviews/personal-identity/loader-path-first-failure.log.gz",
+    "git_blob": "93857ef7f54cdaf38a4c18b3223037c5d6324e83",
+    "uncompressed_sha256": "33085fbc3bdddf511a7e1bf2f8ebadff2b19f6c63678ca4de50d1cd77086daf9"
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "format": 1,
+  "parent": "1e074381f03119ff6f36f4c1711e5f954c23606b",
+  "parent_tree": "bbc65cbab8c4f39308838c2c79605a0a2ae5ab49",
+  "ci_failure": {
+    "run_id": 35479378505,
+    "job_id": 105994493304,
+    "full_log_read": true,
+    "saved_excerpt_not_full_log": true,
+    "downstream_n8n_steps": "not executed"
+  },
+  "application_changes": false,
+  "results": {
+    "node": {
+      "tests": 895,
+      "pass": 895,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "python": {
+      "tests": 683,
+      "pass": 683,
+      "duration_seconds": 38.913
+    },
+    "receipt_focused": {
+      "tests": 70,
+      "pass": 70
+    },
+    "candidate_ci": "pending at creation",
+    "independent_candidate_review": "pending at creation"
+  },
+  "files": [
+    {
+      "path": "test/personal-console-browser.py",
+      "git_blob": "02becca5eef93ba1cb7e1225b3426563afb3d969"
+    },
+    {
+      "path": "test/personal-console-receipts.test.mjs",
+      "git_blob": "99ef4b764f188b93a77a18521f3565094938baff"
+    },
+    {
+      "path": "docs/reviews/console-receipts/legacy-browser-first-failure.log.gz",
+      "git_blob": "36efb308bb6c4df779189e5a97889a0eec20a8ba"
+    }
+  ],
+  "logs": [
+    {
+      "file": "node-browser-final.log",
+      "sha256": "4a14a31d09e5552ca31f687c790153c5256cebc46f73fb9fb02ca34134ef0716"
+    },
+    {
+      "file": "node-browser-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "receipts-browser-final.log",
+      "sha256": "a63e1cd81df7f4e80f7e864707c57c47fe15ed5ffe2fa577d713c0558ed96666"
+    },
+    {
+      "file": "receipts-browser-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-browser-final.log",
+      "sha256": "504a457031a719b74382cfb18bda01931222d45fb3d948f53f72cf7adb8dcd9c"
+    },
+    {
+      "file": "python-browser-final.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "python-browser-interrupted.log",
+      "sha256": "746fb08b2924f445dd120abd349ca8b6c283ddec8754b5a39c439910cbc46730"
+    },
+    {
+      "file": "python-browser-interrupted.txt",
+      "sha256": "83dcdc8867f39cf7c6b538e58f4a4354ed82d13100ac84d2f83e0af26b472b0c"
+    }
+  ],
+  "ci_excerpt_uncompressed_sha256": "9c6d1c662c3e1a13c1098dac0af03239943cbb6f175bdefe6e5f4d6dbd93a7d2"
+}
