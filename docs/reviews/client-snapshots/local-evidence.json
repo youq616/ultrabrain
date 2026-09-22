@@ -1,0 +1,50 @@
+{
+  "format": 1,
+  "base_commit": "356092e31595f0f959d10fc260406ea53776a3f1",
+  "base_tree": "e4d0239cf6697a02c8079a7587f1deda8476ade1",
+  "local": {
+    "uid": 1000,
+    "umask": "0022",
+    "node": "v22.16.0",
+    "python": "Python 3.13.5",
+    "node_tests": 1871,
+    "python_tests": 683,
+    "python_seconds": 59.606,
+    "added_node_subset": 104,
+    "node_exit": 0,
+    "python_exit": 0
+  },
+  "first_contract_run": {
+    "tests": 69,
+    "pass": 67,
+    "fail": 2
+  },
+  "selector_self_audit_red": {
+    "tests": 2,
+    "pass": 0,
+    "fail": 2
+  },
+  "first_full_run": {
+    "tool_timeout_seconds": 45,
+    "complete_result": false,
+    "raw_log_retained": true
+  },
+  "exact_candidate_ci": "not yet run at record creation",
+  "independent_review": "not yet requested at record creation",
+  "local_bun_build_or_postgres_run": false,
+  "logs_sha256": {
+    "first-contract-run.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "first-contract-run.log": "6cebe6fd20dc697fe4181574160bade19ccc63d0a18582591126c731935c7f4c",
+    "focused-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "focused-final.log": "d37e962a8f21ecf6468bd9efaba3610776a1edf438c4564804fc3df7de4cea18",
+    "focused-run.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "focused-run.log": "2535ad4ef2bc9bef383edd85d842bf1679b2880d246d49bf7fe8538a2a32805e",
+    "node-full-tool-timeout.log": "58980123fc048b734043a6c43418292890de907a1aae22680cd205d344c17840",
+    "node-full.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "node-full.log": "62e1054fe65b96af15b2fa0e7d62999f376cd110a4ff77063f8675a20e563155",
+    "python-full.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "python-full.log": "20677b647284f0bcec315154507194fe109b8ca5c474eb0fb24b1e961399785d",
+    "selector-self-audit-red.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "selector-self-audit-red.log": "43bceafe59f2569584e6f6822fcf5ccb96b9334f6f3739146b8ae6ec2e8a1934"
+  }
+}

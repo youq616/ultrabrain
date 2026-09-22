@@ -22,3 +22,21 @@ observed instance/actor pins and workspace binding. It emits verified metadata b
 default, never captures text or calls a model. `dist/lineage.cjs` exports
 `inspectClientLineage(profile, request, {authorize, signal})` for explicit Node use.
 See `docs/CLIENT-LINEAGE.md` in the same repository commit for the complete contract.
+
+## Offline snapshot tools
+
+`ultrabrain-snapshot` (or `node dist/snapshot-cli.cjs`) accepts an explicit JSON
+request on stdin: `inspect`, `compare`, `page`, or `record`, `consent:true`, and
+one local file selection (`compare` requires two). This is a separate offline
+executable: it does not load MCP, open a profile, contact a server, restore data,
+or call a model. `dist/snapshot.cjs` exports `inspectClientSnapshots` for selected
+paths and `inspectClientSnapshotBytes` for caller-supplied byte buffers.
+
+Each file is completely checked using the existing snapshot contract. A selection
+may pin `expected_sha256`. Metadata is the default; only an explicit `record`
+request with `include_text:true` returns body/provenance/derivation. File metadata
+is still private, matching source labels do not prove the same owner, and absence
+in a comparison is not deletion. Local paths may reside on a network-mounted
+filesystem; no application network API is used. Full schema and examples are in
+`docs/CLIENT-SNAPSHOTS.md` at the exact source commit. A prior package with the
+same version string may not have this entry: identify builds by commit and hash.

@@ -21,7 +21,7 @@ p=Path(sys.argv[1])
 with tarfile.open(p) as t:
  for m in t.getmembers():
   if not m.isfile() or '..' in Path(m.name).parts or not (m.name.startswith('package/dist/') or m.name in ['package/package.json','package/README.md','package/LICENSE','package/openclaw.plugin.json']):raise SystemExit('Unexpected package entry')
- required={'package/dist/lineage.cjs','package/dist/cli.cjs','package/dist/native-adapters.cjs','package/dist/openclaw.cjs','package/openclaw.plugin.json','package/dist/native-adapter-config.py','package/dist/hermes-ultrabrain/__init__.py'}
+ required={'package/dist/snapshot.cjs','package/dist/snapshot-cli.cjs','package/dist/lineage.cjs','package/dist/cli.cjs','package/dist/native-adapters.cjs','package/dist/openclaw.cjs','package/openclaw.plugin.json','package/dist/native-adapter-config.py','package/dist/hermes-ultrabrain/__init__.py'}
  if not required.issubset(t.getnames()):raise SystemExit('Incomplete native client package')
 p.with_suffix(p.suffix+'.sha256').write_text(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n')
 print('Client package verified:',p.name)

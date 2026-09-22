@@ -207,3 +207,6 @@ export function readMemorySnapshotRecord(file,id){
   if(!row)throw inspectionError('snapshot_record_missing');
   return row;
 }
+
+// The offline Node entry validates selectors/JSON before opening any selected file.
+export {browserOptions as memorySnapshotQueryOptions,boundedSnapshotJSON as parseSnapshotJSON};

@@ -56,6 +56,17 @@ jobs:
           path: ${{ runner.temp }}/client-lineage-report.json
           if-no-files-found: error
           retention-days: 14
+      - name: Installed offline snapshot toolbox on actual database exports
+        env:
+          ULTRABRAIN_TASK_CLIENT_ROOT: ${{ runner.temp }}/task-host/node_modules/ultrabrain-client
+          ULTRABRAIN_CLIENT_SNAPSHOT_REPORT: ${{ runner.temp }}/client-snapshot-report.json
+        run: bun test/client-snapshot-integration.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-snapshot-${{ github.sha }}
+          path: ${{ runner.temp }}/client-snapshot-report.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Stop only isolated database
         if: always()
         run: bun src/cli.mjs db stop || true

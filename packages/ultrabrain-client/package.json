@@ -9,7 +9,8 @@
     "node": ">=22.16.0"
   },
   "bin": {
-    "ultrabrain-client": "dist/cli.cjs"
+    "ultrabrain-client": "dist/cli.cjs",
+    "ultrabrain-snapshot": "dist/snapshot-cli.cjs"
   },
   "files": [
     "dist",

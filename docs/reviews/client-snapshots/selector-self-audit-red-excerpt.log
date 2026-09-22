@@ -1,0 +1,39 @@
+# Selected original failure blocks; complete raw run is in the evidence archive.
+not ok 1 - snapshot files: coercible operation cannot authorize filesystem reads
+  ---
+  duration_ms: 5.722585
+  type: 'test'
+  location: '/mnt/data/ub-next/test/client-snapshot-files.test.mjs:71:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected exception.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    code: 'invalid_params'
+  operator: 'throws'
+  stack: |-
+    TestContext.<anonymous> (file:///mnt/data/ub-next/test/client-snapshot-files.test.mjs:73:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+not ok 2 - offline snapshot: operation must be a primitive string, not a coercible selector
+  ---
+  duration_ms: 2.050121
+  type: 'test'
+  location: '/mnt/data/ub-next/test/client-snapshot.test.mjs:125:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected exception.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    code: 'invalid_params'
+  operator: 'throws'
+  stack: |-
+    TestContext.<anonymous> (file:///mnt/data/ub-next/test/client-snapshot.test.mjs:127:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
