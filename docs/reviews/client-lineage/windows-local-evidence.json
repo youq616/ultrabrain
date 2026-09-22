@@ -1,0 +1,63 @@
+{
+  "format": 1,
+  "parent_commit": "35a381a64a492adc9ea6f07ccd7cd71d7ded1bde",
+  "parent_tree": "1746259ce2740abbd2d54c8632b788b4e5716604",
+  "ci_failure": {
+    "run": 35684457913,
+    "job": 106608206411,
+    "tests": 715,
+    "pass": 708,
+    "fail": 7
+  },
+  "local": {
+    "uid": 1000,
+    "umask": "0022",
+    "node_tests": 1767,
+    "python_tests": 683,
+    "python_seconds": 43.69,
+    "focused_subset": 87,
+    "added_this_module": 87,
+    "runs": [
+      {
+        "name": "node-final-022",
+        "exit": 0,
+        "seconds": 22.117,
+        "uid": 1000
+      },
+      {
+        "name": "python-final-022",
+        "exit": 0,
+        "seconds": 44.938,
+        "uid": 1000
+      }
+    ]
+  },
+  "earlier_environment_run": {
+    "python_tests": 683,
+    "errors": 10,
+    "exit": 1,
+    "umask": "0002"
+  },
+  "first_url_regression": {
+    "tests": 1,
+    "pass": 0,
+    "fail": 1,
+    "exit": 1
+  },
+  "logs_sha256": {
+    "windows-url-red.log": "0faf26af26c90f137d563c3d2f2d7745a8df1ba887e9894f0d6d844ba6d1b763",
+    "windows-url-red.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "windows-url-focused.log": "58d70f39acae67482f16d598ce589ea94541b0168e4fa8732362203241db98ff",
+    "windows-url-focused.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "node-url-final.log": "8d3b02fd5296cb5058dedff913e48a3cf8101b40753f900db14fcc8e65cce8bd",
+    "python-url-final.log": "f472bbacb45aa0475b512c15cf1a9cee2261e1c591158c4db690021744545f86",
+    "url-results.json": "cb7fffd5a72398d247a2ca4dd78309334a3f443d8f8aaa3d3fcc383ac7b7ea0e",
+    "node-final-022.log": "a85690971d01abcfc8a012a24e6c48eb75b6d55c8504cc86583302d33e8c7d8e",
+    "python-final-022.log": "f1f089e7a6e8b3db8e7788fde403fe75ff1abaea2aea69ecce49feb6c0858165",
+    "node-final-022.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "python-final-022.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "final-022-results.json": "afaea9b1bcf8956a572271aacb8046adc5258651924a98dec8f0c8f9e8ecfc44"
+  },
+  "final_ci": "pending at commit creation",
+  "final_independent_review": "pending at commit creation"
+}

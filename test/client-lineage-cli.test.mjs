@@ -4,7 +4,7 @@ import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';import {join} from 'nod
 import {spawn} from 'node:child_process';import {fileURLToPath} from 'node:url';
 import {identity} from './fixtures/client-sdk-stub.mjs';import {uuid} from './helpers/lineage-fixture.mjs';
 const cli=fileURLToPath(new URL('../packages/ultrabrain-client/src/cli.mjs',import.meta.url));
-const preload=fileURLToPath(new URL('./fixtures/client-lineage-cli-preload.mjs',import.meta.url));
+const preload=new URL('./fixtures/client-lineage-cli-preload.mjs',import.meta.url).href;
 async function run(t,{request={},change,failure=false}={}){
  const dir=mkdtempSync(join(tmpdir(),'ub-lineage-cli-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
  const file=join(dir,'profile.json');
@@ -22,6 +22,7 @@ async function run(t,{request={},change,failure=false}={}){
  try{
   const code=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',resolve);});
   assert.ok(!out.includes('PRIVATE_SERVER_ERROR')&&!err.includes('PRIVATE_SERVER_ERROR'));
+  assert.ok(out.trim(),'CLI fixture exited before returning JSON; inspect its platform job log');
   return {code,data:JSON.parse(out),out,err,observation};
  }finally{clearTimeout(timer);}
 }
@@ -40,4 +41,11 @@ for(const change of [{source:'other'},{allow_capture:true},{server:{transport:'s
 test('client lineage CLI: post-dispatch failure reports uncertain read without private body/error',async t=>{
  const r=await run(t,{failure:true});assert.equal(r.code,1);assert.equal(r.data.read_delivery,'unconfirmed');assert.equal(r.data.memory_writes_requested,false);
  assert.equal(r.data.error,'lineage_read_unconfirmed');assert.equal(r.data.delivery,undefined);
+});
+
+// The actual --import argument must stay a URL on Windows as well as POSIX.
+// A drive-letter path is interpreted as an unsupported ESM scheme by Node.
+test('client lineage CLI: preload is a file URL with platform-safe path round trip',()=>{
+ assert.equal(new URL(preload).protocol,'file:');
+ assert.equal(fileURLToPath(preload),fileURLToPath(new URL('./fixtures/client-lineage-cli-preload.mjs',import.meta.url)));
 });
