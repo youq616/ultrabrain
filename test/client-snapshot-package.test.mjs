@@ -24,11 +24,12 @@ test('offline package: static import closure contains only approved builtins and
       const name=match[1];if(name.startsWith('.'))pending.push(resolve(dirname(file),name));else assert.ok(builtins.has(name),name);
     }
   }
-  assert.ok(seen.has(resolve(root,'src/personal-snapshot-contract.mjs')));assert.equal(seen.size,7);
+  assert.ok(seen.has(resolve(root,'src/personal-snapshot-contract.mjs')));assert.ok(seen.has(resolve(root,'src/snapshot-lineage-audit.mjs')));
+  assert.ok(seen.has(resolve(root,'src/personal-lineage-contract.mjs')));assert.equal(seen.size,9);
 });
 test('offline package: portability includes all new suites without dropping lineage or Windows',()=>{
   const flow=read('.github/workflows/client-portability.yml');
-  for(const name of ['client-snapshot','client-snapshot-files','client-snapshot-races','client-snapshot-cli','client-snapshot-package','client-lineage','personal-snapshot-inspector'])
+  for(const name of ['client-snapshot-audit','client-snapshot-audit-cli','client-snapshot','client-snapshot-files','client-snapshot-races','client-snapshot-cli','client-snapshot-package','client-lineage','personal-snapshot-inspector'])
     assert.ok(flow.includes('test/'+name+'.test.mjs'),name);
   assert.ok(flow.includes('windows-2025'));
 });

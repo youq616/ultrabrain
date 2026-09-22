@@ -40,3 +40,13 @@ in a comparison is not deletion. Local paths may reside on a network-mounted
 filesystem; no application network API is used. Full schema and examples are in
 `docs/CLIENT-SNAPSHOTS.md` at the exact source commit. A prior package with the
 same version string may not have this entry: identify builds by commit and hash.
+
+### Offline source audit
+
+`ultrabrain-snapshot` also accepts `operation: "audit"`, with `consent: true` and
+one explicitly selected file. Optional `memory_id` limits the audit to one record;
+whole-file integrity is always checked. Reports contain direct same-file source
+metadata and separate revision/hash/quote comparisons, never body text. A successful
+exit reports completion, not absence of findings; inspect result.counts. No recursive
+graph, owner authentication, truth certification or automatic repair is implied.
+See docs/SNAPSHOT-SOURCE-AUDIT.md in the matching source commit.
