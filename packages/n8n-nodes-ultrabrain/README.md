@@ -19,3 +19,9 @@ Full instructions and boundaries: https://github.com/youq616/ultrabrain/blob/mai
 License: MIT for this adapter. MCP SDK and n8n remain separate dependencies under their own licenses.
 
 0.8.1 增加 Include Active Personal Memory，默认关闭。启用时需要 source 根目录和至少 4096 字节预算，读取此凭据身份可见的已激活全局/当前项目记忆；不是默认自动采集或自动学习。详见 docs/PERSONAL-CONSOLE.md。
+
+## Personal memory overview (development candidate)
+
+Get Personal Memory Overview reads owner-wide statistics through the existing read-only MCP tool. It requires a source-root credential, observed instance/actor pins, explicit all-project scope and per-item consent (off by default). It sends only a fresh UUID, never body text, and requests no model calls or memory writes. It preserves item pairing; failures use `read_delivery`, never a fabricated successful empty library. Cancellation before final node delivery suppresses pending overview results, including cancellation during connection cleanup. Old capture/context operations retain their semantics.
+
+The inactive, credential-free `examples/n8n/personal-overview.private.json` and full contract `docs/N8N-PERSONAL-OVERVIEW.md` are in the matching repository commit. Counts remain private and may be retained by n8n history or downstream nodes; this operation does not change global logging. This is not an npm release or independent review approval. Identify the private package by commit and SHA-256, not its unchanged development version alone.

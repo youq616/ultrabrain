@@ -1,0 +1,55 @@
+{
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  },
+  "pinData": {},
+  "name": "Ultrabrain Personal Overview (configure credential and consent before use)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "personal_overview",
+        "overviewScope": "owned-all-projects",
+        "overviewConsent": false,
+        "timeoutMs": 30000
+      },
+      "id": "ultrabrain",
+      "name": "Personal Overview",
+      "type": "CUSTOM.ultrabrain",
+      "typeVersion": 1,
+      "position": [
+        300,
+        0
+      ],
+      "notes": "Owner-wide private metadata, not model context or retry authority. Configure credential pins, then explicitly consent. Do not publish execution data.",
+      "notesInFlow": true
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Personal Overview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -10,12 +10,18 @@ class Ultrabrain {
       properties:[
         {displayName:'Operation',name:'operation',type:'options',default:'before_turn',noDataExpression:true,
           options:[{name:'Check Connection',value:'identity',action:'Check the authenticated identity'},
+            {name:'Get Personal Memory Overview',value:'personal_overview',action:'Read owner-wide memory statistics'},
             {name:'Get Context Before Turn',value:'before_turn',action:'Get memory context before an agent turn'},
             {name:'Save Consented Turn',value:'after_turn',action:'Save a consented conversation turn'},
             {name:'Get Session Status',value:'session_status',action:'Get the state of a saved turn'},
             {name:'Resume Project',value:'resume_project',action:'Load a project checkpoint'}]},
+        {displayName:'Overview Scope',name:'overviewScope',type:'options',default:'',noDataExpression:true,
+          displayOptions:{show:{operation:['personal_overview']}},options:[{name:'Select Scope',value:''},{name:'My Owned Records Across All Projects',value:'owned-all-projects'}],
+          description:'Private metadata only. Source-root credential and observed instance/actor pins required. Not a project-filtered or shared-record count.'},
+        {displayName:'Consent to Read Overview for This Item',name:'overviewConsent',type:'boolean',default:false,
+          displayOptions:{show:{operation:['personal_overview']}},description:'Whether to read owner-wide statistics for this item. No bodies, model calls or memory writes. n8n execution history may retain the result.'},
         {displayName:'Session ID',name:'sessionId',type:'string',default:'',required:true,
-          displayOptions:{hide:{operation:['identity']}},description:'Stable application session ID, ASCII letters, numbers, underscore or hyphen; maximum 96 characters.'},
+          displayOptions:{hide:{operation:['identity','personal_overview']}},description:'Stable application session ID, ASCII letters, numbers, underscore or hyphen; maximum 96 characters.'},
         {displayName:'Query',name:'query',type:'string',default:'',required:true,typeOptions:{rows:3},
           displayOptions:{show:{operation:['before_turn','resume_project']}}},
         {displayName:'Project ID',name:'projectId',type:'string',default:'',
@@ -50,7 +56,8 @@ class Ultrabrain {
     catch(e){
       const code=typeof e.code==='string'&&/^[a-z0-9_]{1,64}$/.test(e.code)?e.code:'adapter_failed';
       // Do not attach raw errors, input items, tokens or provider messages to n8n error reports.
-      throw new NodeOperationError(this.getNode(),`Ultrabrain: ${code}; delivery=${e.delivery==='unconfirmed'?'unconfirmed':'not_submitted'}`,
+      const outcome=e.memory_writes_requested===false?`read_delivery=${e.read_delivery==='unconfirmed'?'unconfirmed':'not_started'}; memory_writes_requested=false`:`delivery=${e.delivery==='unconfirmed'?'unconfirmed':'not_submitted'}`;
+      throw new NodeOperationError(this.getNode(),`Ultrabrain: ${code}; ${outcome}`,
         {itemIndex:Number.isInteger(e.itemIndex)?e.itemIndex:0});
     }
   }

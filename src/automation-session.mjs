@@ -1,3 +1,4 @@
+import {automationOverviewRequest,readAutomationOverview} from './automation-overview.mjs';
 /** Shared deterministic lifecycle adapter. No shell, filesystem, DB or arbitrary tool dispatch. */
 import {AgentMemory} from './agent-memory.mjs';
 import {parseUri,text,integer,requireThat,UltraError} from './core.mjs';
@@ -5,6 +6,7 @@ import {mode} from './memory-selection.mjs';
 
 const operations = Object.freeze({
   identity: [],
+  personal_overview: ['scope','consent'],
   before_turn: ['session_id','query','project_id'],
   after_turn: ['session_id','event_id','transcript','consent','visibility'],
   session_status: ['session_id','event_id'],
@@ -43,6 +45,7 @@ export function validateAutomationRequest(operation,request,settings) {
   requireThat(request && typeof request==='object'&&!Array.isArray(request) &&
     Object.keys(request).every(k=>operations[operation].includes(k)),
     'invalid_params','Unknown lifecycle field; credentials, source and command overrides are forbidden');
+  if(operation==='personal_overview'){automationOverviewRequest(request,settings);return;}
   if(operation==='identity')return;
   id(request.session_id,'session_id');
   if(operation==='before_turn'||operation==='resume_project') {
@@ -98,12 +101,20 @@ export async function automationSession(client,input,{signal}={}) {
   return {
     identity:Object.freeze(original),
     async run(operation,request={}) {
-      let submitted=false;
+      let submitted=false,readStarted=false;
       try {
         validateAutomationRequest(operation,request,settings);
+        if(operation==='personal_overview')request=automationOverviewRequest(request,settings);
         const identity=await identify();checkIdentity(identity,settings,original);
         requireThat(!signal?.aborted,'cancelled','Request cancelled before operation');
         if(operation==='identity')return {identity};
+        if(operation==='personal_overview'){
+          readStarted=true;
+          const result=await readAutomationOverview(client,settings,{signal});
+          const after=await identify();checkIdentity(after,settings,original);
+          requireThat(!signal?.aborted,'cancelled','Overview cancelled before delivery');
+          return result;
+        }
         const memory=new AgentMemory({client,rootUri:settings.rootUri,sessionId:request.session_id,
           projectId:request.project_id??null,budgetBytes:settings.budgetBytes,timeoutMs:settings.timeoutMs,
           summary:settings.summary,memoryPolicy:settings.memoryPolicy,factRecall:settings.factRecall,personalContext:settings.includePersonal,
@@ -130,7 +141,9 @@ export async function automationSession(client,input,{signal}={}) {
         // Input, provider errors and transport errors may contain secrets. Never forward their messages.
         const code=error instanceof UltraError?error.code:'transport_error';
         const safe=new UltraError(code,'Lifecycle operation failed; inspect safe code and delivery status');
-        safe.delivery=submitted?'unconfirmed':'not_submitted';
+        if(operation==='personal_overview'){
+          safe.read_delivery=readStarted?'unconfirmed':'not_started';safe.memory_writes_requested=false;
+        }else safe.delivery=submitted?'unconfirmed':'not_submitted';
         throw safe;
       }
     },
