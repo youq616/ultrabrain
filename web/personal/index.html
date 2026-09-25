@@ -1,12 +1,22 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script><script src="/snapshot-inspector-ui.js" defer></script><script src="/snapshot-explorer-ui.js" defer></script><script src="/lineage-ui.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script><script src="/snapshot-inspector-ui.js" defer></script><script src="/snapshot-explorer-ui.js" defer></script><script src="/lineage-ui.js" defer></script><script src="/overview-ui.js" defer></script></head>
 <body>
 <header><div><p class="eyebrow">ULTRABRAIN / PERSONAL</p><h1>个人记忆管理台</h1><p id="scope">仅本机访问 · 不自动采集 · 模型调用需明确授权</p></div><button id="logout" hidden>锁定管理台</button></header>
 <main>
 <section id="login" class="panel narrow"><h2>连接你的个人记忆</h2><p>在服务器上读取启动命令提示的私有令牌文件，将令牌粘贴到此处。它只保存在当前页面内存中，不写入浏览器存储。</p><form id="login-form"><label>管理台令牌<input id="token" type="password" autocomplete="off" required spellcheck="false"></label><button type="submit">连接</button></form><p class="note">远程 Linux 服务请通过 SSH 隧道访问；不要把这个管理端口暴露到公网。此令牌不是模型 API Key，也不是 MCP 令牌。</p></section>
 <div id="workspace" hidden>
 <nav aria-label="视图"><button data-view="candidate">待确认记忆</button><button data-view="active">当前记忆</button><button data-view="archived">已归档</button><button data-view="profile">个人偏好</button><button data-view="recall">任务召回预览</button><button data-view="lookup">按 ID 核对</button><button data-view="documents">导入文档</button><button data-view="jobs">整理任务</button><button data-view="agents">已登记 Agent</button></nav>
+<section class="panel"><button type="button" id="overview-open">记忆库运行概览</button><p class="note">仅当前身份的记忆、任务、文档和 Agent 标签数量，不读取正文。点击打开后再明确读取。</p></section>
+<section id="overview-panel" class="panel" hidden aria-label="记忆库运行概览">
+<h2>记忆库运行概览</h2>
+<p class="note">统计所有项目中当前身份拥有的记录，不包括他人共享记录或旧的无所有者记录。包含候选原文和文档片段，因此“记录数量”不等于已确认知识数量。</p>
+<div class="row"><button type="button" id="overview-run">读取／刷新概览</button><button type="button" id="overview-close">取消读取／清除概览</button></div>
+<p class="note" id="overview-notice" role="status"></p><div id="overview-cards" aria-live="polite"></div>
+<p class="note">“来源有效”沿用当前直接来源检查，不是递归审计或真实性证明。租约到期／次数未达上限不表示可以立即重试，仍须进入任务页核对、明确授权，并承担可能重复计费的风险。</p>
+<div class="row"><button type="button" id="overview-candidates" disabled>进入待确认记忆</button><button type="button" id="overview-active" disabled>进入当前记忆</button><button type="button" id="overview-jobs" disabled>进入整理任务</button><button type="button" id="overview-documents" disabled>进入文档列表</button><button type="button" id="overview-agents" disabled>进入 Agent 列表</button></div>
+<p class="note">进入列表会重新查询，保留该列表原有筛选和未保存草稿；共享范围和筛选可能使列表数量与此概览不同。概览不自动轮询、不运行模型、不修改记录，也不是数据库备份或磁盘健康检查。</p>
+</section>
 <div class="columns"><section class="panel"><div class="section-head"><h2 id="view-title">待确认记忆</h2><button id="refresh">刷新</button></div><form id="search-form"><label class="sr-only" for="query">搜索文字</label><input id="query" placeholder="文字搜索（不是语义搜索）" maxlength="4096"><button type="submit">搜索</button></form><div id="recall-panel" hidden><form id="recall-form" autocomplete="off">
 <p class="note">只查询本机所有者可见且已启用的记忆，不调用模型、不保存任务为记忆。其他 MCP 身份的结果可能不同。字面匹配不是语义搜索；可用空格分隔关键词。</p>
 <label>本次任务或关键词<textarea id="recall-task" rows="3" maxlength="4096" placeholder="例如：Docker 配置 备份" spellcheck="false"></textarea></label>

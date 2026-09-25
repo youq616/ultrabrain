@@ -1,0 +1,30 @@
+{
+  "tests": 683,
+  "pass": 683,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "batches": 7,
+  "counts": [
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    83
+  ],
+  "ids_exactly_match_discovery": true,
+  "ids_unique": true,
+  "mode": "Seven disjoint batches, one full discovery manifest; earlier monolithic run timed out and remains preserved, not counted as pass",
+  "code_tree": "359ec64782413533dbabe460a6a52a87679ee8db",
+  "log_sha256": {
+    "python-batch-1.log": "8a52c2f12c4d23abf76633fb5721fd7249a4305397d57eb90a8ae840a91095e9",
+    "python-batch-2.log": "7d711462c1a557f10c93a08a40f248c7734767e0244a93874d71c98b774c0f3e",
+    "python-batch-3.log": "542a7a159935c529287de894e488deb82e6697bdd5c9cb5bec2ef2fd117073aa",
+    "python-batch-4.log": "4c834367813bc235af2bd2c9e12ce5e8f66c089559d87880f0c1bbf9197487e1",
+    "python-batch-5.log": "86302c9f8398de31e02175c03747cfbe4b41e2210025e40674647052c49b39f5",
+    "python-batch-6.log": "83039f0fd8dfb944206b362ee2e4e70aa54ba7c93f50b3af4bbeebb4f7a5212d",
+    "python-batch-7.log": "755fccef8280126766d2275baec8171bc3a1debdbd61efcfa363e2a2bbe2a327"
+  }
+}

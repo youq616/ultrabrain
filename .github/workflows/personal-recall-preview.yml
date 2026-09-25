@@ -111,6 +111,12 @@ jobs:
           ULTRABRAIN_LINEAGE_REPORT: ${{ runner.temp }}/personal-lineage-report.json
           ULTRABRAIN_LINEAGE_SCREENSHOT: ${{ runner.temp }}/personal-lineage.png
         run: bun test/personal-lineage-integration.mjs
+      - name: Owner metadata overview with PostgreSQL, native MCP and explicit browser reads
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_OVERVIEW_REPORT: ${{ runner.temp }}/personal-overview-report.json
+          ULTRABRAIN_OVERVIEW_SCREENSHOT: ${{ runner.temp }}/personal-overview.png
+        run: bun test/personal-overview-integration.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: personal-recall-preview-${{ github.sha }}
@@ -142,6 +148,8 @@ jobs:
             ${{ runner.temp }}/personal-snapshot-explorer.png
             ${{ runner.temp }}/personal-lineage-report.json
             ${{ runner.temp }}/personal-lineage.png
+            ${{ runner.temp }}/personal-overview-report.json
+            ${{ runner.temp }}/personal-overview.png
           if-no-files-found: error
           retention-days: 14
       - name: Stop only the disposable database

@@ -3,3 +3,5 @@
 #workspace[data-preview="true"] .columns{grid-template-columns:1fr}#recall-panel{max-width:960px}#recall-form{margin:.8rem 0}#recall-form .fields{max-width:500px}
 
 #comparison-panel{margin-top:1.2rem;border-top:1px solid #d5dfda;padding-top:1rem}#comparison-panel h4{font-size:.9rem;margin:.8rem 0 .3rem}#comparison-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:20rem;overflow:auto;font:inherit;font-size:.8rem;padding:.7rem;border:1px solid #dce5df;border-radius:6px}
+
+#overview-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:1rem;margin:1rem 0}#overview-cards article{border:1px solid #dce5df;border-radius:8px;padding:1rem;min-width:0}#overview-cards h3{font-size:1rem;margin:0 0 .7rem}#overview-cards p{font-size:.85rem;overflow-wrap:anywhere}#overview-notice{overflow-wrap:anywhere}

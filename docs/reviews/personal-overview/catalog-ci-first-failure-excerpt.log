@@ -1,0 +1,11 @@
+2026-09-25T10:38:22.5443774Z Built client-only CLI and native adapters; SDK remains an external pinned dependency
+2026-09-25T10:38:26.1147071Z 40 |   const tools=(await c.listTools()).tools;assert.deepEqual(tools.map(t=>t.name).sort(),[...EXPECTED_PERSONAL_READ_TOOLS].sort());assert.ok(tools.every(x=>!['query','ultra_memory_commit','ultra_personal_consolidate'].includes(x.name)));pass();
+2026-09-25T10:38:26.1148117Z                                                       ^
+2026-09-25T10:38:26.1148457Z AssertionError: Expected values to be strictly deep-equal:
+2026-09-25T10:38:26.1148783Z + actual - expected
+2026-09-25T10:38:26.1150473Z     'ultra_personal_jobs',
+2026-09-25T10:38:26.1150712Z +   'ultra_personal_overview'
+2026-09-25T10:38:26.1150942Z   ]
+2026-09-25T10:38:26.1155427Z       at /home/runner/work/ultrabrain/ultrabrain/test/client-kit-integration.mjs:40:50
+2026-09-25T10:38:26.1156962Z Bun v1.3.13 (Linux x64)
+2026-09-25T10:38:26.1195267Z ##[error]Process completed with exit code 1.

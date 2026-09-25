@@ -9,7 +9,9 @@ const guard=fileURLToPath(new URL('./fixtures/snapshot-offline-guard.cjs',import
 function run(t,extra={},rows=chain(),raw) {
   const dir=mkdtempSync(join(tmpdir(),'ub-trace-cli-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
   const path=join(dir,'selected 中文.json'),data=encoded(envelope(rows));writeFileSync(path,data);const before=statSync(path).mtimeMs;
-  const input={operation:'trace',consent:true,memory_id:uuid(4),files:[{path,expected_sha256:hash(data)}],...extra};
+  // Resolve file overrides after creating the host-native absolute fixture path.
+  const overrides=typeof extra==='function'?extra({path,data}):extra;
+  const input={operation:'trace',consent:true,memory_id:uuid(4),files:[{path,expected_sha256:hash(data)}],...overrides};
   const child=spawnSync(process.execPath,['--require',guard,cli],{cwd:dir,input:raw??JSON.stringify(input),encoding:'utf8',timeout:10000,
     env:Object.fromEntries(['PATH','SystemRoot','SYSTEMROOT','TEMP','TMP','HOME'].filter(k=>process.env[k]!==undefined).map(k=>[k,process.env[k]]))});
   assert.ifError(child.error);assert.equal(child.signal,null);assert.equal(child.stderr,'');
@@ -33,8 +35,32 @@ for(const [name,extra,code] of [
   ['consent',{consent:false},'snapshot_consent_required'],['missing ID',{memory_id:undefined},'invalid_params'],
   ['unknown ID',{memory_id:uuid(999)},'snapshot_record_missing'],['text disclosure',{include_text:true},'invalid_params'],
   ['hop overflow',{max_hops:129},'invalid_params'],['coercible hops',{max_hops:'32'},'invalid_params'],
-  ['wrong fingerprint',{files:[{path:'/missing',expected_sha256:'bad'}]},'invalid_params'],
+  ['malformed fingerprint',({path})=>({files:[{path,expected_sha256:'bad'}]}),'invalid_params'],
 ])test('trace CLI: rejects '+name,t=>{const r=run(t,extra);assert.equal(r.status,1);assert.equal(r.report.error,code);});
+// A malformed digest must be tested against a valid local path; otherwise a
+// platform-specific path rejection masks the digest branch. Keep format errors
+// distinct from a well-formed digest that does not match the selected bytes.
+for(const [name,digest] of [
+  ['null',null],['non-string',0],['short','a'.repeat(63)],['long','a'.repeat(65)],
+  ['non-hex','g'.repeat(64)],['uppercase','A'.repeat(64)],
+])test('trace CLI: malformed fingerprint '+name+' uses a native selected file',t=>{
+  const r=run(t,({path})=>({files:[{path,expected_sha256:digest}]}));
+  assert.equal(r.status,1);assert.equal(r.report.error,'invalid_params');assert.equal(r.report.ok,false);
+  assert.equal(Object.hasOwn(r.report,'result'),false);
+});
+test('trace CLI: valid-format mismatched fingerprint blocks the trace report',t=>{
+  const r=run(t,({path,data})=>{
+    const digest=hash(data),mismatch=(digest[0]==='0'?'1':'0')+digest.slice(1);
+    return {files:[{path,expected_sha256:mismatch}]};
+  });
+  assert.equal(r.status,1);assert.equal(r.report.error,'snapshot_hash_mismatch');assert.equal(r.report.ok,false);
+  assert.equal(Object.hasOwn(r.report,'result'),false);
+});
+test('trace CLI: invalid relative path is still rejected before a malformed digest',t=>{
+  const r=run(t,{files:[{path:'selected.json',expected_sha256:'bad'}]});
+  assert.equal(r.status,1);assert.equal(r.report.error,'snapshot_path_invalid');assert.equal(r.report.ok,false);
+  assert.equal(Object.hasOwn(r.report,'result'),false);
+});
 test('trace CLI: unrelated corrupt row blocks all output even with a one-hop budget',t=>{
   const rows=chain();rows[0].content='TRACE_PRIVATE_CORRUPT';const r=run(t,{max_hops:1},rows);
   assert.equal(r.status,1);assert.equal(r.report.error,'memory_snapshot_unconfirmed');

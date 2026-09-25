@@ -1,0 +1,95 @@
+{
+  "stage": "implementation-complete-candidate",
+  "independent_review": "PENDING",
+  "independent_reviewer_session": null,
+  "remote_base": "f843c2bef9ba38c7623756d99bbb526691666c7a",
+  "code_tree_before_this_evidence": "809f0547efc3acb0676f2c7088b5602368d1b640",
+  "prior_local_candidate": "e4bcdc5950439b0537d28b81316965b33a27a5ad",
+  "prior_local_is_remote_ancestor": false,
+  "self_audit": "implementer, not independent agent",
+  "node_full": {
+    "tests": 2297,
+    "pass": 2297,
+    "fail": 0,
+    "skipped": 0,
+    "exit": 0
+  },
+  "portable_node": {
+    "files": 54,
+    "tests": 1747,
+    "pass": 1747,
+    "fail": 0,
+    "skipped": 0,
+    "exit": 0,
+    "platform": "Linux only"
+  },
+  "overview_node": {
+    "tests": 132,
+    "pass": 132,
+    "exit": 0
+  },
+  "new_boundary_red_control": {
+    "tests": 26,
+    "pass": 5,
+    "fail": 21,
+    "exit": 1,
+    "baseline": "previous local recovered overview, not remote f843 which has no overview"
+  },
+  "python_config": {
+    "tests": 62,
+    "pass": 62,
+    "exit": 0
+  },
+  "chromium_offline": {
+    "passed": true,
+    "checks": 10,
+    "browser": "Chromium 144.0.7559.96",
+    "mode": "offline production DOM/scripts, synthetic transport and counts; NOT real PostgreSQL or HTTP",
+    "data_operations": [
+      "overview"
+    ],
+    "model_calls": 0,
+    "downloads": 0
+  },
+  "http_browser_attempt": "BLOCKED: net::ERR_BLOCKED_BY_ADMINISTRATOR; not bypassed",
+  "python_full_attempt": "TIMEOUT after 120 seconds; no completed result or exit code; not passed",
+  "local_not_verified": [
+    "project-managed PostgreSQL",
+    "Bun/native MCP runtime",
+    "Windows",
+    "real online browser HTTP/CSP",
+    "external-model quality"
+  ],
+  "raw_log_sha256": {
+    "config-results.json": "84af3fe81bab69d134d440c80d974e89a1eca92202d38df1bbdaecd7fabf6584",
+    "full-node-after.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "full-node-after.tap": "fc53888be05590bb36a892f7ce58c526a0765da2fab0dc7cce9b867d1cb4b149",
+    "overview-after.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "overview-after.tap": "5e9b11a5a2a1ad55aa1f235cee9a5dac6417666e791a5d92c1c3d653e3f927c4",
+    "overview-boundaries-before.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "overview-boundaries-before.tap": "380e4778f770447025109012c1a894eb7067729e9540ed599577226121d84e53",
+    "overview-browser-after.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "overview-browser-after.json": "5cdcc9587fe00603c1b211271713af7a8d8f5818eb03c79d18abae882d62aff6",
+    "overview-browser-after.log": "d4f4add9e45f981f8a78c6f990456a6bba76edf72efe2f283e8d0b6e6d5c963f",
+    "overview-browser-before.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "overview-browser-before.json": "5cdcc9587fe00603c1b211271713af7a8d8f5818eb03c79d18abae882d62aff6",
+    "overview-browser-before.log": "d4f4add9e45f981f8a78c6f990456a6bba76edf72efe2f283e8d0b6e6d5c963f",
+    "overview-http-browser-first.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "overview-http-browser-first.log": "42bbbe47f00c4d9ca53e153fe12b41752bbc5c740725b84dbb81061ad6eb8bd4",
+    "publish-full-node.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "publish-full-node.tap": "53a608b8abdbfd8ac29e34ed216eacf86add3c77545bd0fb5692aed241545dd4",
+    "publish-portable-node.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "publish-portable-node.tap": "4dcb5a59106c5869cebbfaced5f3efd413e0ea2ee7891fe9c5026b7340f47905",
+    "publish-python-full.log": "1c539f2cc43d99fc9c7a9cc012fbd960fc281d246f1202e8cf095a0a79121a57",
+    "test_automatic_capture_config.py.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "test_automatic_capture_config.py.log": "ec1fd36fea93b31319de7ab8bfab5d44803a184513062bc3ed060f45bae45e81",
+    "test_client_config.py.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "test_client_config.py.log": "2c849507e3f372d2b646756ebe30efda76ce90ad4fafe997a18b0225259b529b",
+    "test_hermes_provider.py.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "test_hermes_provider.py.log": "b082cf14a794a99bf8c722f7f4ee5774f7c5e146657ac88ec9c1bf6b0f645886",
+    "test_native_adapter_config.py.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "test_native_adapter_config.py.log": "120b0c2a9c1e8a2063b1cd2ecf881eba61bfd45783fabf972886a6213af8f192",
+    "test_task_context_config.py.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "test_task_context_config.py.log": "daef030fa16f5d909bb6614e88fbe4758cdcfe9dd1710588586dd17aefdce779"
+  }
+}

@@ -1,0 +1,9 @@
+2026-09-25T10:55:41.7999547Z Built client-only CLI and native adapters; SDK remains an external pinned dependency
+2026-09-25T10:55:55.1122249Z McpError: MCP error -32000: Connection closed
+2026-09-25T10:55:55.1122767Z  code: -32000,
+2026-09-25T10:55:55.1123106Z  data: undefined,
+2026-09-25T10:55:55.1124031Z       at fromError (/home/runner/work/ultrabrain/ultrabrain/vendor/gbrain/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js:2048:16)
+2026-09-25T10:55:55.1125654Z       at _onclose (/home/runner/work/ultrabrain/ultrabrain/vendor/gbrain/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js:263:32)
+2026-09-25T10:55:55.1129484Z       at <anonymous> (/home/runner/work/ultrabrain/ultrabrain/vendor/gbrain/node_modules/@modelcontextprotocol/sdk/dist/esm/client/stdio.js:85:22)
+2026-09-25T10:55:55.1132307Z Bun v1.3.13 (Linux x64)
+2026-09-25T10:55:55.1192420Z ##[error]Process completed with exit code 1.
