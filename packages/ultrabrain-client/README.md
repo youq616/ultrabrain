@@ -62,3 +62,9 @@ bodies or quotes. No automatic invalidation, deletion, repair or server lookup
 occurs. `traversal_complete` covers known supported in-file edges only;
 `all_impacts_known`, `graph_verified`, `identity_verified` and `truth_verified`
 remain false. See `docs/SNAPSHOT-IMPACT.md` in the matching source commit.
+
+## Explicit owner overview (development candidate)
+
+`ultrabrain-client overview --profile /absolute/private-profile.json` reads one UTF-8 JSON selection from stdin: `{"workspace":"/absolute/workspace","scope":"owned-all-projects","consent":true}`. A trusted profile with observed instance/actor pins and a matching workspace is required. This is owner-wide metadata across **all projects**, even when the profile has a project filter. No capture/document-write opt-in, model calls, polling, automatic retries or body reads occur. The source/request/count contract is verified as a whole, and failures are not zero counts.
+
+The installable Node entry is `require('ultrabrain-client/dist/overview.cjs').inspectClientOverview(profile, selection, {authorize, signal})`. It closes its connection and rechecks authority and workspace before returning. `authorize` must be synchronous; cancellation cannot retract a query already sent. CLI failures use `read_delivery: not_started | unconfirmed`, always with `memory_writes_requested: false`. See repository `docs/CLIENT-OVERVIEW.md` for disclosure limits, identity binding and verification commands. This module is not an independent review approval or a production release.

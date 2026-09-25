@@ -93,6 +93,17 @@ jobs:
           path: ${{ runner.temp }}/snapshot-trace-report.json
           if-no-files-found: error
           retention-days: 14
+      - name: Installed explicit owner overview client, no models
+        env:
+          ULTRABRAIN_TASK_CLIENT_ROOT: ${{ runner.temp }}/task-host/node_modules/ultrabrain-client
+          ULTRABRAIN_CLIENT_OVERVIEW_REPORT: ${{ runner.temp }}/client-overview-report.json
+        run: bun test/client-overview-integration.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-overview-${{ github.sha }}
+          path: ${{ runner.temp }}/client-overview-report.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Stop only isolated database
         if: always()
         run: bun src/cli.mjs db stop || true
