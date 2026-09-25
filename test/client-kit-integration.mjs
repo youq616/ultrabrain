@@ -9,6 +9,7 @@ import {once} from 'node:events';
 import {createServer} from 'node:net';
 import {randomBytes,createHash,randomUUID} from 'node:crypto';
 import {verifyPersonalOverview} from '../src/personal-overview-contract.mjs';
+import {clientProxyFixtureOptions} from './helpers/client-proxy-options.mjs';
 import {connect,ROOT} from '../src/runtime.mjs';
 import {PersonalMemoryStore} from '../src/personal-memory-store.mjs';
 import {Client} from '../vendor/gbrain/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js';
@@ -21,7 +22,7 @@ function save(p=profile){writeFileSync(profilePath,JSON.stringify(p),{mode:0o600
 async function run(command,input){const child=spawn('node',[cli,command,'--profile',profilePath],{cwd:ROOT,env:process.env,stdio:['pipe','pipe','pipe']});
  let out='',err='';child.stdout.on('data',x=>out+=x);child.stderr.on('data',x=>err+=x);child.stdin.end(input===undefined?undefined:JSON.stringify(input));
  const timer=setTimeout(()=>child.kill('SIGKILL'),40000);const [code]=await once(child,'close');clearTimeout(timer);return {code,out,err,json:out?JSON.parse(out):null};}
-async function withProxy(fn){const c=new Client({name:'independent-standard-mcp-fixture',version:'1'});const t=new StdioClientTransport({command:'node',args:[cli,'mcp','--profile',profilePath],stderr:'pipe'});t.stderr?.on('data',()=>{});try{await c.connect(t);await fn(c);}finally{await c.close();}}
+async function withProxy(fn,bearer){const c=new Client({name:'independent-standard-mcp-fixture',version:'1'});const t=new StdioClientTransport(clientProxyFixtureOptions(cli,profilePath,bearer));t.stderr?.on('data',()=>{});try{await c.connect(t);await fn(c);}finally{await c.close();}}
 try{
  await engine.executeRaw('INSERT INTO sources(id,name) VALUES($1,$1)',[source]);
  const store=new PersonalMemoryStore({sourceId:source,engine,remote:false,transport:'stdio'});
@@ -74,7 +75,7 @@ try{
   assert.ok(!wire.isError);const overview=verifyPersonalOverview(JSON.parse(wire.content[0].text),request,source);
   for(const group of ['memories','jobs','documents','agents'])assert.ok(Object.values(overview[group]).every(n=>n===0));
   assert.ok(!JSON.stringify(wire).includes(secret));pass();
- });
+ },secret);
  await engine.executeRaw('UPDATE access_tokens SET revoked_at=now() WHERE name=$1',[httpTokenName]);r=await run('probe');assert.equal(r.code,1);assert.ok(!r.out.includes(secret));pass();
  const [count]=await engine.executeRaw('SELECT count(*)::int AS n FROM ultrabrain.personal_memories WHERE source_id=$1',[source]);assert.equal(count.n,2);pass();
  console.log(`PASS ${checks} actual Node client/proxy/native-MCP/PostgreSQL checks; Claude event fixtures, not installed Agent model runs`);
