@@ -1,0 +1,43 @@
+name: Personal overview HTTP browser smoke
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: personal-overview-smoke-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  synthetic-database-real-http:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install isolated Chromium test dependencies
+        run: |
+          python -m venv "$RUNNER_TEMP/overview-browser"
+          "$RUNNER_TEMP/overview-browser/bin/pip" install playwright==1.57.0
+          "$RUNNER_TEMP/overview-browser/bin/python" -m playwright install --with-deps chromium
+      - name: Real console HTTP and CSP with synthetic aggregates (not PostgreSQL)
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/overview-browser/bin/python
+          ULTRABRAIN_OVERVIEW_REPORT: ${{ runner.temp }}/overview-http-browser.json
+          ULTRABRAIN_OVERVIEW_SCREENSHOT: ${{ runner.temp }}/overview-http-browser.png
+        run: node test/personal-overview-http-browser.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: overview-http-browser-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/overview-http-browser.json
+            ${{ runner.temp }}/overview-http-browser.png
+          if-no-files-found: error
+          retention-days: 14

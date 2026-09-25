@@ -85,9 +85,11 @@ test('navigation integration: portability retains every remote baseline suite in
  const command=text.split('\n').find(line=>line.includes('node --test '));
  const actual=command.split('node --test ')[1].trim().split(/\s+/);
  const baseline=["test/client-snapshot-trace.test.mjs", "test/client-snapshot-trace-cli.test.mjs", "test/client-snapshot-audit.test.mjs", "test/client-snapshot-audit-cli.test.mjs", "test/snapshot-offline-guard.test.mjs", "test/client-snapshot.test.mjs", "test/client-snapshot-files.test.mjs", "test/client-snapshot-races.test.mjs", "test/client-snapshot-cli.test.mjs", "test/client-snapshot-package.test.mjs", "test/client-lineage.test.mjs", "test/client-lineage-runtime.test.mjs", "test/client-lineage-cli.test.mjs", "test/personal-lineage.test.mjs", "test/personal-lineage-ui.test.mjs", "test/personal-snapshot-explorer.test.mjs", "test/personal-snapshot-explorer-ui.test.mjs", "test/personal-snapshot-inspector.test.mjs", "test/personal-snapshot-inspector-ui.test.mjs", "test/personal-snapshot.test.mjs", "test/personal-snapshot-browser.test.mjs", "test/personal-job-recovery-barrier.test.mjs", "test/personal-job-recovery.test.mjs", "test/personal-document-module.test.mjs", "test/personal-document-read.test.mjs", "test/personal-jobs.test.mjs", "test/personal-job-manager.test.mjs", "test/personal-document-receipts.test.mjs", "test/personal-console-receipts.test.mjs", "test/personal-memory-compare.test.mjs", "test/personal-memory-read.test.mjs", "test/personal-memory-lookup.test.mjs", "test/client-authorization.test.mjs", "test/client-profile-authorization.test.mjs", "test/client-request-authorization.test.mjs", "test/client-task-context.test.mjs", "test/client-kit.test.mjs", "test/personal-documents.test.mjs", "test/client-document-boundaries.test.mjs", "test/native-adapters.test.mjs", "test/capture-outbox.test.mjs", "test/automatic-capture.test.mjs", "test/capture-hardening.test.mjs", "test/capture-delivery.test.mjs", "test/capture-profile-binding.test.mjs", "test/client-release-docs.test.mjs"];
- assert.deepEqual(actual.filter(name=>baseline.includes(name)),baseline);
+ // Keep the original prefix intact; filtering additions would hide prepends.
+ assert.deepEqual(actual.slice(0,baseline.length),baseline);
+ const additions=['client-snapshot-impact','client-snapshot-impact-boundaries','client-snapshot-impact-cli','client-snapshot-navigation']
+   .map(name=>'test/'+name+'.test.mjs');
+ assert.deepEqual(actual.slice(baseline.length,baseline.length+additions.length),additions);
  assert.equal(new Set(actual).size,actual.length);
- for(const name of ['client-snapshot-impact','client-snapshot-impact-cli','client-snapshot-impact-boundaries','client-snapshot-navigation'])
-   assert.ok(actual.includes('test/'+name+'.test.mjs'));
  assert.ok(text.includes('ubuntu-24.04')&&text.includes('windows-2025'));
 });

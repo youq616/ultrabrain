@@ -8,18 +8,19 @@ import {resolve,dirname,parse,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {requireThat,sourceId,integer,UltraError} from './core.mjs';
 import {objectFields} from './personal-memory.mjs';
+import {PersonalOverview} from './personal-overview.mjs';
 import {PersonalConsolidator} from './personal-consolidation.mjs';
 import {configuredPersonalModel} from './adapters/personal-model.mjs';
 import {PersonalMemoryStore} from './personal-memory-store.mjs';
 import {PersonalDocumentStore} from './personal-documents.mjs';
 import {createPersonalReadiness} from './personal-readiness.mjs';
 const WEB=fileURLToPath(new URL('../web/personal/',import.meta.url));
-const METHODS=Object.freeze({capture:'capture',jobs:'job_status',consolidate:'job_process',cancel_job:'job_cancel',memory_read:'read',memory_snapshot:'snapshot',search:'search',profile:'profile',context:'context',agents:'agents',register:'register',commit:'commit',review:'review',update:'update',
+const METHODS=Object.freeze({overview:'overview',capture:'capture',jobs:'job_status',consolidate:'job_process',cancel_job:'job_cancel',memory_read:'read',memory_snapshot:'snapshot',search:'search',profile:'profile',context:'context',agents:'agents',register:'register',commit:'commit',review:'review',update:'update',
   document_import:'documentImport',document_list:'documentList',document_read:'documentRead',document_queue:'documentQueue',document_archive:'documentArchive'});
 const WRITES=new Set(['register','commit','review','update','capture','consolidate','cancel_job','document_import','document_queue','document_archive']);
 const DOCUMENT_METHODS=new Set(['documentImport','documentList','documentRead','documentQueue','documentArchive']);
-const ASSETS=new Map([['/lineage-ui.js',['lineage-ui.js','text/javascript; charset=utf-8']],['/lineage-contract.mjs',['../../src/personal-lineage-contract.mjs','text/javascript; charset=utf-8']],['/',['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']],['/snapshot-ui.js',['snapshot-ui.js','text/javascript; charset=utf-8']],['/snapshot-inspector-ui.js',['snapshot-inspector-ui.js','text/javascript; charset=utf-8']],['/snapshot-explorer-ui.js',['snapshot-explorer-ui.js','text/javascript; charset=utf-8']],['/snapshot-contract.mjs',['../../src/personal-snapshot-contract.mjs','text/javascript; charset=utf-8']]]);
-const SAFE_CODES=new Set(['invalid_params','not_found','revision_conflict','conflict','agent_not_registered','capture_disabled','permission_denied','queue_full','model_consent_required','stale_source','invalid_personal_model',
+const ASSETS=new Map([['/overview-ui.js',['overview-ui.js','text/javascript; charset=utf-8']],['/overview-contract.mjs',['../../src/personal-overview-contract.mjs','text/javascript; charset=utf-8']],['/lineage-ui.js',['lineage-ui.js','text/javascript; charset=utf-8']],['/lineage-contract.mjs',['../../src/personal-lineage-contract.mjs','text/javascript; charset=utf-8']],['/',['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']],['/snapshot-ui.js',['snapshot-ui.js','text/javascript; charset=utf-8']],['/snapshot-inspector-ui.js',['snapshot-inspector-ui.js','text/javascript; charset=utf-8']],['/snapshot-explorer-ui.js',['snapshot-explorer-ui.js','text/javascript; charset=utf-8']],['/snapshot-contract.mjs',['../../src/personal-snapshot-contract.mjs','text/javascript; charset=utf-8']]]);
+const SAFE_CODES=new Set(['personal_overview_unconfirmed','invalid_params','not_found','revision_conflict','conflict','agent_not_registered','capture_disabled','permission_denied','queue_full','model_consent_required','stale_source','invalid_personal_model',
   'export_consent_required','memory_snapshot_too_large','memory_snapshot_unconfirmed','memory_read_too_large','invalid_label','unsupported_format','file_too_large','invalid_utf8','fingerprint_mismatch','document_bound','document_corrupt','fragment_not_processable','fragment_boundary']);
 export function consoleOptions(args) {
   const out={source:'default',port:3132};
@@ -144,7 +145,7 @@ export async function startPersonalConsole({engine,source,token,port=3132,invoca
         requireThat(Object.hasOwn(METHODS,body.operation),'invalid_params','Unknown personal operation');
         submitted=WRITES.has(body.operation);
         const method=METHODS[body.operation];
-        const result=method.startsWith('job_')?await new PersonalConsolidator(store.ctx,configureModel)[method.slice(4)](body.input??{})
+        const result=method==='overview'?await new PersonalOverview(store.ctx).read(body.input??{}):method.startsWith('job_')?await new PersonalConsolidator(store.ctx,configureModel)[method.slice(4)](body.input??{})
           :DOCUMENT_METHODS.has(method)?await new PersonalDocumentStore(store.ctx)[method](body.input??{})
           :await store[method](body.input??{});
         send(res,200,{ok:true,result});
