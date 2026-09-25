@@ -1,3 +1,4 @@
+import {deliverClientOverview} from '../../../src/client-overview.mjs';
 import {assertClientAuthorized,deliverClientRequest} from '../../../src/client-authorization.mjs';
 import {deliverClientLineage} from '../../../src/client-lineage.mjs';
 import {deliverTaskContext} from '../../../src/client-task-context.mjs';
@@ -67,6 +68,11 @@ export async function connectClient(input,{signal,authorize=()=>{}}={}) {
           }});
       },
       async context(){await check();return clientContext(await invoke('ultra_personal_context',{limit:20,budget_bytes:profile.budgetBytes,...(profile.projectId?{project_id:profile.projectId}:{})}),profile);},
+      async overview(p,{authorize:readAuthority=()=>{},signal:requestSignal}={}){
+        const activeSignal=requestSignal?AbortSignal.any([requestSignal,signal].filter(Boolean)):signal;
+        return deliverClientOverview(p,profile,{checkIdentity:check,invoke,signal:activeSignal,
+          authorize:()=>{allowed(activeSignal);return readAuthority();}});
+      },
       async lineage(p,{authorize:readAuthority=()=>{},signal:requestSignal}={}){
         const activeSignal=requestSignal?AbortSignal.any([requestSignal,signal].filter(Boolean)):signal;
         return deliverClientLineage(p,profile,{checkIdentity:check,invoke,signal:activeSignal,

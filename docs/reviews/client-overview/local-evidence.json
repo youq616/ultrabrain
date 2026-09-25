@@ -1,0 +1,41 @@
+{
+  "base_commit": "210cf8305bead6096d63b08405f66784325f9b7c",
+  "base_tree": "5cdcc21468058c4def91cf2a519082985f5d4159",
+  "self_review": "implementation assistant separate pass, NOT independent agent",
+  "independent_review": "PENDING",
+  "local_node": {
+    "tests": 2396,
+    "pass": 2396,
+    "fail": 0,
+    "skipped": 0,
+    "exit": 0,
+    "uid": 1000
+  },
+  "new_tests": 84,
+  "self_review_red": {
+    "tests": 80,
+    "pass": 74,
+    "fail": 6
+  },
+  "real_integration": {
+    "passed": true,
+    "checks": 13,
+    "mode": "installed Node CLI/library, official SDK, PostgreSQL, stdio and authenticated HTTP",
+    "model_calls": 0,
+    "read_phase_tables_unchanged": 6,
+    "customer_host_verified": false
+  },
+  "local_package_install": "npm pack tarball extracted into isolated node_modules; locked SDK dependencies linked from verified CI artifact (not fresh online npm install)",
+  "runtime_artifact_sha256": "9c2db948f54f99c04ca7e0f624751a4c23ce130b8ddadf5fba319f9010f8f7b8",
+  "evidence_sha256": {
+    "initial-red.tap": "718efc57edbcd55595b3488983054cad86ec4d871f2f309fbaa916c920fec4a7",
+    "self-review-red.tap": "ac5aad03c9263a3fd2e516cea1a5ffb3dd6a405251f24ecba7b4a939cf0ad24c",
+    "self-review-green.tap": "54e0e9183f7253941575a62dec8ca92e7964f5030e6339ab1f9ccc38d460ab2f",
+    "full-node-final.tap": "05b2dd9724ebbc803ae636d1cbc487400ca7b5ba062a76aed584b2dd3e0f948d",
+    "real-integration-final.log": "850dc192d64c7dc305110db052061e9539f727fe8dc706521c78f1a69eea3bc0",
+    "real-integration-final.json": "23e2e5c27796e2ec0a7a21b5bf58b4756203cc1ada9242f8863913f6bc0cc971",
+    "package-final.log": "6e4815110f41bf807c86c3bf6fe382eb4a46f16a458be865980bda72f696d218",
+    "full-node-publication.tap": "0ec521423fb24e82ce114c7af95fd60635c42ca0e9f33c5351be4c3e81d6a474",
+    "overview-publication.tap": "8565ed70bddaec8222c3cdfbf559cd92fc43dada3d5138f3b0edb970e603c6f9"
+  }
+}
