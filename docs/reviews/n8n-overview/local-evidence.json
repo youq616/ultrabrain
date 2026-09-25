@@ -1,0 +1,46 @@
+{
+  "base_commit": "91b581a3ae74f5779301106757e57391ab2914b8",
+  "base_tree": "df1430f937dd8791890326e1a57866e8ebd1820c",
+  "self_review": "implementation assistant, not independent second agent",
+  "independent_review": "PENDING",
+  "local_node": {
+    "tests": 2444,
+    "pass": 2444,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "uid": 1000
+  },
+  "new_tests": 48,
+  "self_review_red": {
+    "tests": 40,
+    "pass": 36,
+    "fail": 4
+  },
+  "real_integration": {
+    "checks": 26,
+    "passed": true,
+    "overviewChecks": 8,
+    "overviewReadPhaseTablesUnchanged": 6,
+    "overviewModelCalls": 0,
+    "engine": "execution-context fixture",
+    "harnessRuntime": "Bun 1.3.13",
+    "hostVersion": null,
+    "hostNodeVersion": null,
+    "sdk": "1.29.0"
+  },
+  "runtime_artifact_sha256": "9c2db948f54f99c04ca7e0f624751a4c23ce130b8ddadf5fba319f9010f8f7b8",
+  "local_package_sha256": "b827a0aef59417b9d75937d57a65134024c1e42a74884700aaa3a6efa79b3984",
+  "local_installation": "Bun build/npm pack with verified pinned SDK linked from prior CI runtime. No real local n8n engine or fresh online npm install.",
+  "evidence_sha256": {
+    "self-review-red.tap": "49037321487f8dd295062c76ebdb2115676da32042e53b8856680beb5bff166a",
+    "self-review-green.tap": "64ba4ed1eb8252571ccd3da7b5f407073222dbb2ae8d1a71660eb91dad717188",
+    "module-final.tap": "0630f7075fa8af83eedbc7a567e965bfa814535300e4a1e8e24337057349c131",
+    "full-node.tap": "347c9ea695e91d5e9277513797cfea0208aae77e34f967e423bc38b2a119bcf3",
+    "n8n-overview-real-first.log": "2c4f8e7f0460cd86f1ca93912b71daa735570dcfb9fe62911a6ef477d6b54722",
+    "n8n-overview-real.log": "fcaf52ce7a33ca320694eacef0fca96be00d9d5156c7a2bfac901d4b56f3f8b9",
+    "n8n-overview-real.json": "84389d0fc76458d0c7570e3746ae63b8560c48feed092ada1dba35e880f17fac",
+    "package.log": "f2b1f4450cef7dbd182f289bd7cb7816ef46a5f0946170164baa17cb0bfc2666"
+  },
+  "remote_integration_update": "BLOCKED by tool write safety check; not published or retried. New8 checks local-only; real new-operation n8n engine acceptance not obtained."
+}

@@ -14,9 +14,9 @@ class UltrabrainApi {
       {displayName:'Allow Source-Shared Capture',name:'allowSharedCapture',type:'boolean',default:false,
         description:'Whether capture may use world visibility within this authorized source. Private remains host-private, not remote-user-private.'},
       {displayName:'Expected Instance UUID',name:'expectedInstance',type:'string',default:'',
-        description:'Optional pin from Check Connection. Backups retain this logical instance identity.'},
+        description:'Pin from Check Connection; required for Personal Memory Overview, optional for other operations. Backups retain this logical instance identity.'},
       {displayName:'Expected Actor SHA-256',name:'expectedActor',type:'string',default:'',
-        description:'Optional pin from Check Connection. A different token may represent a different actor.'},
+        description:'Pin from Check Connection; required for Personal Memory Overview, optional for other operations. A different token may represent a different actor.'},
     ];
   }
 }
