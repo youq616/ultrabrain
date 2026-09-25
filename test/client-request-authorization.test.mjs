@@ -100,3 +100,49 @@ for(const [mode,capture,expected] of [['readonly',false,EXPECTED_PERSONAL_READ_T
   try{assert.deepEqual((await c.catalog()).map(t=>t.name).sort(),[...expected].sort());}
   finally{await c.close();}
  });
+
+// Advertise the actual plugin registry, not the expected fixture itself. Otherwise
+// adding a production read tool can never invalidate the old catalogue oracle.
+const {registerPersonalPlugin}=await import('../src/personal-plugin.mjs');
+const {verifyPersonalOverview}=await import('../src/personal-overview-contract.mjs');
+const {overviewReceipt,overviewId}=await import('./helpers/overview-fixture.mjs');
+function registeredServerTools(){
+ const tools=[];registerPersonalPlugin(tools,{OperationError:Error});
+ return [{name:'ultra_identity'},...tools,{name:'query'},{name:'ultra_unknown_future_tool'}];
+}
+for(const [mode,capture,expected]of [['readonly',false,EXPECTED_PERSONAL_READ_TOOLS],['capture',true,EXPECTED_PERSONAL_CAPTURE_TOOLS]])
+ test('actual registry '+mode+' proxy catalogue matches the independent exact oracle',async()=>{
+  reset();const c=await connectClient({...input,allow_capture:capture,allow_documents:false});
+  state.onList=async()=>({tools:registeredServerTools()});
+  try{assert.deepEqual((await c.catalog()).map(t=>t.name).sort(),[...expected].sort());}
+  finally{await c.close();}
+ });
+test('optional overview is not invented when an older server does not advertise it',async()=>{
+ reset();const c=await connectClient({...input,allow_capture:false,allow_documents:false});
+ state.onList=async()=>({tools:registeredServerTools().filter(t=>t.name!=='ultra_personal_overview')});
+ try{const tools=await c.catalog();assert.deepEqual(tools.map(t=>t.name).sort(),
+  EXPECTED_PERSONAL_READ_TOOLS.filter(n=>n!=='ultra_personal_overview').sort());
+  const {requiredClientTools}=await import('../src/client-kit.mjs');
+  assert.ok(!requiredClientTools(c.profile).includes('ultra_personal_overview'));
+ }finally{await c.close();}
+});
+test('readonly proxy forwards a UUID-bound overview with no capture or document permission',async()=>{
+ reset();const c=await connectClient({...input,allow_capture:false,allow_documents:false});state.calls=[];
+ state.onCall=req=>req.name==='ultra_identity'?identity:overviewReceipt(req.arguments.request_id,'default');
+ try{const request={request_id:overviewId},response=await c.callAllowed('ultra_personal_overview',request);
+  const result=verifyPersonalOverview(JSON.parse(response.content[0].text),request,'default');
+  assert.equal(result.read_only,true);assert.equal(result.model_calls,0);
+  assert.deepEqual(state.calls.map(x=>x.name),['ultra_identity','ultra_personal_overview']);
+  assert.deepEqual(state.calls.at(-1).args,request);
+ }finally{await c.close();}
+});
+for(const phase of ['identity','response'])test('overview proxy denies delivery after revocation during '+phase,async()=>{
+ reset();let allowed=true;const c=await connectClient({...input,allow_capture:false,allow_documents:false},{authorize:()=>allowed});state.calls=[];
+ state.onCall=req=>{
+  if(req.name==='ultra_identity'){if(phase==='identity')allowed=false;return identity;}
+  allowed=false;return overviewReceipt(req.arguments.request_id,'default');
+ };
+ try{await assert.rejects(c.callAllowed('ultra_personal_overview',{request_id:overviewId}),{code:'client_authorization_revoked'});
+  assert.equal(state.calls.filter(x=>x.name==='ultra_personal_overview').length,phase==='identity'?0:1);
+ }finally{await c.close();}
+});

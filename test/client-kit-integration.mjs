@@ -7,7 +7,8 @@ import {join} from 'node:path';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 import {createServer} from 'node:net';
-import {randomBytes,createHash} from 'node:crypto';
+import {randomBytes,createHash,randomUUID} from 'node:crypto';
+import {verifyPersonalOverview} from '../src/personal-overview-contract.mjs';
 import {connect,ROOT} from '../src/runtime.mjs';
 import {PersonalMemoryStore} from '../src/personal-memory-store.mjs';
 import {Client} from '../vendor/gbrain/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js';
@@ -39,6 +40,13 @@ try{
   assert.match(c.getInstructions(),/untrusted reference data/);pass();
   const tools=(await c.listTools()).tools;assert.deepEqual(tools.map(t=>t.name).sort(),[...EXPECTED_PERSONAL_READ_TOOLS].sort());assert.ok(tools.every(x=>!['query','ultra_memory_commit','ultra_personal_consolidate'].includes(x.name)));pass();
   const result=await c.callTool({name:'ultra_personal_context',arguments:{}});assert.ok(!result.isError);assert.equal(JSON.parse(result.content[0].text).memories[0].id,entry.id);pass();
+  // The packaged proxy must actually deliver the new owner-only read, not
+  // merely list its name. The stdio owner has exactly the explicitly seeded data.
+  const request={request_id:randomUUID()},wire=await c.callTool({name:'ultra_personal_overview',arguments:request});
+  assert.ok(!wire.isError);const overview=verifyPersonalOverview(JSON.parse(wire.content[0].text),request,source);
+  assert.deepEqual(overview.memories,{total:1,candidate:0,active:1,archived:0,active_current:1,active_stale:0,candidate_stale:0,document_fragments:0});
+  assert.ok(Object.values(overview.jobs).every(n=>n===0));assert.deepEqual(overview.documents,{total:0,active:0,archived:0});
+  assert.deepEqual(overview.agents,{total:1});assert.ok(!JSON.stringify(wire).includes('SYNTHETIC_PRIVATE_CONTEXT'));pass();
   const denied=await c.callTool({name:'ultra_personal_review',arguments:{memory_id:entry.id,expected_revision:2,event_id:'bad',status:'archived'}});assert.equal(denied.isError,true);pass();
  });
  save({...profile,allow_capture:true,expected_instance:id.instance_id,expected_actor:id.actor_key});
@@ -59,6 +67,14 @@ try{
  process.env.ULTRABRAIN_KIT_FIXTURE=secret;
  save({format:1,source,server:{transport:'http',url:`http://127.0.0.1:${port}/mcp`,bearer_env:'ULTRABRAIN_KIT_FIXTURE'}});
  r=await run('probe');assert.equal(r.code,0,r.out+' '+r.err);assert.equal(r.json.visible_active_memories,0);assert.notEqual(r.json.identity.actor_key,id.actor_key);assert.ok(!r.out.includes(secret));pass();
+ // A read-only HTTP token is a different principal, not an alias for the
+ // stdio owner. It must not see that owner's counts through the same proxy.
+ await withProxy(async c=>{
+  const request={request_id:randomUUID()},wire=await c.callTool({name:'ultra_personal_overview',arguments:request});
+  assert.ok(!wire.isError);const overview=verifyPersonalOverview(JSON.parse(wire.content[0].text),request,source);
+  for(const group of ['memories','jobs','documents','agents'])assert.ok(Object.values(overview[group]).every(n=>n===0));
+  assert.ok(!JSON.stringify(wire).includes(secret));pass();
+ });
  await engine.executeRaw('UPDATE access_tokens SET revoked_at=now() WHERE name=$1',[httpTokenName]);r=await run('probe');assert.equal(r.code,1);assert.ok(!r.out.includes(secret));pass();
  const [count]=await engine.executeRaw('SELECT count(*)::int AS n FROM ultrabrain.personal_memories WHERE source_id=$1',[source]);assert.equal(count.n,2);pass();
  console.log(`PASS ${checks} actual Node client/proxy/native-MCP/PostgreSQL checks; Claude event fixtures, not installed Agent model runs`);
