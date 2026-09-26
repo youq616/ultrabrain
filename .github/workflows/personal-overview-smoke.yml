@@ -55,3 +55,19 @@ jobs:
             ${{ runner.temp }}/duplicate-review-browser.png
           if-no-files-found: error
           retention-days: 14
+      - name: Explicit two-file duplicate comparison in production console
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/overview-browser/bin/python
+          ULTRABRAIN_COMPARE_UI_REPORT: ${{ runner.temp }}/duplicate-compare-ui.json
+          ULTRABRAIN_COMPARE_UI_SCREENSHOT: ${{ runner.temp }}/duplicate-compare-ui.png
+          ULTRABRAIN_COMPARE_UI_MOBILE_SCREENSHOT: ${{ runner.temp }}/duplicate-compare-ui-mobile.png
+        run: node test/personal-snapshot-duplicate-compare-http-browser.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: duplicate-compare-ui-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/duplicate-compare-ui.json
+            ${{ runner.temp }}/duplicate-compare-ui.png
+            ${{ runner.temp }}/duplicate-compare-ui-mobile.png
+          if-no-files-found: error
+          retention-days: 14

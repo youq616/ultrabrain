@@ -28,7 +28,7 @@ with sync_playwright() as p:
         html = (root / 'web/personal/index.html').read_text()
         scripts = re.findall(r'<script src="/([a-z-]+\.js)" defer></script>', html)
         assert scripts == ['app.js', 'snapshot-ui.js', 'snapshot-inspector-ui.js', 'snapshot-explorer-ui.js',
-                           'snapshot-duplicates-ui.js', 'lineage-ui.js', 'overview-ui.js'], 'Load all production scripts in order'
+                           'snapshot-duplicates-ui.js', 'snapshot-duplicate-compare-ui.js', 'lineage-ui.js', 'overview-ui.js'], 'Load all production scripts in order'
         html = re.sub(r'<script[^>]*>.*?</script>', '', html)
         html = re.sub(r'<link[^>]*>', '', html)
         page.set_content(html)

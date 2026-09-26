@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script><script src="/snapshot-inspector-ui.js" defer></script><script src="/snapshot-explorer-ui.js" defer></script><script src="/snapshot-duplicates-ui.js" defer></script><script src="/lineage-ui.js" defer></script><script src="/overview-ui.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script><script src="/snapshot-inspector-ui.js" defer></script><script src="/snapshot-explorer-ui.js" defer></script><script src="/snapshot-duplicates-ui.js" defer></script><script src="/snapshot-duplicate-compare-ui.js" defer></script><script src="/lineage-ui.js" defer></script><script src="/overview-ui.js" defer></script></head>
 <body>
 <header><div><p class="eyebrow">ULTRABRAIN / PERSONAL</p><h1>个人记忆管理台</h1><p id="scope">仅本机访问 · 不自动采集 · 模型调用需明确授权</p></div><button id="logout" hidden>锁定管理台</button></header>
 <main>
@@ -82,6 +82,7 @@
 <pre id="inspector-summary" class="memory-content" aria-live="polite"></pre>
 <button type="button" id="explorer-open" disabled>浏览已核验快照</button>
 <button type="button" id="duplicates-open" disabled>审阅重复记忆</button>
+<button type="button" id="dupcmp-open" disabled>对照两份文件的重复变化</button>
 <section id="duplicates-panel" class="panel" hidden aria-label="本地重复记忆审阅">
 <h3>本地重复记忆审阅</h3>
 <p class="note">仅扫描已完整核验的一份本地快照，包含其中所有项目和所有状态。只认正文完全相同，不忽略大小写、空格、换行或 Unicode 表示差异。不会合并、删除、归档或查询服务器。</p>
@@ -99,6 +100,22 @@
 <section id="duplicates-detail" hidden><h4>单条本地记录（纯文本）</h4><p id="duplicates-detail-id" class="meta"></p><button type="button" id="duplicates-detail-clear">清除此条全文</button><pre id="duplicates-detail-text" class="memory-content"></pre></section>
 </section></div>
 <p class="note">每页最多20个组／20条组内记录，所有结果均可分页查看。“额外出现次数”不是可以删除的数量。即使未标出元数据差异，也没有比较完整引用含义，更没有证明权限、归属、真实性或安全合并。文件自述来源不代表当前登录身份；清除页面不删除原文件或保证内存安全擦除。</p>
+</section>
+<section id="dupcmp-panel" class="panel" hidden aria-label="跨快照重复变化审阅">
+<h3>跨快照重复变化审阅</h3>
+<p class="note">比较两份已完整核验的本地文件。只认正文完全相同，不做近义匹配；左右不代表时间先后，相同来源标签不证明同一所有者。此面板仅显示私有元数据，不读取正文、不上传文件、不查询服务器。</p>
+<label class="checkbox"><input type="checkbox" id="dupcmp-consent">我确认两份文件适合对照，同意查看全部项目与状态中的重复组编号、指纹、两侧成员及变化字段名；这不是删除或合并授权。</label>
+<div class="row"><button type="button" id="dupcmp-run" disabled>比较重复变化</button><button type="button" id="dupcmp-close">取消／清除对照</button></div>
+<pre id="dupcmp-files" class="meta"></pre>
+<label>查看哪类重复组<select id="dupcmp-kind" disabled><option value="all">全部类别</option><option value="left_only">仅左侧重复</option><option value="right_only">仅右侧重复</option><option value="changed">两侧重复且有变化</option><option value="unchanged">两侧重复且相同</option></select></label>
+<p id="dupcmp-summary" class="note" role="status"></p>
+<div class="dupcmp-layout"><section aria-label="重复变化组列表"><h4>重复组对照</h4><div id="dupcmp-groups" aria-live="polite"></div>
+<div class="row"><button type="button" id="dupcmp-prev" disabled>上一页对照组</button><button type="button" id="dupcmp-next" disabled>下一页对照组</button></div>
+</section><section id="dupcmp-detail" hidden aria-label="两侧成员元数据"><h4>所选内容组的两侧成员</h4>
+<p id="dupcmp-detail-summary" class="note"></p><div id="dupcmp-members" aria-live="polite"></div>
+<div class="row"><button type="button" id="dupcmp-members-prev" disabled>上一页成员</button><button type="button" id="dupcmp-members-next" disabled>下一页成员</button></div>
+</section></div>
+<p class="note">每页20组／20个成员编号。对侧只有一条同文记录也保留；“该内容组内仅左／仅右”不说明记录被新增或删除。同一编号改变正文可能出现在另一组。变化字段名不包含其原文；引用字段相同或不同都不证明来源有效。两侧相同也不代表可以互换、清理或安全合并。</p>
 </section>
 <section id="explorer-panel" class="panel" hidden aria-label="快照记忆浏览器">
 <h3>快照记忆浏览器</h3>

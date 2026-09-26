@@ -14,7 +14,7 @@ from playwright.sync_api import sync_playwright, expect
 ROOT = Path(__file__).resolve().parent.parent
 OFFLINE = '--offline' in sys.argv
 SCRIPTS = ['app.js', 'snapshot-ui.js', 'snapshot-inspector-ui.js', 'snapshot-explorer-ui.js',
-           'snapshot-duplicates-ui.js', 'lineage-ui.js', 'overview-ui.js']
+           'snapshot-duplicates-ui.js', 'snapshot-duplicate-compare-ui.js', 'lineage-ui.js', 'overview-ui.js']
 
 def encode(value):
     return json.dumps(value, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
@@ -217,8 +217,8 @@ with sync_playwright() as p:
     assert not errors and not downloads
     checks += 1
     report = {'passed': True, 'checks': checks, 'browser': 'Chromium '+browser.version,
-              'mode': 'offline production DOM and seven scripts; synthetic login and Python SHA-256 bridge; NOT live HTTP/CSP' if OFFLINE
-                      else 'real production console HTTP/CSP and seven scripts; synthetic database and selected local files',
+              'mode': 'offline production DOM and eight scripts; synthetic login and Python SHA-256 bridge; NOT live HTTP/CSP' if OFFLINE
+                      else 'real production console HTTP/CSP and eight scripts; synthetic database and selected local files',
               'python_grouping_oracle': True, 'data_requests_during_review': 0, 'downloads': 0,
               'model_calls': 0, 'user_environment_verified': False}
     if os.environ.get('ULTRABRAIN_DUPLICATE_REPORT'):

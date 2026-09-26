@@ -1,0 +1,90 @@
+{
+  "base_commit": "d5e3c3c322e68e06405f511580d36a48b64ca577",
+  "base_tree": "3b2f63700dd51f73e7a55884a740a1bb0873db89",
+  "independent_review": "NOT APPROVED",
+  "reviewer_session": null,
+  "node_full": {
+    "tests": 2695,
+    "pass": 2695,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "exit": 0,
+    "uid": 1000
+  },
+  "new_tests": 64,
+  "self_review_red": {
+    "tests": 18,
+    "pass": 16,
+    "fail": 2
+  },
+  "browser_offline": {
+    "passed": true,
+    "checks": 16,
+    "browser": "Chromium 144.0.7559.96",
+    "mode": "offline production HTML/CSS/eight scripts; synthetic login and Python SHA-256 bridge; NOT HTTP/CSP",
+    "independent_python_grouping": true,
+    "data_requests_during_comparison": 0,
+    "downloads": 0,
+    "model_calls": 0,
+    "user_deployment_verified": false
+  },
+  "old_single_file_browser": {
+    "passed": true,
+    "checks": 14,
+    "browser": "Chromium 144.0.7559.96",
+    "mode": "offline production DOM and eight scripts; synthetic login and Python SHA-256 bridge; NOT live HTTP/CSP",
+    "python_grouping_oracle": true,
+    "data_requests_during_review": 0,
+    "downloads": 0,
+    "model_calls": 0,
+    "user_environment_verified": false
+  },
+  "old_overview_browser": {
+    "passed": true,
+    "checks": 10,
+    "browser": "Chromium 144.0.7559.96",
+    "mode": "offline production DOM/scripts, synthetic transport and counts; NOT real PostgreSQL or HTTP",
+    "data_operations": [
+      "overview"
+    ],
+    "model_calls": 0,
+    "downloads": 0
+  },
+  "online_browser_local": "BLOCKED by administrator policy; not bypassed or passed",
+  "not_locally_executed": [
+    "Windows",
+    "full Python discovery",
+    "real PostgreSQL",
+    "new CLI package build",
+    "independent agent"
+  ],
+  "evidence_sha256": {
+    "browser-http-first.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "browser-http-first.log": "81d2ab838b808b2471b00d49c6ec2d24ae06b1bee4d281f54617834ff1d865e2",
+    "browser-offline-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "browser-offline-final.json": "13571f57cf01142c8c5689261b84bcea1da48968ecd364cab3889339084f9bac",
+    "browser-offline-final.log": "c2ae6dbea5b9c1a501d72774855b33c9ad2f9d90adf8bfb4f1d13bf72e2cb3d3",
+    "browser-offline-first.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "browser-offline-first.log": "c2ae6dbea5b9c1a501d72774855b33c9ad2f9d90adf8bfb4f1d13bf72e2cb3d3",
+    "browser-offline.json": "13571f57cf01142c8c5689261b84bcea1da48968ecd364cab3889339084f9bac",
+    "full-node-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "full-node-final.tap": "15191d12353caa6842453f5653840633cbb97bc2a82be833ac7ce91eb2d0e462",
+    "full-node-first.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "full-node-first.tap": "decaf0a7d825f1ae7976973f3cd83771df7b90bfabe9580b6163e604969b0333",
+    "initial-red.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "initial-red.tap": "ad271ae1314d19c9a507a2119a43c04228106a80fe07b209cad6ad4d2ee6044b",
+    "module-reviewed.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "module-reviewed.tap": "f17693e7a1552b095537bb12fa4d856440d11f10843178d3b79e0b43f39521f0",
+    "old-duplicate-browser.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "old-duplicate-browser.json": "36cacd245ea0b25c07d0cbc9aa82d1d031e1e75ef22b1f06161e246a247fd361",
+    "old-duplicate-browser.log": "8c46a601cf1ae6d670ebfb52e6c8495783fdb2391580eef3a0847c2d79214b4d",
+    "old-overview-browser.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "old-overview-browser.json": "5cdcc9587fe00603c1b211271713af7a8d8f5818eb03c79d18abae882d62aff6",
+    "old-overview-browser.log": "d4f4add9e45f981f8a78c6f990456a6bba76edf72efe2f283e8d0b6e6d5c963f",
+    "review-first.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "review-first.tap": "0b6fd1e6750210fa42ec93cbaca9cea5652910ed01aaea9dc80becc65ccc721d",
+    "ui-first.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "ui-first.tap": "5facafcc69789665f640ca66fdd20e7dbf4946dd8bc66a7b9dd5bc53462f74b9"
+  }
+}

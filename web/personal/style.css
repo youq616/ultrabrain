@@ -14,3 +14,13 @@
 #duplicates-detail-text{max-height:24rem;overflow:auto;padding:.7rem;border:1px solid #dce5df;border-radius:6px}
 #duplicates-summary,#duplicates-group-summary{overflow-wrap:anywhere}
 @media(max-width:800px){.duplicate-layout{grid-template-columns:1fr}}
+
+/* Local two-file metadata review, independently bounded group/member lists. */
+.dupcmp-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;align-items:start}
+.dupcmp-layout>section{min-width:0}.dupcmp-layout h4{margin:.7rem 0}
+#dupcmp-groups,#dupcmp-members{max-height:27rem;overflow:auto;overscroll-behavior:contain;border-block:1px solid #dce5df;margin:.7rem 0}
+#dupcmp-files{white-space:pre-wrap;overflow-wrap:anywhere}
+#dupcmp-summary,#dupcmp-detail-summary{overflow-wrap:anywhere}
+#dupcmp-kind{max-width:26rem}
+@media(max-width:800px){.dupcmp-layout{grid-template-columns:1fr}}
+#dupcmp-groups article[data-selected="true"]{border-inline-start:3px solid #225b49;padding-inline-start:.7rem}
