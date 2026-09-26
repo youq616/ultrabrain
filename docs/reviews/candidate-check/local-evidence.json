@@ -1,0 +1,55 @@
+{
+  "base_commit": "ddc75d0e5688289fe1722e616f8503269b293a4d",
+  "base_tree": "37458e3bf1e31dcc6b2118fedaa06731fe89b106",
+  "self_review": "implementation assistant separate pass; not an independent agent",
+  "independent_review": "NOT APPROVED",
+  "node_full": {
+    "tests": 2810,
+    "pass": 2810,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "uid": 1000,
+    "exit": 0
+  },
+  "new_tests": 115,
+  "first_full_before_last_review_fix": {
+    "tests": 2809,
+    "pass": 2809
+  },
+  "review_red_runs": [
+    {
+      "tests": 3,
+      "pass": 0,
+      "fail": 3
+    },
+    {
+      "tests": 4,
+      "pass": 3,
+      "fail": 1
+    }
+  ],
+  "local_live_attempt": "candidate_http_failed; separate getent hosts api.github.com exit 2; no live API success claimed",
+  "evidence_sha256": {
+    "candidate-corrected.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "candidate-corrected.tap": "881fb5ba8c4c6ee931a1e9e3fd0c590794b2ba1001f2b1bd77d3ac9a9e55bf25",
+    "candidate-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "candidate-final.tap": "37d5f1234bc00d103a3f8aa53267509326f3b2adb0943a00f327d4ba84c1ad3d",
+    "candidate-first.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "candidate-first.tap": "47f6a7f7fcb2dc4c33f5d3c841e99afed3a24b2a4ddc30bfb98712ba84b5a413",
+    "dns-probe.exit": "53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3",
+    "dns-probe.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "full-node-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "full-node-final.tap": "26c4a83278ef4a186b27c21bc336c18acb1617a74a7e7a32a790b907ab8b87c3",
+    "full-node-first.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "full-node-first.tap": "3ed6dc2b1338b06a2e5044b629fa56ebbca70f8161ad92f5ad9b8c1034b4df4b",
+    "live-first.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "live-first.json": "d1d346691ab88a248000ebd35a00c904b2df4818b13af71daedcf5278b262cbc",
+    "live-first.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "review-before.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "review-before.tap": "ed5111a7787538701ad852d400ad514ccc00ae4b85d6e0da95977d7d3826cb2d",
+    "review-chronology-before.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "review-chronology-before.tap": "ab1bd5fece0af5abceb7ed24f5756d42381a24f077dacaa067f547f8303c4cef",
+    "source-index.json": "ce7f53158e32cdb9dbfe52f868ee0a06c7665f459c755d2d08fa42133a37cd49"
+  }
+}

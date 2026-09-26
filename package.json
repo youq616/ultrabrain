@@ -56,6 +56,7 @@
     "personal:deploy": "python3 -I -B scripts/personal-deploy.py",
     "test:personal-deploy": "bun test/personal-deploy-integration.mjs",
     "personal:ready": "python3 -I -B scripts/personal-ready.py",
-    "personal:activate": "/usr/bin/python3 -I -B scripts/personal-activate.py"
+    "personal:activate": "/usr/bin/python3 -I -B scripts/personal-activate.py",
+    "candidate:check": "node scripts/candidate-check.mjs"
   }
 }

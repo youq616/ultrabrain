@@ -1,0 +1,29 @@
+name: Candidate evidence checker
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+jobs:
+  readonly-github-integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Candidate contracts including negative acceptance controls
+        run: node --test test/candidate-check.test.mjs test/candidate-github.test.mjs test/candidate-cli.test.mjs test/candidate-review.test.mjs
+      - name: Read exact baseline metadata, never approve or execute selected PR code
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node test/candidate-live-integration.mjs
+# No pull_request_target, write permission, artifact downloads, merge or deployment.
+# This diagnostic workflow is intentionally outside the nine baseline requirements
+# to avoid treating its own in-progress observation as candidate acceptance.
