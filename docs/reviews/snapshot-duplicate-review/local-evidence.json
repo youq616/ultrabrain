@@ -1,0 +1,30 @@
+{
+  "date": "2026-09-26",
+  "node": {
+    "tests": 2540,
+    "pass": 2540,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "uid": 1000
+  },
+  "new_tests": 40,
+  "offline_package_checks": 40,
+  "browser_offline_checks": 15,
+  "local_online_browser": "BLOCKED_BY_ADMINISTRATOR; not passed",
+  "independent_review": "PENDING",
+  "prior_dependency_tree": "da01ec0cf5b41613bf400f47d88bb83c0d344083",
+  "remote_base": "8d373b38195f0134a2374cd3996811568d5621e9",
+  "hashes": {
+    "ui-initial-red.tap": "fbdcd73fe257add2f5137fc01291cfe68349821d4bb8b722a504ab2056489b2b",
+    "ui-expanded-red.tap": "15fc8c1cf61780709fd821f8f461bec9b32928ce203fc56c940d88ad452c56a2",
+    "ui-green.tap": "995c8ebd42e067071915cfdbc8a6a86879efc948ed7cbee75edf987d7ba0d4ef",
+    "full-node-first.tap": "6eab1dc41131cfc13ca1c30801aee29da8c5fd7392f9459696ff714dd001d97f",
+    "full-node-green.tap": "0d2e913edf81fb93d5910c23eca0bd5a0ea06e2cfcf7ff7bb0b85029e1de8bd0",
+    "browser-offline-first.log": "991696eaf756803c38c014029034c70dfde6c1935657bdc18959d3e4c9e5e6a3",
+    "browser-offline.json": "4821cff077f68ac47d40eb6c3267b2990ad22020c2ded684cb81350fe3ffb33c",
+    "browser-http-first.log": "eff2e99eebf2b8758d0028cbb9bb0ea86ba5add82f969370303651dee9b85edc",
+    "offline-package.log": "6883887482c3352c854dd197e19f1787e4d7775e3ac8ef1217016805bb84176e",
+    "package.log": "6c3e0be87070b427f442de8b8ff04e34e2d56b8c5e5070f3141eb78469b9925a"
+  }
+}

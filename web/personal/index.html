@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script><script src="/snapshot-inspector-ui.js" defer></script><script src="/snapshot-explorer-ui.js" defer></script><script src="/lineage-ui.js" defer></script><script src="/overview-ui.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ultrabrain · 个人记忆</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/snapshot-ui.js" defer></script><script src="/snapshot-inspector-ui.js" defer></script><script src="/snapshot-explorer-ui.js" defer></script><script src="/lineage-ui.js" defer></script><script src="/overview-ui.js" defer></script><script src="/snapshot-duplicates-ui.js" defer></script></head>
 <body>
 <header><div><p class="eyebrow">ULTRABRAIN / PERSONAL</p><h1>个人记忆管理台</h1><p id="scope">仅本机访问 · 不自动采集 · 模型调用需明确授权</p></div><button id="logout" hidden>锁定管理台</button></header>
 <main>
@@ -80,6 +80,23 @@
 <label class="checkbox"><input id="inspector-consent" type="checkbox">我有权在本机查看这些文件，并同意读取到当前页面内存。它们可能含秘密；文件内容不会上传或自动脱敏。</label>
 <div class="row"><button type="button" id="inspector-run" disabled>核验所选文件</button><button type="button" id="inspector-cancel">取消／清除本地核验</button></div>
 <pre id="inspector-summary" class="memory-content" aria-live="polite"></pre>
+<button type="button" id="duplicates-open" disabled>审阅快照中的同文记录</button>
+<section id="duplicates-panel" class="panel" hidden aria-label="本地重复记忆审阅">
+<h3>本地重复记忆审阅</h3>
+<p class="note">复用已核验文件，按原文完全相同分组；不忽略空格、大小写、换行或 Unicode 差异。跨项目、权限和状态的记录不会被过滤。相同原文不是可以合并的证明。</p>
+<label>选择已核验文件<select id="duplicates-side"><option value="left">左侧快照</option><option value="right" id="duplicates-side-right" disabled>右侧快照</option></select></label>
+<label class="checkbox"><input id="duplicates-consent" type="checkbox">我同意扫描所选文件全部项目、全部状态的记录，并在本机显示重复组与成员元数据。</label>
+<div class="row"><button type="button" id="duplicates-run" disabled>扫描同文记录</button><button type="button" id="duplicates-close">取消／清除重复审阅</button></div>
+<p id="duplicates-summary" class="note" role="status"></p><div id="duplicates-groups" aria-live="polite"></div>
+<div class="row"><button type="button" id="duplicates-group-prev" disabled>上一页重复组</button><button type="button" id="duplicates-group-next" disabled>下一页重复组</button></div>
+<h4>当前组成员</h4><p id="duplicates-member-summary" class="note"></p><div id="duplicates-members"></div>
+<div class="row"><button type="button" id="duplicates-member-prev" disabled>上一页成员</button><button type="button" id="duplicates-member-next" disabled>下一页成员</button></div>
+<h4>人工对照两条本地记录</h4><p class="meta">记录 A：<span id="duplicates-a-id"></span></p><p class="meta">记录 B：<span id="duplicates-b-id"></span></p>
+<label class="checkbox"><input id="duplicates-detail-consent" type="checkbox">我同意显示所选 A、B 两条记录的完整正文和元数据，包括私有来源说明与引用。这不是删除或合并授权。</label>
+<div class="row"><button type="button" id="duplicates-compare" disabled>显示 A／B 完整记录</button><button type="button" id="duplicates-detail-clear">清除对照正文</button></div>
+<div id="duplicates-detail" hidden><h4>A：本地快照记录</h4><pre id="duplicates-detail-a" class="memory-content"></pre><h4>B：本地快照记录</h4><pre id="duplicates-detail-b" class="memory-content"></pre></div>
+<p class="note">每页最多10组／20成员。额外出现次数不是可删除数量；引用未作语义等价比较，不选择保留者。切换文件、撤回同意或离开核验工作区会清除结果。这里只检查文件，不查询当前数据库，不上传、不下载、不调用模型、不自动删除、合并或归档。</p>
+</section>
 <button type="button" id="explorer-open" disabled>浏览已核验快照</button>
 <section id="explorer-panel" class="panel" hidden aria-label="快照记忆浏览器">
 <h3>快照记忆浏览器</h3>

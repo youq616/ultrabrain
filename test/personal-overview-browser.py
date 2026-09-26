@@ -27,7 +27,7 @@ with sync_playwright() as p:
         import re
         html = (root / 'web/personal/index.html').read_text()
         scripts = re.findall(r'<script src="/([a-z-]+\.js)" defer></script>', html)
-        assert len(scripts) == 6, 'Load the complete current classic-script set, not only the new panel'
+        assert scripts == ['app.js','snapshot-ui.js','snapshot-inspector-ui.js','snapshot-explorer-ui.js','lineage-ui.js','overview-ui.js','snapshot-duplicates-ui.js'], 'Load the exact current classic-script set, not only the new panel'
         html = re.sub(r'<script[^>]*>.*?</script>', '', html)
         html = re.sub(r'<link[^>]*>', '', html)
         page.set_content(html)
