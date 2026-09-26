@@ -1,0 +1,77 @@
+{
+  "remote_base": "8d373b38195f0134a2374cd3996811568d5621e9",
+  "remote_base_tree": "41259f0550ce6bb401de965147d1e441bdf90fd6",
+  "publication": "LOCAL ONLY; no new remote commit/PR/CI",
+  "reviewer": "implementer self-review; no independent second-agent session",
+  "full_node": {
+    "tests": 2500,
+    "pass": 2500,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "exit": 0,
+    "uid": 1000
+  },
+  "new_tests": 56,
+  "self_review_before": {
+    "tests": 15,
+    "pass": 12,
+    "fail": 3
+  },
+  "initial_full_regression": {
+    "tests": 2500,
+    "pass": 2499,
+    "fail": 1
+  },
+  "offline_package": {
+    "passed": true,
+    "checks": 40,
+    "fixtures": "synthetic exported snapshots (no database)",
+    "execution": "actual built Node CLI/library copied without SDK",
+    "guard": "descriptor/file-handle and sticky denial exit",
+    "input_bytes_and_mtime_unchanged": true,
+    "model_calls": 0,
+    "package_manifest": {
+      "format": 1,
+      "version": "0.14.0-alpha.1",
+      "compiler": "Bun 1.3.13",
+      "sdk": "1.29.0",
+      "sha256": "8158c61d4043c32fa11f95ed3eadba211a39840f44b9ff5d930d9a0a47f5b7e7",
+      "artifacts": {
+        "overview.cjs": "c08aaa5b1c85a30a9ec77f2c5cce6372d1f1abbb74d7e928d8caaf4870f3539f",
+        "cli.cjs": "8158c61d4043c32fa11f95ed3eadba211a39840f44b9ff5d930d9a0a47f5b7e7",
+        "native-adapters.cjs": "16575627044ee8ee2d4e37f8e89d820048b014f240367b4d41e9111ab59822d4",
+        "openclaw.cjs": "b1be33f09fab5124625e501e66686cf786aca0472782f0aaed38328f618fe896",
+        "lineage.cjs": "b3bd9956eea5b85db543eaa7c51688efa535b418fb3a656d96fa9cd1e70545e0",
+        "snapshot.cjs": "efbe21b190f3db1f3c5f4aa0c0dd756e46eb4888106535b192770bc7bb75cf7c",
+        "snapshot-cli.cjs": "32a56da0321debdca2a2c3691cafd34a3e73843071b651b0a7e7aed4f1fc3d41"
+      }
+    },
+    "windows_verified": false
+  },
+  "postgresql_export": {
+    "passed": true,
+    "checks": 48,
+    "scope": "Real PostgreSQL/consolidator snapshot -> SDK-free installed Node audit, trace, impact and duplicates CLI/library/bytes",
+    "impact_checks": 18,
+    "duplicates_checks": 3,
+    "exported_records": 6,
+    "injected_synthetic_generations": 3,
+    "external_model_calls": 0,
+    "tables_unchanged_in_audit_phase": 6,
+    "input_bytes_and_mtime_unchanged": true,
+    "bundle_hashes_checked": true,
+    "actual_user_host_verified": false
+  },
+  "log_sha256": {
+    "initial-red.tap": "97374670166b1b59750e1bf0cd13270961f35fd42b8ebf6e4336be6de89e26b6",
+    "self-review-red.tap": "d463686f72a6ca6a1349a9cc2100c218edac2864baffa711a96a23ea11b3b828",
+    "module-green.tap": "6839d10b6fd49dd74bf23844cacc6d04c7a08edf5174d3631828ecbcd34421ec",
+    "full-node-first.tap": "e7f81d30f8cf23f8a3563504fe078e49e67ab90eb0254e56a042a33599d6253d",
+    "full-node-final.tap": "6b39e84ed6b9e26e3630bbb03e5c1e87730324303df61fce2787c0ab1ddf1443",
+    "offline-package.json": "a1477f4066c9f06ce4b7e7df16462984b0f3731eceb81e5d9878c997d3144dbf",
+    "database-export-audit.json": "e6026b5932ee49cc7dfa6f0b10bc752e5ee99699da86814f4740a0d77d9694b5",
+    "database-export-audit.log": "e6026b5932ee49cc7dfa6f0b10bc752e5ee99699da86814f4740a0d77d9694b5",
+    "database-stop.log": "96b39dd1e701bcb75300d11272951b2517a5d864eb7f34b11e8ead4a98f48360"
+  }
+}

@@ -104,6 +104,17 @@ jobs:
           path: ${{ runner.temp }}/client-overview-report.json
           if-no-files-found: error
           retention-days: 14
+      - name: Two-file duplicate comparison on real PostgreSQL exports
+        env:
+          ULTRABRAIN_TASK_CLIENT_ROOT: ${{ runner.temp }}/task-host/node_modules/ultrabrain-client
+          ULTRABRAIN_DUPLICATE_COMPARE_REPORT: ${{ runner.temp }}/duplicate-compare-report.json
+        run: bun test/client-snapshot-duplicate-compare-integration.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: duplicate-compare-${{ github.sha }}
+          path: ${{ runner.temp }}/duplicate-compare-report.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Stop only isolated database
         if: always()
         run: bun src/cli.mjs db stop || true

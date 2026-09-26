@@ -98,9 +98,25 @@ try{
     assert.deepEqual(leaf.result.counts,{direct:0,indirect:0,total:0});
     assert.equal(leaf.result.all_impacts_known,false);pass();impactChecks++;
   }
+  // Exact text review runs over these same REAL exported rows. Source edits
+  // remain distinct; archived/current origins and three derived candidates can
+  // match text without granting any authority to merge or remove a record.
+  let duplicatesChecks=0;
+  const expectedDuplicates=[
+    [fixtures.matched.input,fixtures.archived.input].sort(),
+    Object.values(fixtures).map(f=>f.id).sort(),
+  ].sort((a,b)=>a[0]<b[0]?-1:1);
+  for(const mode of ['cli','library','bytes']) {
+    const r=run({operation:'duplicates'},mode);
+    assert.deepEqual(r.result.counts,{groups:2,records_in_groups:5,records_outside_groups:1,additional_occurrences:3});
+    assert.deepEqual(r.result.groups.map(g=>g.members.map(m=>m.id)),expectedDuplicates);
+    assert.equal(r.result.scan_complete,true);assert.equal(r.result.merge_safe,false);
+    assert.equal(r.result.references_compared,false);assert.equal(r.result.automatic_action,'none');
+    assert.equal(r.network_requests,0);assert.equal(r.memory_writes_requested,false);pass();duplicatesChecks++;
+  }
   assert.deepEqual(await fingerprint(),before);assert.deepEqual([sha(readFileSync(path)),statSync(path).mtimeMs],fileBefore);pass();
-  const report={passed:true,checks,scope:'Real PostgreSQL/consolidator snapshot -> SDK-free installed Node audit, trace and impact CLI/library/bytes',
-    impact_checks:impactChecks,exported_records:6,injected_synthetic_generations:generations,external_model_calls:0,tables_unchanged_in_audit_phase:6,
+  const report={passed:true,checks,scope:'Real PostgreSQL/consolidator snapshot -> SDK-free installed Node audit, trace, impact and duplicates CLI/library/bytes',
+    impact_checks:impactChecks,duplicates_checks:duplicatesChecks,exported_records:6,injected_synthetic_generations:generations,external_model_calls:0,tables_unchanged_in_audit_phase:6,
     input_bytes_and_mtime_unchanged:true,bundle_hashes_checked:true,actual_user_host_verified:false};
   if(process.env.ULTRABRAIN_SNAPSHOT_AUDIT_REPORT)writeFileSync(process.env.ULTRABRAIN_SNAPSHOT_AUDIT_REPORT,JSON.stringify(report,null,2)+'\n');
   console.log(JSON.stringify(report,null,2));

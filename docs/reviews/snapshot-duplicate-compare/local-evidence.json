@@ -1,0 +1,57 @@
+{
+  "date": "2026-09-26",
+  "local_parent": "c512bca018f8f66f35233b57bf0ade15b7857898",
+  "local_parent_tree": "2767baa0e02b1a764abd821b71b5db852dfc0a9f",
+  "remote_base": "8d373b38195f0134a2374cd3996811568d5621e9",
+  "remote_base_tree": "41259f0550ce6bb401de965147d1e441bdf90fd6",
+  "independent_review": "NOT APPROVED",
+  "reviewer_session": null,
+  "self_review": "implementation assistant",
+  "node_full": {
+    "tests": 2631,
+    "pass": 2631,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "exit": 0,
+    "uid": 1000
+  },
+  "new_tests": 72,
+  "local_package": "npm pack then isolated extraction, not fresh network npm install",
+  "offline_package_checks": 43,
+  "real_database_checks": {
+    "passed": true,
+    "checks": 8,
+    "mode": "actual PostgreSQL exports, built isolated CLI/path/byte APIs",
+    "exported_records": [
+      7,
+      8
+    ],
+    "input_bytes_and_mtime_unchanged": true,
+    "read_phase_tables_unchanged": 6,
+    "external_model_calls": 0,
+    "generator_calls": 0,
+    "actual_user_host_verified": false
+  },
+  "package_sha256": "b015fd56cbbbdc80f037fe42c1aa9c4a7467dbe0c9cb4bfcfa0e466c578e092c",
+  "log_sha256": {
+    "initial-red.tap": "5867b722fd6b7b555838920d2efe73c90cc6da6548bd0081e708c0c8379eb059",
+    "review-first.tap": "08a527a840fd5b4846a74200eea9e0676f8179ce895108006d9cb39f6dadb6ea",
+    "full-node-first.tap": "6f06e174856d9546ba35800e2b6702d46f14d3c7172d387ef957d08b4475a8e3",
+    "full-node-final.tap": "7678aa020f3e56291a0ba5101590a435829f5ce921e90e838b3240ce3d453473",
+    "offline-package.json": "eeb4cc7110a773176fab77688dc21ac1798ed44620cbbeb3503755e4377e4e59",
+    "database-init.log": "4ff99b171047a8aa25b9d7faad6ddfe0694b4a8cfa5d7c40e433591c842ed63c",
+    "database-init-corrected.log": "5aaeb7e801b4b486d2ac9ad2495b39c42bc025049b08db77fbf40b4dffdfd066",
+    "database-migrate.log": "5afebefc5c980598a5ae20fbc1a7d3060e99351ae4a717c8e2d2eede82a4688c",
+    "database-integration-first.log": "0553fc93fc3deb07e19cc13c191457636d6e0cbf65f9dadd0ac2538a877a8d73",
+    "database-integration.json": "fa0292e79450677480a4362dde7fc1c96e2587dc9125c4d0d31a6e85e8099624",
+    "database-stop.log": "96b39dd1e701bcb75300d11272951b2517a5d864eb7f34b11e8ead4a98f48360",
+    "package-final.log": "b81c66e2146634bc3811108a14cdee50dd7f7a5bca3509b4efd387cb922e0b16"
+  },
+  "not_locally_executed": [
+    "Windows",
+    "browser/CSP",
+    "full Python discovery",
+    "separate reviewer"
+  ]
+}

@@ -25,7 +25,13 @@ test('offline package: static import closure contains only approved builtins and
     }
   }
   assert.ok(seen.has(resolve(root,'src/personal-snapshot-contract.mjs')));assert.ok(seen.has(resolve(root,'src/snapshot-lineage-audit.mjs')));
-  assert.ok(seen.has(resolve(root,'src/personal-lineage-contract.mjs')));assert.ok(seen.has(resolve(root,'src/snapshot-impact.mjs')));assert.equal(seen.size,10);
+  assert.ok(seen.has(resolve(root,'src/personal-lineage-contract.mjs')));assert.ok(seen.has(resolve(root,'src/snapshot-impact.mjs')));
+  // Exact reviewed local closure, not a relaxed lower bound on module count.
+  const expected=['packages/ultrabrain-client/src/snapshot.mjs','packages/ultrabrain-client/src/snapshot-cli.mjs',
+    'src/client-snapshot.mjs','src/client-snapshot-files.mjs','src/client-authorization.mjs','src/core.mjs',
+    'src/personal-snapshot-contract.mjs','src/personal-lineage-contract.mjs','src/snapshot-lineage-audit.mjs',
+    'src/snapshot-impact.mjs','src/snapshot-duplicates.mjs'].map(p=>resolve(root,p));
+  assert.deepEqual([...seen].sort(),expected.sort());
 });
 test('offline package: portability includes all new suites without dropping lineage or Windows',()=>{
   const flow=read('.github/workflows/client-portability.yml');
