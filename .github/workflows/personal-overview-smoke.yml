@@ -41,3 +41,17 @@ jobs:
             ${{ runner.temp }}/overview-http-browser.png
           if-no-files-found: error
           retention-days: 14
+      - name: Explicit local duplicate review using real console HTTP and Chromium
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/overview-browser/bin/python
+          ULTRABRAIN_DUPLICATE_REPORT: ${{ runner.temp }}/duplicate-review-browser.json
+          ULTRABRAIN_DUPLICATE_SCREENSHOT: ${{ runner.temp }}/duplicate-review-browser.png
+        run: node test/personal-snapshot-duplicates-http-browser.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: duplicate-review-browser-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/duplicate-review-browser.json
+            ${{ runner.temp }}/duplicate-review-browser.png
+          if-no-files-found: error
+          retention-days: 14

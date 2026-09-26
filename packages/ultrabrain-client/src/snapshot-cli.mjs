@@ -7,14 +7,16 @@ import {requireThat} from '../../../src/core.mjs';
 const HELP = `Ultrabrain offline snapshot tools
 Usage: ultrabrain-snapshot < request.json
 Read one explicit JSON request (maximum 16 KiB) from stdin. No profile or server.
-Operations: inspect, compare, page, record, audit, trace, impact. Every request requires consent:true.
+Operations: inspect, compare, page, record, audit, trace, impact, duplicates, duplicate-compare. Every request requires consent:true.
 files: [{path:ABSOLUTE_LOCAL_PATH, expected_sha256:OPTIONAL_HEX}]
-compare requires two files; other operations require one file.
+compare and duplicate-compare require two files; other operations require one file.
 page accepts options; record requires memory_id, and include_text defaults false.
 audit accepts optional memory_id; always metadata-only, direct same-file sources.
 trace requires memory_id; optional max_hops:1..128 (default 32), metadata-only.
 trace stops on mismatches, missing sources, cycles or the hop limit.
 impact requires memory_id; metadata-only potential direct/indirect dependents, not a deletion plan.
+duplicates scans one complete file for exact equal content; metadata-only, no merge or deletion.
+duplicate-compare compares duplicate groups in two complete files; no chronology or deletion inference.
 See docs/CLIENT-SNAPSHOTS.md in the matching source commit.
 Unsigned files do not prove identity. Comparison is not a restore plan.
 `;

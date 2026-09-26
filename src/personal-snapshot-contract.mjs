@@ -210,3 +210,119 @@ export function readMemorySnapshotRecord(file,id){
 
 // The offline Node entry validates selectors/JSON before opening any selected file.
 export {browserOptions as memorySnapshotQueryOptions,boundedSnapshotJSON as parseSnapshotJSON};
+
+/** Exact-content duplicate review: shared browser/Node, no IO or mutation.
+ * setTimeout yields between bounded batches so browser cancellation is observed.
+ * Matching bytes alone grant no merge, deletion, ownership or truth authority. */
+const DUPLICATE_BATCH=32;
+const duplicateYield=()=>new Promise(resolve=>setTimeout(resolve,0));
+export const DUPLICATE_METADATA_FIELDS=Object.freeze(['type','origin_kind','project_id','status','visibility',
+ 'importance','confidence','agent_id','revision','created_at','updated_at','last_confirmed','provenance','derivation_current']);
+const duplicateMember=row=>Object.freeze(Object.fromEntries(['id','type','origin_kind','project_id','status','visibility','revision','derivation_current']
+ .map(key=>[key,row[key]])));
+
+/** Internal adapter: only canonical WeakSet-backed inspected handles are accepted.
+ * Public path/byte APIs verify the complete file before calling this operation.
+ * Groups and members follow canonical ID order, not locale, hash or file recency.
+ * Checkpoints/yields include large single groups, not only the group outer loop.
+ */
+export async function inspectMemorySnapshotDuplicates(file,checkpoint=()=>{}) {
+ checkpoint();queryMemorySnapshot(file); // Refuse forged handles before accessing fields.
+ const rows=file.snapshot.memories,byContent=new Map();
+ for(let i=0;i<rows.length;i++) {
+  checkpoint();if(i%DUPLICATE_BATCH===0){await duplicateYield();checkpoint();}
+  const row=rows[i];
+  // Equality of verified well-formed strings is the criterion, not SHA equality.
+  if(!byContent.has(row.content))byContent.set(row.content,[]);
+  byContent.get(row.content).push(row);
+ }
+ const groups=[],counts={groups:0,records_in_groups:0,records_outside_groups:0,additional_occurrences:0};
+ let visited=0;
+ for(const records of byContent.values()) {
+  checkpoint();
+  if(records.length===1){counts.records_outside_groups++;continue;}
+  const first=records[0],different=new Set(),members=[],statusCounts={candidate:0,active:0,archived:0};
+  let derivationPresent=0;
+  for(const row of records) {
+   checkpoint();if(visited++%DUPLICATE_BATCH===0){await duplicateYield();checkpoint();}
+   members.push(duplicateMember(row));statusCounts[row.status]++;
+   if(row.derivation!==null)derivationPresent++;
+   for(const key of DUPLICATE_METADATA_FIELDS)if(row[key]!==first[key])different.add(key);
+  }
+  groups.push(Object.freeze({content_sha256:first.content_hash,content_bytes:bytes(first.content),
+   member_count:records.length,members:Object.freeze(members),status_counts:Object.freeze(statusCounts),
+   differing_fields:Object.freeze(DUPLICATE_METADATA_FIELDS.filter(key=>different.has(key))),derivation_present_count:derivationPresent}));
+  counts.groups++;counts.records_in_groups+=records.length;counts.additional_occurrences+=records.length-1;
+ }
+ checkpoint();
+ return Object.freeze({format:'ultrabrain-snapshot-duplicates-v1',scanned_records:rows.length,scan_complete:true,
+  matching:'exact-content-no-normalization',scope:'one-verified-file-all-projects-and-states',
+  counts:Object.freeze(counts),groups:Object.freeze(groups),compared_metadata_fields:DUPLICATE_METADATA_FIELDS,
+  references_compared:false,text_included:false,read_only:true,identity_verified:false,truth_verified:false,
+  merge_safe:false,automatic_action:'none'});
+}
+
+/** Two-file duplicate comparison, not before/after cleanup certification.
+ * Content keys use exact verified strings, never only fingerprints. Groups are
+ * emitted in first encounter order: canonical left IDs, then unseen right IDs.
+ * A singleton on the opposite side is retained, not confused with absence.
+ */
+export const DUPLICATE_COMPARE_FIELDS=Object.freeze([...DUPLICATE_METADATA_FIELDS,'derivation']);
+export async function compareMemorySnapshotDuplicates(left,right,checkpoint=()=>{}) {
+ checkpoint();
+ if(!inspectedFiles.has(left)||!inspectedFiles.has(right))throw inspectionError('snapshot_not_inspected');
+ if(left.snapshot.source_id!==right.snapshot.source_id)throw inspectionError('snapshot_source_mismatch');
+ const byContent=new Map(),sides=[left.snapshot.memories,right.snapshot.memories];
+ let visited=0;
+ // Fixed-size yielding across both indexing and projection, even one giant group.
+ const turn=async()=>{checkpoint();await duplicateYield();checkpoint();};
+ for(let side=0;side<2;side++)for(const row of sides[side]) {
+  checkpoint();if(visited++%DUPLICATE_BATCH===0)await turn();
+  if(!byContent.has(row.content))byContent.set(row.content,[[],[]]);
+  byContent.get(row.content)[side].push(row);
+ }
+ const summaries=sides.map(rows=>({scanned_records:rows.length,duplicate_groups:0,records_in_groups:0,additional_occurrences:0}));
+ const groups=[],counts={groups:0,left_only:0,right_only:0,changed:0,unchanged:0};
+ for(const [content,pair]of byContent) {
+  checkpoint();if(visited++%DUPLICATE_BATCH===0)await turn();
+  if(pair[0].length<2&&pair[1].length<2)continue;
+  const projections=[];
+  for(let side=0;side<2;side++) {
+   const rows=pair[side],members=[],status_counts={candidate:0,active:0,archived:0};
+   for(const row of rows){
+    checkpoint();if(visited++%DUPLICATE_BATCH===0)await turn();
+    members.push(duplicateMember(row));status_counts[row.status]++;
+   }
+   const duplicate=rows.length>=2,additional=Math.max(0,rows.length-1);
+   if(duplicate){summaries[side].duplicate_groups++;summaries[side].records_in_groups+=rows.length;summaries[side].additional_occurrences+=additional;}
+   projections.push({member_count:rows.length,duplicate,additional_occurrences:additional,status_counts,members});
+  }
+  const [a,b]=pair.map(rows=>new Map(rows.map(row=>[row.id,row])));
+  const membership={left_only:[],right_only:[],shared:[]},shared_record_changes=[];
+  // Canonical ID iteration and a fixed field order make the complete report stable.
+  for(const row of pair[0]) {
+   checkpoint();if(visited++%DUPLICATE_BATCH===0)await turn();
+   const other=b.get(row.id);
+   if(!other){membership.left_only.push(row.id);continue;}
+   membership.shared.push(row.id);
+   const changed=DUPLICATE_COMPARE_FIELDS.filter(key=>orderedJSON(row[key])!==orderedJSON(other[key]));
+   if(changed.length)shared_record_changes.push({id:row.id,fields:changed});
+  }
+  for(const row of pair[1]) {
+   checkpoint();if(visited++%DUPLICATE_BATCH===0)await turn();
+   if(!a.has(row.id))membership.right_only.push(row.id);
+  }
+  const kind=pair[0].length<2?'right_only':pair[1].length<2?'left_only':
+   membership.left_only.length||membership.right_only.length||shared_record_changes.length?'changed':'unchanged';
+  const first=pair[0][0]??pair[1][0];
+  groups.push({content_sha256:first.content_hash,content_bytes:bytes(content),kind,
+   left:projections[0],right:projections[1],membership,shared_record_changes});
+  counts.groups++;counts[kind]++;
+ }
+ const result=freezeSnapshot({format:'ultrabrain-snapshot-duplicate-comparison-v1',source_id:left.snapshot.source_id,
+  comparison_complete:true,matching:'exact-content-no-normalization',scope:'two-verified-files-all-projects-and-states',
+  left:summaries[0],right:summaries[1],counts,groups,compared_fields:DUPLICATE_COMPARE_FIELDS,
+  references_verified:false,text_included:false,read_only:true,identity_verified:false,truth_verified:false,
+  merge_safe:false,automatic_action:'none'});
+ checkpoint();return result;
+}

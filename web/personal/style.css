@@ -5,3 +5,12 @@
 #comparison-panel{margin-top:1.2rem;border-top:1px solid #d5dfda;padding-top:1rem}#comparison-panel h4{font-size:.9rem;margin:.8rem 0 .3rem}#comparison-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:20rem;overflow:auto;font:inherit;font-size:.8rem;padding:.7rem;border:1px solid #dce5df;border-radius:6px}
 
 #overview-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:1rem;margin:1rem 0}#overview-cards article{border:1px solid #dce5df;border-radius:8px;padding:1rem;min-width:0}#overview-cards h3{font-size:1rem;margin:0 0 .7rem}#overview-cards p{font-size:.85rem;overflow-wrap:anywhere}#overview-notice{overflow-wrap:anywhere}
+
+/* Bounded local duplicate lists: selecting a group never requires scrolling past
+   the entire group index before its members can be inspected. */
+.duplicate-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;align-items:start}
+.duplicate-layout>section{min-width:0}.duplicate-layout h4{margin:.7rem 0}
+#duplicates-groups,#duplicates-members{max-height:26rem;overflow:auto;overscroll-behavior:contain;border-block:1px solid #dce5df;margin:.7rem 0}
+#duplicates-detail-text{max-height:24rem;overflow:auto;padding:.7rem;border:1px solid #dce5df;border-radius:6px}
+#duplicates-summary,#duplicates-group-summary{overflow-wrap:anywhere}
+@media(max-width:800px){.duplicate-layout{grid-template-columns:1fr}}

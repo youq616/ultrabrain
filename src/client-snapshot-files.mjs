@@ -27,7 +27,7 @@ export function snapshotFileRequest(input) {
   try { copy = structuredClone(input); } catch { throw new UltraError('invalid_params','Cloneable request required'); }
   requireThat(object(copy),'invalid_params','Invalid snapshot request');
   const {files,...operation} = copy, request = snapshotRequest(operation);
-  requireThat(Array.isArray(files) && files.length === (request.operation === 'compare' ? 2 : 1),
+  requireThat(Array.isArray(files) && files.length === (['compare','duplicate-compare'].includes(request.operation) ? 2 : 1),
     'invalid_params','Invalid snapshot file count');
   return freezeSnapshotResult({request,files:Array.from(files,fileSelection)});
 }
