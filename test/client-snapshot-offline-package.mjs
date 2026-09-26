@@ -24,7 +24,7 @@ try {
   const path=join(dir,'local 中文 snapshot.json'),next=join(dir,'next.json');
   const body='PRIVATE_OFFLINE_BODY\r\n🙂<img src=x onerror=bad()>',provenance='PRIVATE_ORIGIN';
   const data=encoded(envelope([row(1,{content:body,provenance}),row(2,{derivation:{job_id:uuid(90),input_id:uuid(1),input_revision:1,input_hash:sha(body),
-    profile_hash:sha('synthetic profile'),quote:body.slice(0,20),start:0,end:20,offset_unit:'UTF-16 code units'}}),row(3,{status:'archived'})]));
+    profile_hash:sha('synthetic profile'),quote:body.slice(0,20),start:0,end:20,offset_unit:'UTF-16 code units'}}),row(3,{status:'archived',content:body})]));
   writeFileSync(path,data,{mode:0o600});writeFileSync(next,encoded(envelope([row(1,{content:'CHANGED',revision:2}),row(4)])),{mode:0o600});
   const before=[path,next].map(p=>[sha(readFileSync(p)),statSync(p).mtimeMs]);
   const request=(operation,more={})=>({operation,consent:true,files:operation==='compare'?[{path},{path:next}]:[{path}],...more});
@@ -43,12 +43,13 @@ try {
     assert.ok(!r.stdout.includes(dir)&&!r.stdout.includes('OFFLINE_FORBIDDEN_OPERATION'));
     return {report:JSON.parse(r.stdout),text:r.stdout};
   }
-  for(const mode of ['cli','library','bytes'])for(const operation of ['inspect','compare','page','record','audit','trace','impact']){
+  for(const mode of ['cli','library','bytes'])for(const operation of ['inspect','compare','page','record','audit','trace','impact','duplicates']){
     const input=request(operation,operation==='impact'?{memory_id:uuid(1)}:['audit','trace'].includes(operation)?{memory_id:uuid(2)}:operation==='record'?{memory_id:uuid(1)}:operation==='page'?{options:{query:'PRIVATE_OFFLINE'}}:{});
     const {report,text}=run(input,{mode});assert.equal(report.operation,operation);assert.equal(report.identity_verified,false);
     assert.ok(!text.includes(body)&&!text.includes(provenance)&&!text.includes('PRIVATE_OFFLINE'));
     if(operation==='audit'){assert.equal(report.result.entries[0].state,'matched');assert.equal(report.result.text_included,false);}
     if(operation==='trace'){assert.equal(report.result.termination,'unlinked');assert.equal(report.result.followed_hops,1);}
+    if(operation==='duplicates'){assert.deepEqual(report.result.counts,{groups:1,records_in_groups:2,records_outside_groups:1,additional_occurrences:1});assert.deepEqual(report.result.groups[0].members.map(m=>m.id),[uuid(1),uuid(3)]);assert.equal(report.result.merge_safe,false);}
     if(operation==='impact'){assert.equal(report.result.counts.total,1);assert.equal(report.result.entries[0].memory.id,uuid(2));assert.equal(report.result.all_impacts_known,false);}
     assert.equal(report.local_only,true);assert.equal(report.memory_writes_requested,false);pass();
   }

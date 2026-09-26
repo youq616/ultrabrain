@@ -2,6 +2,7 @@
 import {setImmediate as yieldToEventLoop} from 'node:timers/promises';
 import {sha256,requireThat,UltraError} from './core.mjs';
 import {assertClientAuthorized} from './client-authorization.mjs';
+import {inspectMemorySnapshotDuplicates} from './snapshot-duplicates.mjs';
 import {inspectMemorySnapshotImpact} from './snapshot-impact.mjs';
 import {auditMemorySnapshot,traceMemorySnapshot,SNAPSHOT_TRACE_DEFAULT_HOPS,validSnapshotTraceHops} from './snapshot-lineage-audit.mjs';
 import {
@@ -25,7 +26,7 @@ export function snapshotRequest(input) {
   try { request = structuredClone(input); }
   catch { throw new UltraError('invalid_params','Cloneable snapshot request required'); }
   const choices = {inspect:['operation','consent'],compare:['operation','consent'],
-    audit:['operation','consent','memory_id'],impact:['operation','consent','memory_id'],trace:['operation','consent','memory_id','max_hops'],page:['operation','consent','options'],record:['operation','consent','memory_id','include_text']};
+    duplicates:['operation','consent'],audit:['operation','consent','memory_id'],impact:['operation','consent','memory_id'],trace:['operation','consent','memory_id','max_hops'],page:['operation','consent','options'],record:['operation','consent','memory_id','include_text']};
   requireThat(object(request) && typeof request.operation === 'string' && Object.hasOwn(choices,request.operation) &&
     ownFields(request,choices[request.operation]),'invalid_params','Invalid offline snapshot operation');
   requireThat(request.consent === true,'snapshot_consent_required','Explicit local inspection consent required');
@@ -52,7 +53,11 @@ const safeCodes = new Set(['invalid_params','snapshot_consent_required','client_
   'snapshot_file_changed','snapshot_file_unavailable','snapshot_input_too_large']);
 /** Never expose parser snippets, paths, query text, filesystem details or callback errors. */
 export function snapshotFailure(error) {
-  return new UltraError(safeCodes.has(error?.code) ? error.code : 'snapshot_operation_unconfirmed',
+  let code;
+  // Exceptions are untrusted too: never run code getters or let a revoked Proxy
+  // escape sanitization. Only an own data value from the fixed code set survives.
+  try { code = Object.getOwnPropertyDescriptor(error,'code')?.value; } catch {}
+  return new UltraError(safeCodes.has(code) ? code : 'snapshot_operation_unconfirmed',
     'Offline snapshot operation was not confirmed');
 }
 const summary = file => ({file_sha256:file.file_sha256,file_bytes:file.file_bytes,
@@ -105,6 +110,7 @@ export async function inspectClientSnapshotBytes(input, inputs, {authorize=()=>{
       result = {record_count:files[0].snapshot.record_count,states,excluded:files[0].snapshot.excluded};
     } else if (request.operation === 'compare') result = compareMemorySnapshots(files[0],files[1]);
     else if (request.operation === 'page') result = queryMemorySnapshot(files[0],request.options);
+    else if (request.operation === 'duplicates') result = await inspectMemorySnapshotDuplicates(files[0],allowed);
     else if (request.operation === 'audit') result = await auditMemorySnapshot(files[0],request.memory_id,allowed);
     else if (request.operation === 'impact') result = await inspectMemorySnapshotImpact(files[0],request.memory_id,allowed);
     else if (request.operation === 'trace') result = await traceMemorySnapshot(files[0],request.memory_id,request.max_hops,allowed);
@@ -119,6 +125,7 @@ export async function inspectClientSnapshotBytes(input, inputs, {authorize=()=>{
         expected_hash_verified:copies[index].expected_sha256 !== undefined})),result,
       limitations:['unsigned-self-declared-owner','no-live-database-check','absence-is-not-deletion',
         'no-chronology-inference','not-a-restore-plan','metadata-is-private',
+        request.operation === 'duplicates' ? 'exact-content-match-is-not-a-merge-plan' :
         request.operation === 'impact' ? 'same-file-potential-dependent-records-only' :
         request.operation === 'trace' ? 'same-file-bounded-matched-chain-only' :
           request.operation === 'audit' ? 'same-file-direct-reference-only' : 'no-source-following']};

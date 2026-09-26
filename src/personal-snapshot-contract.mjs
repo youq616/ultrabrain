@@ -210,3 +210,57 @@ export function readMemorySnapshotRecord(file,id){
 
 // The offline Node entry validates selectors/JSON before opening any selected file.
 export {browserOptions as memorySnapshotQueryOptions,boundedSnapshotJSON as parseSnapshotJSON};
+
+/** Exact-content review within ONE verified snapshot. No automatic deduplication.
+ * Text is neither normalized nor reduced to a hash key. Matching bodies can have
+ * different permissions, projects, provenance and lifecycle; none is dispensable.
+ */
+// Yield to UI events and Node cancellation without importing Node-only modules.
+const yieldDuplicateLoop=()=>new Promise(resolve=>setTimeout(resolve,0));
+
+const DUPLICATE_BATCH=32;
+export const DUPLICATE_METADATA_FIELDS=Object.freeze(['type','origin_kind','project_id','status','visibility',
+ 'importance','confidence','agent_id','revision','created_at','updated_at','last_confirmed','provenance','derivation_current']);
+const duplicateMember=row=>Object.freeze(Object.fromEntries(['id','type','origin_kind','project_id','status','visibility','revision','derivation_current']
+ .map(key=>[key,row[key]])));
+
+/** Internal adapter: only canonical WeakSet-backed inspected handles are accepted.
+ * Public path/byte APIs verify the complete file before calling this operation.
+ * Groups and members follow canonical ID order, not locale, hash or file recency.
+ * Checkpoints/yields include large single groups, not only the group outer loop.
+ */
+export async function inspectMemorySnapshotDuplicates(file,checkpoint=()=>{}) {
+ checkpoint();queryMemorySnapshot(file); // Refuse forged handles before accessing fields.
+ const rows=file.snapshot.memories,byContent=new Map();
+ for(let i=0;i<rows.length;i++) {
+  checkpoint();if(i%DUPLICATE_BATCH===0){await yieldDuplicateLoop();checkpoint();}
+  const row=rows[i];
+  // Equality of verified well-formed strings is the criterion, not SHA equality.
+  if(!byContent.has(row.content))byContent.set(row.content,[]);
+  byContent.get(row.content).push(row);
+ }
+ const groups=[],counts={groups:0,records_in_groups:0,records_outside_groups:0,additional_occurrences:0};
+ let visited=0;
+ for(const records of byContent.values()) {
+  checkpoint();
+  if(records.length===1){counts.records_outside_groups++;continue;}
+  const first=records[0],different=new Set(),members=[],statusCounts={candidate:0,active:0,archived:0};
+  let derivationPresent=0;
+  for(const row of records) {
+   checkpoint();if(visited++%DUPLICATE_BATCH===0){await yieldDuplicateLoop();checkpoint();}
+   members.push(duplicateMember(row));statusCounts[row.status]++;
+   if(row.derivation!==null)derivationPresent++;
+   for(const key of DUPLICATE_METADATA_FIELDS)if(row[key]!==first[key])different.add(key);
+  }
+  groups.push(Object.freeze({content_sha256:first.content_hash,content_bytes:encoder.encode(first.content).length,
+   member_count:records.length,members:Object.freeze(members),status_counts:Object.freeze(statusCounts),
+   differing_fields:Object.freeze(DUPLICATE_METADATA_FIELDS.filter(key=>different.has(key))),derivation_present_count:derivationPresent}));
+  counts.groups++;counts.records_in_groups+=records.length;counts.additional_occurrences+=records.length-1;
+ }
+ checkpoint();
+ return Object.freeze({format:'ultrabrain-snapshot-duplicates-v1',scanned_records:rows.length,scan_complete:true,
+  matching:'exact-content-no-normalization',scope:'one-verified-file-all-projects-and-states',
+  counts:Object.freeze(counts),groups:Object.freeze(groups),compared_metadata_fields:DUPLICATE_METADATA_FIELDS,
+  references_compared:false,text_included:false,read_only:true,identity_verified:false,truth_verified:false,
+  merge_safe:false,automatic_action:'none'});
+}

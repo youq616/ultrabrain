@@ -1,0 +1,43 @@
+name: Local snapshot duplicate review
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: snapshot-duplicate-review-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  browser-local-files:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install isolated browser dependencies
+        run: |
+          python -m venv "$RUNNER_TEMP/duplicate-browser"
+          "$RUNNER_TEMP/duplicate-browser/bin/pip" install playwright==1.57.0
+          "$RUNNER_TEMP/duplicate-browser/bin/python" -m playwright install --with-deps chromium
+      - name: Real HTTP/CSP and Chromium reviewing local synthetic files, no live memory queries
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/duplicate-browser/bin/python
+          ULTRABRAIN_DUPLICATE_REVIEW_REPORT: ${{ runner.temp }}/duplicate-review-report.json
+          ULTRABRAIN_DUPLICATE_REVIEW_SCREENSHOT: ${{ runner.temp }}/duplicate-review.png
+        run: node test/personal-snapshot-duplicates-browser.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: duplicate-review-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/duplicate-review-report.json
+            ${{ runner.temp }}/duplicate-review.png
+          if-no-files-found: error
+          retention-days: 14
