@@ -1,0 +1,55 @@
+{
+  "base_commit": "8d373b38195f0134a2374cd3996811568d5621e9",
+  "base_tree": "41259f0550ce6bb401de965147d1e441bdf90fd6",
+  "node": {
+    "tests": 2504,
+    "pass": 2504,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "exit": 0,
+    "uid": 1000
+  },
+  "new_node_tests": 60,
+  "self_review_first": {
+    "tests": 60,
+    "pass": 58,
+    "fail": 2,
+    "cause": "shared snapshotFailure invokes exception code accessor/reflection"
+  },
+  "first_full": {
+    "tests": 2504,
+    "pass": 2503,
+    "fail": 1,
+    "cause": "existing offline import closure count omitted new module"
+  },
+  "new_package": {
+    "passed": true,
+    "checks": 10,
+    "mode": "compiled CLI/path/byte APIs copied without SDK, existing negative-capability guard",
+    "data": "synthetic snapshots only",
+    "input_bytes_and_mtime_unchanged": true,
+    "network_requests": 0,
+    "model_calls": 0,
+    "platform": "linux",
+    "bundle_sha256": "c7f5559bad348747568c9af5b2fcdedb861a2d15c473580e9e75b4dc172fb724"
+  },
+  "existing_offline_package": {
+    "checks": 37,
+    "passed": true
+  },
+  "package_sha256": "3ec7fdca785dad705045adea90d8d75732fff9bf1fe2db667b6325a895bc2be9",
+  "package_scope": "npm pack, extracted tarball, no dependency install; offline entry copied without SDK; not a customer install",
+  "python": "not rerun locally",
+  "independent_agent_review": "PENDING; self-review is not independent-agent approval",
+  "log_sha256": {
+    "initial-red.tap": "97c7be483bd00b4b54114caaf7ed0a9e30943320416097756c3be706a2c13158",
+    "self-review-red.tap": "8fd73dbd183b131559cdf86aee6835517a440595ced24c8511fb8579461ebd41",
+    "self-review-green.tap": "3e24f3b3e254805ebfe48d74c32ef32a3dc5f9da2f52278e8eaf3c311abe5f1f",
+    "full-node.tap": "5908466578a0c3d21053c94e0ded8f5e41179621e566e6b6e818b202489d59d0",
+    "full-node-final.tap": "56992a5b5216c2ec2446cdccd1de2561a418361dffe19abb15fcd2a7ec673235",
+    "package-final.log": "5d17c021d4740ef2e8ea8793784c4af3a66dd0107e9aa5cb59dfb6d00a7d9c92",
+    "package-final-checks.log": "f12fe0253734267b76d4fd0dd9ee29e00b5158bfae7eeaa194c2165c149cd574",
+    "existing-offline-package.log": "142ac1b425e3cfd917cf1e930f8be92ce07f6d259977115b135068211024f241"
+  }
+}

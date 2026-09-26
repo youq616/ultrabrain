@@ -104,6 +104,16 @@ jobs:
           path: ${{ runner.temp }}/client-overview-report.json
           if-no-files-found: error
           retention-days: 14
+      - name: Installed offline duplicate audit without SDK or write capabilities
+        env:
+          ULTRABRAIN_DUPLICATES_REPORT: ${{ runner.temp }}/snapshot-duplicates-report.json
+        run: node test/client-snapshot-duplicates-package.mjs "$RUNNER_TEMP/task-host/node_modules/ultrabrain-client"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-duplicates-${{ github.sha }}
+          path: ${{ runner.temp }}/snapshot-duplicates-report.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Stop only isolated database
         if: always()
         run: bun src/cli.mjs db stop || true

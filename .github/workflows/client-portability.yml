@@ -28,6 +28,8 @@ jobs:
         run: node --test test/client-overview.test.mjs test/client-overview-runtime.test.mjs test/client-overview-cli.test.mjs test/client-overview-package.test.mjs
       - name: n8n owner overview contracts
         run: node --test test/n8n-overview.test.mjs test/n8n-overview-node.test.mjs
+      - name: Exact-content duplicate snapshot audit
+        run: node --test test/client-snapshot-duplicates.test.mjs test/client-snapshot-duplicates-cli.test.mjs
       - run: python -m unittest discover -s test -p test_task_context_config.py -v
       - run: python -m unittest discover -s test -p test_client_config.py -v
       - run: python -m unittest discover -s test -p test_native_adapter_config.py -v

@@ -1,0 +1,19 @@
+test_each_damage_round_observes_its_own_response_and_drains_handler (test_job_browser_response_barrier.BrowserResponseBarrierTests.test_each_damage_round_observes_its_own_response_and_drains_handler) ... FAIL
+
+======================================================================
+FAIL: test_each_damage_round_observes_its_own_response_and_drains_handler (test_job_browser_response_barrier.BrowserResponseBarrierTests.test_each_damage_round_observes_its_own_response_and_drains_handler)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/ub-20260926/repo/ultrabrain/test/test_job_browser_response_barrier.py", line 134, in test_each_damage_round_observes_its_own_response_and_drains_handler
+    exec(corruption_loop(source), env)
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<actual-job-browser-corruption-loop>", line 114, in <module>
+  File "/mnt/data/ub-20260926/repo/ultrabrain/test/test_job_browser_response_barrier.py", line 108, in unroute
+    assert not self.request_pending and not self.callback_pending, \
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: stale DOM state cannot authorize removing an active response handler
+
+----------------------------------------------------------------------
+Ran 1 test in 0.008s
+
+FAILED (failures=1)

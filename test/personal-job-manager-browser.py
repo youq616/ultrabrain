@@ -107,11 +107,27 @@ with sync_playwright() as p:
                 data['result']['source_id'] = 'foreign'
             route.fulfill(status=200, content_type='application/json', body=json.dumps(data))
         page.route('**/api/call', corrupt)
-        page.locator('#job-form button[type="submit"]').click()
+        # The previous iteration leaves the same error message and zero cards.
+        # Those DOM assertions cannot prove THIS response has been delivered.
+        with page.expect_response(lambda response: response.request.method == 'POST'
+                                  and response.url.endswith('/api/call')
+                                  and response.request.post_data_json['operation'] == 'jobs') as observed:
+            page.locator('#job-form button[type="submit"]').click()
+        response = observed.value
+        assert response.ok
+        response.finished()
+        damaged = response.json()['result']
+        if damage == 'date':
+            assert damaged['jobs'][0]['created_at'] == '2026-02-30T00:00:00.000Z'
+        else:
+            assert damaged['source_id'] == 'foreign'
         expect(page.locator('#message')).to_contain_text('job_page_unconfirmed')
+        expect(page.locator('#coverage')).to_contain_text('本次任务列表未确认')
         expect(page.locator('#results article')).to_have_count(0)
         expect(page.locator('#export')).to_be_disabled()
-        page.unroute('**/api/call', corrupt)
+        # Wait for the handler to unwind before another request/route is created.
+        # Do not ignore callback errors or weaken the malformed-response checks.
+        page.unroute_all(behavior='wait')
         checks += 1
     page.locator('#job-form button[type="submit"]').click()
     expect(page.locator('#results article')).to_have_count(1)
@@ -142,7 +158,7 @@ with sync_playwright() as p:
     expect(page.locator('#content')).to_have_value('TASK_UNSAVED_DRAFT')
     if os.environ.get('ULTRABRAIN_JOB_SCREENSHOT'):
         page.screenshot(path=os.environ['ULTRABRAIN_JOB_SCREENSHOT'], full_page=True)
-    page.unroute('**/api/call', bad_cancel)
+    page.unroute_all(behavior='wait')
     page.locator('#retry').click()
     expect(page.locator('#pending-panel')).to_be_hidden()
     expect(page.locator('#results')).to_contain_text('stale')
@@ -176,7 +192,7 @@ with sync_playwright() as p:
     page.locator('#job-form button[type="submit"]').click()
     expect(page.locator('#message')).to_contain_text('任务结果已清除')
     expect(page.locator('#results article')).to_have_count(0)
-    page.unroute('**/api/call', clear_late)
+    page.unroute_all(behavior='wait')
     checks += 1
     page.locator('#job-form button[type="submit"]').click()
     expect(page.locator('#results article')).to_have_count(1)

@@ -1,0 +1,9 @@
+Exact excerpt from run36216042831/job108332089138 at commitc3e144033f914f00cd22c71436a903f2f5c23bc8; not the full job log.
+2026-09-26T03:52:17.6028875Z   File "/home/runner/work/ultrabrain/ultrabrain//test/personal-job-manager-browser.py", line 108, in corrupt
+2026-09-26T03:52:17.6029245Z     route.fulfill(status=200, content_type='application/json', body=json.dumps(data))
+2026-09-26T03:52:17.6129684Z playwright._impl._errors.Error: Route.fulfill: Route is already handled!
+2026-09-26T03:52:17.6619994Z   File "/home/runner/work/ultrabrain/ultrabrain//test/personal-job-manager-browser.py", line 117, in <module>
+2026-09-26T03:52:17.6620633Z     expect(page.locator('#results article')).to_have_count(1)
+2026-09-26T03:52:17.6648163Z playwright._impl._errors.Error: LocatorAssertions.to_have_count: Route.fulfill: Route is already handled!
+2026-09-26T03:52:17.6845394Z AssertionError: Task module browser failed
+2026-09-26T03:52:17.6938764Z ##[error]Process completed with exit code 1.
