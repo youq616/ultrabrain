@@ -1,0 +1,86 @@
+Exact failure excerpts and summaries, not the full logs. Full original logs are retained in the delivery archive.
+
+FILE: self-review-red.tap
+not ok 55 - review: exception reflection cannot expose private callback diagnostics getter
+  ---
+  duration_ms: 0.664115
+  type: 'test'
+  location: '/mnt/data/ub-20260926/repo/ultrabrain/test/client-snapshot-duplicates.test.mjs:124:46'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    Error: PRIVATE_EXCEPTION_ACCESSOR
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (file:///mnt/data/ub-20260926/repo/ultrabrain/test/client-snapshot-duplicates.test.mjs:128:2)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+not ok 56 - review: exception reflection cannot expose private callback diagnostics revoked-proxy
+  ---
+  duration_ms: 0.465026
+  type: 'test'
+  location: '/mnt/data/ub-20260926/repo/ultrabrain/test/client-snapshot-duplicates.test.mjs:124:46'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: Cannot perform 'get' on a proxy that has been revoked
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (file:///mnt/data/ub-20260926/repo/ultrabrain/test/client-snapshot-duplicates.test.mjs:128:2)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..60
+# tests 60
+# suites 0
+# pass 58
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 828.832789
+
+FILE: full-node.tap
+not ok 691 - offline package: static import closure contains only approved builtins and local modules
+  ---
+  duration_ms: 2.273333
+  type: 'test'
+  location: '/mnt/data/ub-20260926/repo/ultrabrain/test/client-snapshot-package.test.mjs:17:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    11 !== 10
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 10
+  actual: 11
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///mnt/data/ub-20260926/repo/ultrabrain/test/client-snapshot-package.test.mjs:28:142)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..2504
+# tests 2504
+# suites 0
+# pass 2503
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 23400.122418

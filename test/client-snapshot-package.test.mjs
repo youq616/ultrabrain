@@ -24,8 +24,12 @@ test('offline package: static import closure contains only approved builtins and
       const name=match[1];if(name.startsWith('.'))pending.push(resolve(dirname(file),name));else assert.ok(builtins.has(name),name);
     }
   }
-  assert.ok(seen.has(resolve(root,'src/personal-snapshot-contract.mjs')));assert.ok(seen.has(resolve(root,'src/snapshot-lineage-audit.mjs')));
-  assert.ok(seen.has(resolve(root,'src/personal-lineage-contract.mjs')));assert.ok(seen.has(resolve(root,'src/snapshot-impact.mjs')));assert.equal(seen.size,10);
+  // Exact independent membership, not a count that could hide module substitution.
+  const expected=['packages/ultrabrain-client/src/snapshot-cli.mjs','packages/ultrabrain-client/src/snapshot.mjs',
+    'src/client-authorization.mjs','src/client-snapshot-files.mjs','src/client-snapshot.mjs','src/core.mjs',
+    'src/personal-lineage-contract.mjs','src/personal-snapshot-contract.mjs','src/snapshot-duplicates.mjs',
+    'src/snapshot-impact.mjs','src/snapshot-lineage-audit.mjs'];
+  assert.deepEqual([...seen].sort(),expected.map(p=>resolve(root,p)).sort());
 });
 test('offline package: portability includes all new suites without dropping lineage or Windows',()=>{
   const flow=read('.github/workflows/client-portability.yml');
