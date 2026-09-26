@@ -1,0 +1,27 @@
+# Two-file duplicate comparison UI — 2026-09-26
+
+## Scope / provenance
+
+Remote base d5e3c3c322e68e06405f511580d36a48b64ca577, source tree3b2f63700dd51f73e7a55884a740a1bb0873db89 (PR28). That commit's nine actual CI workflows were read at takeover and are completed/success; they do not certify this phase. Restored the supplied local bundle, whose tracked tree exactly matches the remote base. Its local commit7b8aa41156dffe18f5b8b89639b99937fbc20caf is reconstructed ancestry, not the remote commit object. Publish on a separate draft branch with the real d5e3c3c3 parent; never force-push the local reconstruction or change main / prior PR heads.
+
+New complete module: production-console two-file duplicate-comparison workspace, explicit second consent, four-category filter, 20-group and 20-member pages, metadata-only side-by-side membership/changed-field inspection. Reuses the existing compareMemorySnapshotDuplicates function and its immutable inspected handles unchanged. All member IDs remain reachable, including a disjoint2000-ID union across two1000-record files. Opposite-side singletons and per-content-group ID semantics are explicit. No body viewing, downloads, server queries, deletes, merge actions or model calls are added.
+
+An independent optional parent-consumer hook avoids overwriting the existing explorer and single-file duplicate hooks. Reset remains synchronous. Static asset delivery alone is added to the existing allowlist; Host/Origin/CSP/token policies, authenticated operation catalog, migrations, upstream pins and qbrain are unchanged. The pre-existing blocked n8n integration extension is not touched. UI files are not a new CLI tarball.
+
+## Separate implementer self-review
+
+This section records the implementation assistant's separate pass, NOT an independent second-agent approval. A concrete UI state consistency issue was reproduced: programmatic category-value replacement without a change event allowed old member/group pagination to retain the previous selection. Two additional assertions failed (18-test pass16/fail2 run). The fix binds displayed pagination to the last rendered category and checks it before all page bounds, including a disabled/out-of-range page. No production authority is expanded and no assertions are weakened. The full original first-failure log is retained in review-first-failures.tap.gz. This is one UI consistency finding, not two security vulnerabilities.
+
+Review additionally covered both-file binding, falsified/changed parent context, consent withdrawal before/after async work, final delivery checks, old asynchronous failures and detached buttons, no caller body/derivation/provenance values in output, field-name labels, no hidden write/download path, copied canonical data invariance, disjoint2000-member pagination, category-empty versus comparison-empty and source mismatch, error getters/revoked Proxies, group identity independent of a displayed digest, and optional hook compatibility with standalone prior tests. Selected-group visual/aria state was added and checked. No remaining blocking finding was identified by the implementer; that is not proof of zero defects.
+
+## Actual local execution
+
+Ordinary Linux uid1000 with Node22.16.0: full2695/2695, zero failures/skips/cancellations, exit0. New64 tests (44 UI plus20 review/HTTP/wiring tests) are included, not additive. Earlier full2675/2675 predates the20 review cases and remains separately recorded. Initial TDD44 failures were missing-module results, not44 discovered defects. Source tree/clean patch replay is checked separately in the final handoff report.
+
+Actual Chromium144.0.7559.96: new16 checks passed using the complete production HTML/CSS/eight scripts with explicit offline synthetic-login/Python-SHA256 mode. An independent Python grouping oracle checks visible group/member results; it is a separate test algorithm, not another agent. Existing single-file review14 and overview10 checks also passed in their explicitly offline modes after loading the eighth script. The new desktop and390px screenshots were inspected. Zero data requests/downloads/model calls in the new comparison phase. Synthetic exports only; no user database or credentials.
+
+Real Node HTTP routing/CSP-header checks pass with the startup-only fake DB. The actual production-console online Chromium attempt was blocked at navigation by net::ERR_BLOCKED_BY_ADMINISTRATOR; preserve browser-http-first.log and do not bypass or mark it passed. Offline mode is different evidence, not relabelled online success. New real HTTP/CSP Chromium and Windows/Ubuntu cases are additive CI steps, awaiting actual final-SHA results. Browser Python syntax and changed YAML parse locally; full Python discovery, real PostgreSQL and compiled CLI rebuild were not rerun locally because core/server contracts and CLI source are unchanged. No new package or user deployment is claimed.
+
+## Independent review / release gate
+
+Independent reviewer session: none as of source commit; NOT APPROVED. A final-SHA repository review request and its actual response are recorded in the PR after publication. A requested review, exhausted quota response, self-review pass, test runner, new worktree or green CI is not separate-agent approval. Any blocking code correction requires reviewing the new complete SHA. Keep the PR draft, main and prior development branches unchanged, and do not deploy user services. Prior PR28 review quota exhaustion is historical, not a result for this new code.

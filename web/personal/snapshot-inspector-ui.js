@@ -5,6 +5,7 @@ let inspectorEpoch=0,inspectorWorking=false,inspectorData=null,inspectorReport=n
 let inspectorBrowserHooks={reset(){},sync(){}};
 // Independent optional consumer; the explorer must not overwrite its lifecycle.
 let inspectorDuplicateHooks={reset(){},sync(){}};
+let inspectorDuplicateCompareHooks={reset(){},sync(){}};
 const inspectorKinds={left_only:'仅左侧存在',right_only:'仅右侧存在',changed:'字段不同'};
 function clearInspectorDetails(){
   $('inspector-details').hidden=true;$('inspector-detail-left').textContent='';$('inspector-detail-right').textContent='';
@@ -16,10 +17,10 @@ function clearInspectorComparison(){
 function inspectorControls(){
   $('inspector-run').disabled=busy||!!pending||inspectorWorking||!$('inspector-consent').checked;
   $('inspector-compare').disabled=busy||!!pending||inspectorWorking||!inspectorData?.right||!$('inspector-compare-consent').checked;
-  inspectorBrowserHooks.sync();inspectorDuplicateHooks.sync();
+  inspectorBrowserHooks.sync();inspectorDuplicateHooks.sync();inspectorDuplicateCompareHooks.sync();
 }
 function invalidateInspector(close=false){
-  inspectorBrowserHooks.reset();inspectorDuplicateHooks.reset();
+  inspectorBrowserHooks.reset();inspectorDuplicateHooks.reset();inspectorDuplicateCompareHooks.reset();
   inspectorEpoch++;inspectorWorking=false;inspectorData=null;
   clearInspectorComparison();$('inspector-summary').textContent='';$('inspector-consent').checked=false;$('inspector-compare-consent').checked=false;
   if(close){$('inspector-panel').hidden=true;$('inspector-left').value='';$('inspector-right').value='';}
@@ -33,7 +34,7 @@ async function inspectSelectedSnapshots(){
   if(inspectorWorking||busy||pending)return;
   const session=token,source=sourceId,navigation=loadVersion,selectedView=view;
   const left=$('inspector-left').files?.[0],right=$('inspector-right').files?.[0],epoch=++inspectorEpoch;
-  inspectorBrowserHooks.reset();inspectorDuplicateHooks.reset();
+  inspectorBrowserHooks.reset();inspectorDuplicateHooks.reset();inspectorDuplicateCompareHooks.reset();
   inspectorData=null;clearInspectorComparison();$('inspector-summary').textContent='';$('inspector-compare-consent').checked=false;
   const current=()=>epoch===inspectorEpoch&&!!session&&token===session&&sourceId===source&&
     loadVersion===navigation&&view===selectedView&&!$('workspace').hidden&&!$('inspector-panel').hidden;

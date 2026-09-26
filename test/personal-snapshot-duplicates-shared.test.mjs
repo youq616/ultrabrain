@@ -41,6 +41,6 @@ test('duplicate HTTP: only fixed script and shared contract are served under ori
  for(const path of ['/snapshot-duplicates-ui.js?file=other','/snapshot-duplicates-ui.js/extra'])assert.equal((await fetch(service.origin+path)).status,404);
  const html=await (await fetch(service.origin)).text();assert.ok(html.includes('id="duplicates-panel"'));
  const scripts=[...html.matchAll(/<script src="([^"]+)" defer>/g)].map(m=>m[1]);
- assert.deepEqual(scripts,['/app.js','/snapshot-ui.js','/snapshot-inspector-ui.js','/snapshot-explorer-ui.js','/snapshot-duplicates-ui.js','/lineage-ui.js','/overview-ui.js']);
+ assert.deepEqual(scripts,['/app.js','/snapshot-ui.js','/snapshot-inspector-ui.js','/snapshot-explorer-ui.js','/snapshot-duplicates-ui.js','/snapshot-duplicate-compare-ui.js','/lineage-ui.js','/overview-ui.js']);
  assert.equal(calls,1,'Static loads must not call the database');
 });

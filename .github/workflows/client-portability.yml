@@ -34,6 +34,8 @@ jobs:
         run: node --test test/personal-snapshot-duplicates-ui.test.mjs test/personal-snapshot-duplicates-shared.test.mjs test/personal-snapshot-duplicates-review.test.mjs
       - name: Two-file exact duplicate comparison
         run: node --test test/client-snapshot-duplicate-compare.test.mjs test/client-snapshot-duplicate-compare-boundaries.test.mjs test/client-snapshot-duplicate-compare-cli.test.mjs
+      - name: Two-file duplicate comparison UI contracts
+        run: node --test test/personal-snapshot-duplicate-compare-ui.test.mjs test/personal-snapshot-duplicate-compare-review.test.mjs
       - run: python -m unittest discover -s test -p test_task_context_config.py -v
       - run: python -m unittest discover -s test -p test_client_config.py -v
       - run: python -m unittest discover -s test -p test_native_adapter_config.py -v
