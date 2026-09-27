@@ -48,10 +48,10 @@ test('context never truncates individual instructions to satisfy its serialized 
 });
 test('personal tools have real handlers and consistent read/write scopes',()=>{
   class E extends Error{constructor(code,msg){super(msg);this.code=code;}}
-  const operations=[];assert.equal(registerPersonalPlugin(operations,{OperationError:E}).length,19); // 18 accepted tools plus one read-only owner overview
+  const operations=[];assert.equal(registerPersonalPlugin(operations,{OperationError:E}).length,20); // Previous 19 plus the scoped metadata-only candidate list
   assert.deepEqual(operations.map(x=>x.name),PERSONAL_TOOL_NAMES);
   const previous=["ultra_personal_capture", "ultra_personal_consolidate", "ultra_personal_jobs", "ultra_personal_cancel", "ultra_agent_register", "ultra_agent_list", "ultra_memory_commit", "ultra_memory_read", "ultra_memory_search", "ultra_personal_context", "ultra_memory_profile", "ultra_personal_review", "ultra_personal_update", "ultra_personal_document_import", "ultra_personal_document_list", "ultra_personal_document_read", "ultra_personal_document_queue", "ultra_personal_document_archive"];
-  assert.deepEqual([...operations.map(x=>x.name)].sort(),[...previous,'ultra_personal_overview'].sort());
+  assert.deepEqual([...operations.map(x=>x.name)].sort(),[...previous,'ultra_personal_overview','ultra_personal_candidates'].sort());
   const overview=operations.find(x=>x.name==='ultra_personal_overview');assert.equal(overview.scope,'read');assert.equal(overview.mutating,false);
   assert.ok(operations.every(x=>typeof x.handler==='function'&&x.mutating===(x.scope==='write')));
   assert.throws(()=>registerPersonalPlugin(operations,{OperationError:E}),{code:'upstream_contract_changed'});

@@ -124,3 +124,20 @@ original event returns a historical candidate receipt, not a current-state claim
 Correction JSON is bounded at128 KiB; other operations retain their16 KiB limit.
 See source `docs/CLIENT-MEMORY-CORRECTION.md` and its non-consenting example at the
 matching commit. This package adds no model, background capture or automatic retry.
+
+## Scoped owner-candidate metadata pages
+
+`ultrabrain-candidates --profile /absolute/profile.json` accepts a bounded JSON
+selection `{workspace, consent:true, limit?:1..50, after_id?:fullUUID}` on stdin.
+The `listClientCandidates` SDK is in `dist/candidates.cjs`; connections expose
+`.candidates(...)`. Observed instance/actor and workspace pins are mandatory,
+but no write or model opt-in is needed. The new optional read-only server tool
+returns only owned non-document candidates in global/bound-project scope, with
+no body/provenance/quote transfer. Full pages are validated before delivery.
+
+Pagination is ID-ordered and live, not a database snapshot, time ordering, total
+count or activation authorization. Changing scope requires a fresh traversal;
+new or reclassified earlier IDs require a restart. Raw captured inputs may be
+candidates. Continue manually with `next_after`; inspect a selected ID before
+any edit/review. No prefetch, retries, hidden search fallback, model or writes.
+See `docs/CLIENT-CANDIDATES.md` and the default-denied example in this source.

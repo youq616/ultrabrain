@@ -1,4 +1,5 @@
 /** Personal MCP tools are registered in compatibility mode; governed enterprise allowlist stays frozen. */
+import {PersonalCandidates} from './personal-candidates.mjs';
 import {PersonalOverview} from './personal-overview.mjs';
 import {PersonalConsolidator} from './personal-consolidation.mjs';
 import {PERSONAL_JOB_STATES} from './personal-consolidation-core.mjs';
@@ -15,6 +16,7 @@ const query={agent_id:str('Optional label filter, never authentication'),project
   limit:num('1..100'),offset:num('Search live page offset; personal context accepts only 0'),budget_bytes:num('512..131072 serialized UTF-8 bytes')};
 const revision={memory_id:str('Full memory UUID',true),expected_revision:num('Latest observed revision',true),event_id:str('Stable immutable request id',true)};
 const definitions=[
+ ['ultra_personal_candidates','candidates',false,{request_id:str('Fresh request UUID',true),project_id:str('Include global and this project; omit for global only'),after_id:str('Exclusive last-seen memory UUID, not authority'),limit:num('1..50, default 20')},'List owned non-document candidate metadata only, ordered by ID. No body, automatic activation or model; live keyset pages are not a snapshot.'],
  ['ultra_personal_overview','overview',false,{request_id:str('Fresh full UUID binding this read',true)},'Read one owner-only, all-project aggregate snapshot of memory, job, document and agent counts. No bodies or model calls; lease/attempt counts do not authorize retries.'],
  ['ultra_personal_capture','capture',true,{agent_id:str('Registered label',true),event_id:str('Stable capture event id',true),transcript:str('Explicitly consented raw text, at most 32 KiB',true),consent:{type:'boolean',required:true},project_id:str('Optional project label')},'Atomically retain a private source entry and queue it for personal consolidation. Does not call a model or activate memory.'],
  ['ultra_personal_consolidate','job_process',true,{expected_source:str('Must match authenticated source',true),allow_model_call:{type:'boolean',required:true},limit:num('1..4 jobs, default 1'),retry:{type:'boolean'},job_id:str('Optional owned job UUID')},'Process explicitly queued owned personal jobs using a separately enabled host model. Produces quoted private candidates only. Model costs may repeat after explicit recovery.'],
@@ -54,6 +56,7 @@ export function registerPersonalPlugin(operations,{OperationError},configureMode
       try {
         const {dry_run,_meta,...input}=p;
         requireThat(dry_run===undefined||typeof dry_run==='boolean','invalid_params','dry_run must be boolean');
+        if(method==='candidates')return await new PersonalCandidates(ctx).list(input);
         if(method==='overview')return await new PersonalOverview(ctx).read(input);
         if(method.startsWith('job_'))return await new PersonalConsolidator(ctx,configureModel)[method.slice(4)](input);
         if(DOCUMENT_METHODS.has(method))return await new PersonalDocumentStore(ctx)[method](input);
