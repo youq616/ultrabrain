@@ -1,10 +1,16 @@
 /** Testable n8n execution contract. The node wrapper creates platform errors, never echoes input on failure. */
+import {automationCandidatesFailure} from './automation-candidates.mjs';
 import {automationSettings,validateAutomationRequest} from './automation-session.mjs';
 import {requireThat,integer,UltraError} from './core.mjs';
 
 function requestFor(context,operation,index) {
   const value=name=>context.getNodeParameter(name,index);
   if(operation==='identity')return {};
+  if(operation==='personal_candidates'){
+    const after=value('candidateAfter');
+    requireThat(typeof after==='string','invalid_params','Explicit candidate cursor required');
+    return {scope:value('candidateScope'),consent:value('candidateConsent'),limit:value('candidateLimit'),...(after!==''?{after_id:after}:{})};
+  }
   if(operation==='personal_overview')return {scope:value('overviewScope'),consent:value('overviewConsent')};
   const p={session_id:value('sessionId')};
   if(['before_turn','resume_project'].includes(operation)) {
@@ -25,7 +31,7 @@ export async function executeN8n(context,connect) {
   const items=context.getInputData();
   requireThat(Array.isArray(items)&&items.length<=1000,'invalid_params','At most 1000 input items per node execution');
   if(items.length===0)return [];
-  let connection,openError;
+  let connection,openError,cleanupFailed=false;
   const output=[];
   const signal=typeof context.getExecutionCancelSignal==='function'?context.getExecutionCancelSignal():undefined;
   // Freeze credential resolution once per execution; never accept endpoint/token/source from item JSON.
@@ -41,9 +47,10 @@ export async function executeN8n(context,connect) {
         requireThat(!signal?.aborted,'cancelled','Execution cancelled');
         const identitySettings={rootUri:credentials.rootUri,
           expectedInstance:credentials.expectedInstance??'',expectedActor:credentials.expectedActor??'',
-          timeoutMs:integer(get('timeoutMs',30000),30000,1000,120000)};
+          timeoutMs:integer(get('timeoutMs',30000),30000,1000,120000),
+          ...(operation==='personal_candidates'?{candidateProject:credentials.candidateProject??''}:{})};
         // The overview must not evaluate hidden query/transcript/context fields.
-        const settings=automationSettings(operation==='personal_overview'?identitySettings:{...identitySettings,
+        const settings=automationSettings(['personal_overview','personal_candidates'].includes(operation)?identitySettings:{...identitySettings,
           allowCapture:credentials.allowCapture===true,allowSharedCapture:credentials.allowSharedCapture===true,
           memoryPolicy:get('memoryPolicy','current'),summary:get('summary','prefer'),
           budgetBytes:integer(get('budgetBytes',16000),16000,512,131072),
@@ -61,10 +68,10 @@ export async function executeN8n(context,connect) {
         const result=await session.run(operation,request);
         output.push({json:{ok:true,operation,result},pairedItem:{item:index}});
       }catch(e){
-        const safe=failure(e,operation==='personal_overview');
+        const safe=operation==='personal_candidates'?automationCandidatesFailure(e):failure(e,operation==='personal_overview');
         if(!context.continueOnFail()) {
           const error=new UltraError(safe.error,'Ultrabrain operation failed; check operation code and delivery state');
-          if(operation==='personal_overview'){error.read_delivery=safe.read_delivery;error.memory_writes_requested=false;}
+          if(['personal_overview','personal_candidates'].includes(operation)){error.read_delivery=safe.read_delivery;error.memory_writes_requested=false;}
           else error.delivery=safe.delivery;error.itemIndex=index;throw error;
         }
         output.push({json:safe,pairedItem:{item:index}});
@@ -73,7 +80,7 @@ export async function executeN8n(context,connect) {
     }
   }finally{
     // A confirmed write is not relabeled failed merely because session cleanup failed.
-    if(connection)try{await connection.close();}catch{}
+    if(connection)try{await connection.close();}catch{cleanupFailed=true;}
   }
   // n8n receives items only after cleanup. Cancellation during a later item or
   // cleanup invalidates earlier private overview observations, not confirmed writes.
@@ -82,6 +89,13 @@ export async function executeN8n(context,connect) {
     error.read_delivery='unconfirmed';error.memory_writes_requested=false;error.itemIndex=item.pairedItem.item;
     if(!context.continueOnFail())throw error;
     item.json=failure(error,true);
+  }
+  // Candidate observations are delivered only after cleanup. Do not relabel prior writes.
+  if(signal?.aborted||cleanupFailed)for(const item of output)if(item.json.ok&&item.json.operation==='personal_candidates'){
+    const error=new UltraError(signal?.aborted?'cancelled':'candidates_cleanup_failed','Candidate delivery was not confirmed');
+    error.read_delivery='unconfirmed';error.memory_writes_requested=false;error.itemIndex=item.pairedItem.item;
+    if(!context.continueOnFail())throw error;
+    item.json=automationCandidatesFailure(error);
   }
   return output;
 }
