@@ -1,0 +1,34 @@
+{
+  "phase": "pre-publication local validation before alignment to concurrent PR34",
+  "intermediate_source_base": "66c1e4dec131b4d60c52867438bc36505a2b4ac7",
+  "publication_base": "927f1f5e0d3312942cac832b4b68f70810feee7d",
+  "new_tests": 82,
+  "pre_alignment_full_node": {
+    "tests": 3165,
+    "pass": 3165,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "uid": 1000
+  },
+  "new_database_checks": 18,
+  "old_local_edit_regression": 38,
+  "old_offline_checks": 43,
+  "independent_review": "PENDING",
+  "final_sha_verification": "See actual final PR and delivery report; these results are not claimed for the later combined PR34 tree.",
+  "sha256": {
+    "candidates-initial-red.tap": "5c17c37444f45f07099396c8303f8e89a511e6257399d756367162928b68db00",
+    "module-first.tap": "bef3025a0082a866c84cf7367884058798cdd2cbc0db7ad2aa9f902b17d892a3",
+    "module-reviewed.tap": "c820e1905c0a49953d9f0b3e465611bcfff91af98d1529b6fd724bf52c887a18",
+    "module-green.tap": "4cfe40c9c8b05b9e05aa6922b865d91984a3ee9559b8b549229601082b63fae2",
+    "review-aggregate-red.tap": "aa4118d7b46dd73ade72686ed21e54d2c22a58cefe3ca1211aa61ed933db4a48",
+    "module-final.tap": "d00c7bc09da0d83f2c24994388a7291ab7b80c20eba55a23553e82edf1bb455d",
+    "full-node-first.tap": "6c2794ddf4d5250b5cb4519e85d37855d8a9fc25d9abe67e859adfe815f56f62",
+    "full-node-final.tap": "472001674b51e7e8eea52ed0b231a74ea8878165a641acc5ec6b9762456a06de",
+    "candidates-db-first.json": "dd8bc6eb5fda9d3a36c81b8cf3694d978da4bb17fdcb95adb970db3acf0020c3",
+    "candidates-db-final.json": "dd8bc6eb5fda9d3a36c81b8cf3694d978da4bb17fdcb95adb970db3acf0020c3",
+    "edit-regression.json": "d4c8d9c5c9c15c510d727870a70d42c1e0151e2026c2d56f5b9651c8af7c8a04",
+    "database-final.log": "75244174b0d721b01b28bef16a8d72aec8c875a2f0a01ad11bbda2c14f248745",
+    "package-first.log": "baac312ad8c0fd806b97c5e5a7c3c3d55ee60e0e2646f760c256455c847dd433"
+  }
+}

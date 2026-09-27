@@ -1,0 +1,43 @@
+name: Candidate page contracts and source
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  metadata-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exact candidate-page source and parent for reproducible patch validation
+        run: |
+          git archive --format=tar HEAD > "$RUNNER_TEMP/candidates-source.tar"
+          git archive --format=tar HEAD^ > "$RUNNER_TEMP/candidates-parent.tar"
+          git ls-tree -rz --full-tree HEAD > "$RUNNER_TEMP/candidates-source-tree.bin"
+          git ls-tree -rz --full-tree HEAD^ > "$RUNNER_TEMP/candidates-parent-tree.bin"
+          git diff --binary HEAD^ HEAD > "$RUNNER_TEMP/candidates.patch"
+          git rev-parse HEAD HEAD^{tree} HEAD^ HEAD^^{tree} > "$RUNNER_TEMP/candidates-source-ids.txt"
+      - name: Candidate page unit and protocol-boundary tests
+        run: node --test test/personal-candidates.test.mjs test/client-candidates.test.mjs test/client-candidates-cli.test.mjs test/personal-candidates-review.test.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: candidates-source-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/candidates-source.tar
+            ${{ runner.temp }}/candidates-parent.tar
+            ${{ runner.temp }}/candidates-source-tree.bin
+            ${{ runner.temp }}/candidates-parent-tree.bin
+            ${{ runner.temp }}/candidates.patch
+            ${{ runner.temp }}/candidates-source-ids.txt
+          if-no-files-found: error
+          retention-days: 14
+# Only Git-tracked source is archived. No DB, runtime, credentials or test dataset.
