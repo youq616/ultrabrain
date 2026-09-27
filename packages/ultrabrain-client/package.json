@@ -10,7 +10,8 @@
   },
   "bin": {
     "ultrabrain-client": "dist/cli.cjs",
-    "ultrabrain-snapshot": "dist/snapshot-cli.cjs"
+    "ultrabrain-snapshot": "dist/snapshot-cli.cjs",
+    "ultrabrain-recall-eval": "dist/recall-eval-cli.cjs"
   },
   "files": [
     "dist",

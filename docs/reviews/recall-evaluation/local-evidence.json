@@ -1,0 +1,53 @@
+{
+  "base_commit": "19fd7a64bf9eaf203f16da03282e956e66d2d49f",
+  "base_tree": "cbfec58177f2abff164b3958d640378b53f82f0a",
+  "self_review": "implementation assistant separate pass; not second-agent approval",
+  "independent_review": "PENDING",
+  "node_full": {
+    "tests": 2986,
+    "pass": 2986,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "exit": 0,
+    "uid": 1000,
+    "concurrency": 4
+  },
+  "new_tests": 89,
+  "first_sdk_regression": {
+    "tests": 73,
+    "pass": 72,
+    "fail": 1,
+    "issue": "workspace disappearance during cleanup misclassified as invalid input"
+  },
+  "real_integration": {
+    "passed": true,
+    "checks": 12,
+    "mode": "actual compiled CLI/SDK, official MCP, disposable PostgreSQL, stdio and read-only HTTP",
+    "cases_per_run": 3,
+    "read_phase_tables_unchanged": 6,
+    "external_model_calls": 0,
+    "generator_calls": 0,
+    "user_environment_verified": false
+  },
+  "local_install": "npm pack tarball extracted in isolated directory; locked official SDK from verified CI artifact, not fresh online npm install",
+  "runtime_artifact_sha256": "9c2db948f54f99c04ca7e0f624751a4c23ce130b8ddadf5fba319f9010f8f7b8",
+  "evidence_sha256": {
+    "recall-initial-red.tap": "8f6a496e03d57a16cc1260e204b1e06a740f4b13f85cc121ac63129baf21726c",
+    "recall-core-first.tap": "e57664096a6380f53b8ff9170676fed322d92eacac8df2b68e76bcf1875fc57d",
+    "recall-module-first.tap": "8492e6e8c1a004b55ce78b223606409acd41d6d7bd739228dc34b7f644b7cd1f",
+    "recall-module-corrected.tap": "a06c20ea39a3b9c27768327df6328d0e0ceb75a0bec5c6ea4a75ba052a30c300",
+    "recall-reviewed.tap": "8788e757e28cd513046ed8082540adac39ab28b4aec86823dceb2ba2d8254fff",
+    "full-node-first.tap": "3f6a38fde6d9030a177eec005d6fb7c2818f7ba936a7ce4ca6247250191753d6",
+    "full-node-first-timeout.json": "761e64ea1c432684b19552d478bd43df8d8892ea34db04ffd5b81bf284c832de",
+    "full-node-final.tap": "b8d78976a89af0892cf134eb0a3298ab596e698ed819ee96593df39176db59fa",
+    "full-node-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "package-first.log": "5092dfa49092b1c4ded3df5436f2f9aa7a468a272865e6046e171c2af0092f5d",
+    "database-init.log": "5aaeb7e801b4b486d2ac9ad2495b39c42bc025049b08db77fbf40b4dffdfd066",
+    "database-migrate.log": "5afebefc5c980598a5ae20fbc1a7d3060e99351ae4a717c8e2d2eede82a4688c",
+    "recall-real-integration-first.log": "893f76331987a69718975e9998d61c12f6ae9c1a68f0ca3db3ef53ea900771ff",
+    "recall-real-integration.json": "6b8657792578e2cda8c2b815d75e9b3cf8e3d87e175ad57bf6f6a097f4ec33ac",
+    "database-stop.log": "96b39dd1e701bcb75300d11272951b2517a5d864eb7f34b11e8ead4a98f48360",
+    "database-stop.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  }
+}

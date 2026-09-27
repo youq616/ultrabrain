@@ -1,0 +1,13 @@
+{
+  "workspace": "/replace/with/your/trusted/workspace",
+  "consent": false,
+  "top_k": 5,
+  "cases": [
+    {
+      "id": "replace-with-labelled-case",
+      "task": "配置文件 修改方式",
+      "relevant_ids": ["00000001-1111-4111-8111-111111111111"],
+      "forbidden_ids": ["00000002-1111-4111-8111-111111111111"]
+    }
+  ]
+}
