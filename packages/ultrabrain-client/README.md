@@ -111,3 +111,16 @@ Node entry is `reviewClientMemory` in `dist/memory-review.cjs`. Cancellation and
 cleanup errors preserve locally verified write-delivery facts without exposing
 withheld records. See repository `docs/CLIENT-MEMORY-REVIEW.md` at the exact build
 commit for request schemas, shared-visibility implications and failure recovery.
+
+## Explicit full-memory correction
+
+The same `ultrabrain-memory-review` binary and `reviewClientMemory` SDK also accept
+`correct` and `replay-correction`. Both require full observed version pins, the
+existing write opt-in, explicit consent, `acknowledge_reset:true`, and exactly all
+seven editable `memory` fields. No omitted-field defaults, automatic merging or
+activation. A correction returns the entry to candidate, clearing derivation and
+confirmation; a separate explicit review is required before recall. Replaying the
+original event returns a historical candidate receipt, not a current-state claim.
+Correction JSON is bounded at128 KiB; other operations retain their16 KiB limit.
+See source `docs/CLIENT-MEMORY-CORRECTION.md` and its non-consenting example at the
+matching commit. This package adds no model, background capture or automatic retry.

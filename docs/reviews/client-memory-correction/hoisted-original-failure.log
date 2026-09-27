@@ -1,0 +1,46 @@
+41 |  let out='',err='';child.stdout.on('data',b=>{out+=b;if(out.length>1048576)child.kill('SIGKILL');});child.stderr.on('data',b=>{err+=b;if(err.length>1048576)child.kill('SIGKILL');});child.stdin.on('error',()=>{});
+42 |  if(race)child.on('message',m=>{if(m.observed)race().then(()=>child.send({continue:true})).catch(e=>{raceError=e;child.kill('SIGKILL');});});
+43 |  const timer=setTimeout(()=>child.kill('SIGKILL'),40000);
+44 |  try{
+45 |   child.stdin.end(input?JSON.stringify(input):'');const status=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',resolve);});
+46 |   if(raceError)throw raceError;assert.equal(err,'');if(secret)assert.ok(!out.includes(secret));
+                                           ^
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ 'node:internal/modules/cjs/loader:1404\n' +
++   '  throw err;\n' +
++   '  ^\n' +
++   '\n' +
++   "Error: Cannot find module '/mnt/data/correction-runtime/host/node_modules/ultrabrain-client/node_modules/@modelcontextprotocol/sdk/dist/cjs/client/index.js'\n" +
++   'Require stack:\n' +
++   '- /tmp/ub-review-real-Unr7Hr/preload.cjs\n' +
++   '- internal/preload\n' +
++   '    at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)\n' +
++   '    at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)\n' +
++   '    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)\n' +
++   '    at Function._load (node:internal/modules/cjs/loader:1211:37)\n' +
++   '    at TracingChannel.traceSync (node:diagnostics_channel:322:14)\n' +
++   '    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)\n' +
++   '    at Module.require (node:internal/modules/cjs/loader:1487:12)\n' +
++   '    at require (node:internal/modules/helpers:135:16)\n' +
++   '    at Object.<anonymous> (/tmp/ub-review-real-Unr7Hr/preload.cjs:1:16)\n' +
++   '    at Module._compile (node:internal/modules/cjs/loader:1730:14) {\n' +
++   "  code: 'MODULE_NOT_FOUND',\n" +
++   "  requireStack: [ '/tmp/ub-review-real-Unr7Hr/preload.cjs', 'internal/preload' ]\n" +
++   '}\n' +
++   '\n' +
++   'Node.js v22.16.0\n' +
++   ''
+- ''
+
+ generatedMessage: true,
+     actual: "node:internal/modules/cjs/loader:1404\n  throw err;\n  ^\n\nError: Cannot find module '/mnt/data/correction-runtime/host/node_modules/ultrabrain-client/node_modules/@modelcontextprotocol/sdk/dist/cjs/client/index.js'\nRequire stack:\n- /tmp/ub-review-real-Unr7Hr/preload.cjs\n- internal/preload\n    at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)\n    at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)\n    at Function._load (node:internal/modules/cjs/loader:1211:37)\n    at TracingChannel.traceSync (node:diagnostics_channel:322:14)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)\n    at Module.require (node:internal/modules/cjs/loader:1487:12)\n    at require (node:internal/modules/helpers:135:16)\n    at Object.<anonymous> (/tmp/ub-review-real-Unr7Hr/preload.cjs:1:16)\n    at Module._compile (node:internal/modules/cjs/loader:1730:14) {\n  code: 'MODULE_NOT_FOUND',\n  requireStack: [ '/tmp/ub-review-real-Unr7Hr/preload.cjs', 'internal/preload' ]\n}\n\nNode.js v22.16.0\n",
+   expected: "",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at run (/mnt/data/ub-correction/test/local-original-review-integration.mjs:46:39)
+      at processTicksAndRejections (native:7:39)
+
+Bun v1.3.13 (Linux x64)

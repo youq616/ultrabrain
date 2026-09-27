@@ -1,0 +1,22 @@
+{
+  "operation": "correct",
+  "memory_id": "REPLACE_WITH_OBSERVED_FULL_UUID",
+  "workspace": "/replace/with/bound/workspace",
+  "consent": false,
+  "event_id": "replace-with-stable-new-event-id",
+  "expected_revision": 1,
+  "expected_content_hash": "REPLACE_WITH_OBSERVED_SHA256",
+  "expected_status": "active",
+  "expected_visibility": "private",
+  "expected_project_id": null,
+  "acknowledge_reset": false,
+  "memory": {
+    "type": "preference",
+    "content": "替换为人工核对过的完整新内容",
+    "provenance": "替换为明确的纠错来源说明",
+    "importance": "normal",
+    "confidence": null,
+    "visibility": "private",
+    "project_id": null
+  }
+}

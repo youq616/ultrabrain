@@ -1,13 +1,17 @@
 /** Explicit single-record inspection, activation/archive and replay. No model or bulk actions. */
 import {requireThat,UltraError} from './core.mjs';
-import {memoryId,personalId} from './personal-memory.mjs';
+import {memoryId,personalId,normalizePersonalMemory} from './personal-memory.mjs';
 import {clientLineageRecord} from './client-lineage.mjs';
 import {matchingWorkspace} from './client-profile-file.mjs';
 import {assertClientAuthorized} from './client-authorization.mjs';
 const evidence=new WeakMap();
 const common=['operation','memory_id','workspace','consent'];
 const pins=['event_id','expected_revision','expected_content_hash','expected_status','expected_visibility','expected_project_id','status'];
-const metaKeys=['id','type','origin_kind','status','revision','content_hash','visibility','project_id','owned_by_caller','derivation_current'];
+export const MEMORY_REVIEW_INPUT_MAX_BYTES=131072;
+const editableFields=Object.freeze(['type','content','provenance','importance','confidence','visibility','project_id']);
+const correction=r=>['correct','replay-correction'].includes(r.operation);
+const replay=r=>['replay','replay-correction'].includes(r.operation);
+const metaKeys=['id','type','origin_kind','status','revision','content_hash','visibility','project_id','owned_by_caller','derivation_current','importance','confidence'];
 const freeze=v=>{if(v&&typeof v==='object'&&!Object.isFrozen(v)){Object.values(v).forEach(freeze);Object.freeze(v);}return v;};
 function exactData(value,required,optional=[]){
  try{
@@ -23,8 +27,8 @@ function workspaceAllowed(profile,path){
 }
 export function memoryReviewRequest(input,profile){
  requireThat(profile?.expectedInstance&&profile.expectedActor&&profile.workspace,'memory_review_disabled','Observed identity pins and workspace required');
- const r=exactData(input,common,['include_text',...pins]);
- requireThat(['inspect','apply','replay'].includes(r.operation),'invalid_params','Choose inspect, apply or replay');
+ const r=exactData(input,common,['include_text',...pins,'memory','acknowledge_reset']);
+ requireThat(['inspect','apply','replay','correct','replay-correction'].includes(r.operation),'invalid_params','Choose an explicit supported operation');
  requireThat(r.consent===true,'memory_review_consent_required','Explicit per-record consent required');
  memoryId(r.memory_id);workspaceAllowed(profile,r.workspace);
  if(r.operation==='inspect'){
@@ -32,15 +36,31 @@ export function memoryReviewRequest(input,profile){
   requireThat(r.include_text===undefined||typeof r.include_text==='boolean','invalid_params','Explicit text disclosure required');
   return Object.freeze({...r,include_text:r.include_text===true});
  }
- exactData(input,[...common,...pins]);
+ exactData(input,[...common,...(correction(r)?pins.filter(k=>k!=='status'):pins),...(correction(r)?['memory','acknowledge_reset']:[])]);
  requireThat(profile.allowCapture===true,'memory_review_disabled','Existing personal write opt-in required');
  personalId(r.event_id,'event_id');
  requireThat(Number.isSafeInteger(r.expected_revision)&&r.expected_revision>=1&&r.expected_revision<=2147483646&&
   typeof r.expected_content_hash==='string'&&/^[a-f0-9]{64}$/.test(r.expected_content_hash)&&
   ['candidate','active','archived'].includes(r.expected_status)&&['private','source'].includes(r.expected_visibility)&&
-  ['active','archived'].includes(r.status),'invalid_params','Complete observed version and lifecycle selection required');
+  (correction(r)||['active','archived'].includes(r.status)),'invalid_params','Complete observed version and lifecycle selection required');
  if(r.expected_project_id!==null)personalId(r.expected_project_id,'expected_project_id');
  requireThat(r.expected_project_id===null||r.expected_project_id===profile.projectId,'memory_review_project_mismatch','Selection outside the client project');
+ if(correction(r)){
+  requireThat(r.acknowledge_reset===true,'memory_correction_reset_required','Correction returns to candidate and clears derivation and confirmation');
+  const selected=exactData(r.memory,editableFields);
+  // Never default missing/undefined edit fields: omission could accidentally
+  // clear confidence/project or change visibility during a full replacement.
+  requireThat(selected.confidence===null||typeof selected.confidence==='number'&&Number.isFinite(selected.confidence),
+   'invalid_params','Explicit confidence value required');
+  requireThat(['low','normal','high'].includes(selected.importance)&&['private','source'].includes(selected.visibility)&&
+   typeof selected.provenance==='string'&&(selected.project_id===null||typeof selected.project_id==='string'),
+   'invalid_params','Explicit editable fields required');
+  const normalized=normalizePersonalMemory(selected);
+  requireThat(normalized.project_id===null||normalized.project_id===profile.projectId,
+   'memory_review_project_mismatch','Replacement outside the bound client project');
+  r.memory=Object.freeze(Object.fromEntries(editableFields.map(k=>[k,normalized[k]])));
+  requireThat(Buffer.byteLength(JSON.stringify(r))<=MEMORY_REVIEW_INPUT_MAX_BYTES,'input_too_large','Correction request exceeds bound');
+ }
  return Object.freeze(r);
 }
 /** Snapshot data descriptors before the shared validator. Official JSON has no
@@ -69,14 +89,15 @@ function responseData(value){
 }
 function receipt(value,r){
  try{
-  const v=exactData(value,['id','revision','status','replayed','assurance']);
-  requireThat(v.id===r.memory_id&&v.revision===r.expected_revision+1&&v.status===r.status&&typeof v.replayed==='boolean'&&
-   (r.operation!=='replay'||v.replayed===true)&&typeof v.assurance==='string'&&Buffer.byteLength(v.assurance)<=2048,
+  const edit=correction(r),v=exactData(value,['id','revision','status','replayed',edit?'review_required':'assurance']);
+  requireThat(v.id===r.memory_id&&v.revision===r.expected_revision+1&&v.status===(edit?'candidate':r.status)&&
+   typeof v.replayed==='boolean'&&(!replay(r)||v.replayed===true)&&
+   (edit?v.review_required===true:typeof v.assurance==='string'&&Buffer.byteLength(v.assurance)<=2048),
    'memory_review_receipt_unconfirmed','Invalid acknowledgement');
-  return Object.freeze({id:v.id,revision:v.revision,status:v.status,replayed:v.replayed});
+  return Object.freeze({id:v.id,revision:v.revision,status:v.status,replayed:v.replayed,...(edit?{review_required:true}:{})});
  }catch{throw new UltraError('memory_review_receipt_unconfirmed','Review acknowledgement was not confirmed');}
 }
-const safeCodes=new Set(['invalid_params','invalid_profile','insecure_profile','missing_credentials','identity_mismatch','workspace_mismatch',
+const safeCodes=new Set(['memory_correction_reset_required','memory_correction_no_change','invalid_params','invalid_profile','insecure_profile','missing_credentials','identity_mismatch','workspace_mismatch',
  'client_authorization_revoked','aborted','input_too_large','memory_review_disabled','memory_review_consent_required','memory_review_project_mismatch',
  'memory_review_selected_changed','memory_review_not_owned','memory_review_document_bound','memory_review_stale_source','memory_review_no_change',
  'memory_review_replay_unavailable','memory_review_receipt_unconfirmed','memory_review_cleanup_failed','lineage_record_unconfirmed',
@@ -110,28 +131,34 @@ export async function deliverMemoryReview(input,profile,{checkIdentity,invoke,si
   }else{
    requireThat(row.owned_by_caller===true,'memory_review_not_owned','Shared visibility is not write ownership');
    requireThat(row.origin_kind==='agent','memory_review_document_bound','Use the document lifecycle interface');
-   requireThat(row.project_id===r.expected_project_id,'memory_review_project_mismatch','Project differs from the observed selection');
-   if(r.operation==='apply'){
+   requireThat(row.project_id===(r.operation==='replay-correction'?r.memory.project_id:r.expected_project_id),
+    'memory_review_project_mismatch','Project differs from the selected version or replay destination');
+   if(!replay(r)){
     requireThat(row.revision===r.expected_revision&&row.content_hash===r.expected_content_hash&&row.status===r.expected_status&&
      row.visibility===r.expected_visibility,'memory_review_selected_changed','Record changed; inspect and obtain new consent');
-    requireThat(row.status!==r.status,'memory_review_no_change','Already in selected state');
-    requireThat(r.status!=='active'||row.derivation_current,'memory_review_stale_source','Reconcile stale source before activation');
+    if(correction(r))requireThat(editableFields.some(k=>row[k]!==r.memory[k]),'memory_correction_no_change','No editable field changed');
+    else{
+     requireThat(row.status!==r.status,'memory_review_no_change','Already in selected state');
+     requireThat(r.status!=='active'||row.derivation_current,'memory_review_stale_source','Reconcile stale source before activation');
+    }
    }else{
     // A strictly greater current revision means the server CAS cannot execute a
     // new mutation. Only an already journaled exact event can return a receipt.
     requireThat(row.revision>r.expected_revision,'memory_review_replay_unavailable','No advanced revision; use original apply only after inspection');
    }
    allowed();await checkIdentity(signal);allowed();
-   const wire={memory_id:r.memory_id,expected_revision:r.expected_revision,event_id:r.event_id,status:r.status};
+   const wire={memory_id:r.memory_id,expected_revision:r.expected_revision,event_id:r.event_id,
+    ...(correction(r)?{memory:r.memory}:{status:r.status})};
    state.write_attempts=1;state.write_delivery='unconfirmed';
-   const response=await invoke('ultra_personal_review',wire,signal);allowed();
+   const response=correction(r)?await invoke('ultra_personal_update',wire,signal):await invoke('ultra_personal_review',wire,signal);allowed();
    const ack=receipt(response,r);state.write_delivery='confirmed';
    result={format:'ultrabrain-client-memory-review-v1',operation:r.operation,source_id:profile.source,event_id:r.event_id,
     observed_revision:row.revision,receipt:ack,read_requests:1,write_requests:1,write_delivery:'confirmed',
     memory_writes_requested:true,current_state_verified:false,truth_verified:false,text_included:false};
   }
   await checkIdentity(signal);allowed();
-  result.limitations=['explicit-caller-review-not-truth','receipt-is-not-current-state','no-automatic-retry-or-bulk-actions','metadata-is-private'];
+  if(correction(r))result.review_required=true;
+  result.limitations=[...(correction(r)?['correction-clears-derivation-and-confirmation','replay-does-not-certify-historical-extra-pins']:[]),'explicit-caller-review-not-truth','receipt-is-not-current-state','no-automatic-retry-or-bulk-actions','metadata-is-private'];
   freeze(result);evidence.set(result,Object.freeze({...state}));return result;
  }catch(error){throw failure(error,state);}
 }

@@ -16,6 +16,6 @@ test('review package: exact Windows/Linux unit step and installed-package integr
 });
 test('review package: core uses canonical exact-read validator, no direct DB/Agent/model/bulk writes',()=>{
  const s=read('src/client-memory-review.mjs');assert.ok(s.includes('clientLineageRecord('));
- assert.deepEqual([...s.matchAll(/invoke\('([^']+)'/g)].map(m=>m[1]),['ultra_memory_read','ultra_personal_review']);
+ assert.deepEqual([...s.matchAll(/invoke\('([^']+)'/g)].map(m=>m[1]),['ultra_memory_read','ultra_personal_update','ultra_personal_review']);
  for(const x of ['executeRaw','PersonalMemoryStore','setInterval(','ultra_agent_register','ultra_memory_commit'])assert.ok(!s.includes(x));
 });
