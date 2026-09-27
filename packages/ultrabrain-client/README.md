@@ -94,3 +94,21 @@ labels do not prove equal owners; sides do not imply chronology, and neither a
 missing group nor a smaller count authorizes deletion. The existing file and byte
 APIs support the same operation. No network, models, automatic repair or writes.
 See `docs/SNAPSHOT-DUPLICATE-COMPARISON.md` in the matching repository commit.
+
+## Explicit annotated recall evaluation
+
+`ultrabrain-recall-eval --profile PATH` accepts an explicitly consented labelled
+suite on stdin (1–32 tasks, workspace, top_k:1–20, relevant_ids/forbidden_ids).
+The trusted profile must already enable task recall and pin identity/workspace.
+`dist/recall-eval.cjs` exports `evaluateClientRecall(profile, suite, {authorize, signal})`.
+Each case performs one ordinary task-context read with the original 20-entry and
+profile byte limits; labels never alter server permissions or go into requests.
+Reports contain ID-only ranking metrics, missing labels and forbidden IDs seen
+anywhere in the returned response, not tasks or memory text. Positive metrics use
+only positive-labelled cases; all-negative suites yield null, not a perfect score.
+No capture, models, automatic retry, hooks, persistence or acceptance decision.
+All-or-nothing delivery includes live authority and cleanup checks. Tasks are sent
+to the selected server; annotation metrics are not semantic/answer-quality proof.
+See `docs/RECALL-EVALUATION.md` in the matching source commit. Identify this private
+candidate by its source/manifest hashes; an older package with the same version
+may not contain these entries.
