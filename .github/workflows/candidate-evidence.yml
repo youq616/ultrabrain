@@ -20,10 +20,23 @@ jobs:
           node-version: '22'
       - name: Candidate contracts including negative acceptance controls
         run: node --test test/candidate-check.test.mjs test/candidate-github.test.mjs test/candidate-cli.test.mjs test/candidate-review.test.mjs
+      - name: Explicit candidate chain contracts and cross-layer negative controls
+        run: node --test test/candidate-chain.test.mjs test/candidate-chain-cli.test.mjs test/candidate-chain-review.test.mjs
       - name: Read exact baseline metadata, never approve or execute selected PR code
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node test/candidate-live-integration.mjs
+      - name: Read a pinned two-PR chain, keep missing-review evidence blocked
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ULTRABRAIN_CANDIDATE_CHAIN_REPORT: ${{ runner.temp }}/candidate-chain-live.json
+        run: node test/candidate-chain-live-integration.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: candidate-chain-${{ github.sha }}
+          path: ${{ runner.temp }}/candidate-chain-live.json
+          if-no-files-found: error
+          retention-days: 14
 # No pull_request_target, write permission, artifact downloads, merge or deployment.
 # This diagnostic workflow is intentionally outside the nine baseline requirements
 # to avoid treating its own in-progress observation as candidate acceptance.

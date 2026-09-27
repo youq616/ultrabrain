@@ -1,0 +1,19 @@
+{
+  "format": "ultrabrain-candidate-chain-selection-v1",
+  "repository": "youq616/ultrabrain",
+  "anchor_sha": "d5e3c3c322e68e06405f511580d36a48b64ca577",
+  "tip_sha": "91c2eec7f2e82c818f0f7e062a3d4dbab79926cb",
+  "reviewer_ids": [],
+  "candidates": [
+    {
+      "pr": 29,
+      "base_sha": "d5e3c3c322e68e06405f511580d36a48b64ca577",
+      "head_sha": "ddc75d0e5688289fe1722e616f8503269b293a4d"
+    },
+    {
+      "pr": 30,
+      "base_sha": "ddc75d0e5688289fe1722e616f8503269b293a4d",
+      "head_sha": "91c2eec7f2e82c818f0f7e062a3d4dbab79926cb"
+    }
+  ]
+}

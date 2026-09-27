@@ -1,17 +1,20 @@
 /** Read-only, one-shot GitHub metadata collector. Fixed repository and GET paths.
  * Does not follow server URLs, redirects, artifact downloads or retry requests. */
 import {candidateSelection,evaluateCandidate,requireCandidate,CandidateError,CANDIDATE_WORKFLOWS,positive} from './candidate-check.mjs';
+import {createHash} from 'node:crypto';
 import {assertClientAuthorized} from './client-authorization.mjs';
 const ROOT='/repos/youq616/ultrabrain';
 const LIMIT=4*1024*1024;
 const MAX_PAGES=10;
 const jsonCopy=v=>JSON.parse(JSON.stringify(v)); // Only decoded JSON from trusted transport seam.
-export function candidateReader({token,signal,fetchImpl=globalThis.fetch}={}){
+export function candidateReader({token,signal,fetchImpl=globalThis.fetch,allowCompare=false}={}){
   requireCandidate(token===undefined||typeof token==='string'&&/^[!-~]{1,4096}$/.test(token),'invalid_params');
+  requireCandidate(typeof allowCompare==='boolean','invalid_params');
+  const comparison=new RegExp('^'+ROOT+'/compare/[a-f0-9]{40}\\.\\.\\.[a-f0-9]{40}\\?per_page=1&page=2$');
   return async path=>{
-    requireCandidate(typeof path==='string'&&path.startsWith(ROOT+'/')&&!/[\\#\x00-\x20]/.test(path)&&!path.includes('..'),'invalid_params');
+    requireCandidate(typeof path==='string'&&path.startsWith(ROOT+'/')&&!/[\\#\x00-\x20]/.test(path),'invalid_params');
     // Constrain even the injected get seam to the exact read-only API families.
-    requireCandidate(new RegExp('^'+ROOT+'/(?:pulls/[1-9][0-9]*(?:/reviews)?|git/commits/[a-f0-9]{40}|actions/runs(?:/[1-9][0-9]*/attempts/[1-9][0-9]*/jobs)?)(?:\\?[a-z0-9_=&]+)?$').test(path),'invalid_params');
+    requireCandidate(new RegExp('^'+ROOT+'/(?:pulls/[1-9][0-9]*(?:/reviews)?|git/commits/[a-f0-9]{40}|actions/runs(?:/[1-9][0-9]*/attempts/[1-9][0-9]*/jobs)?)(?:\\?[a-z0-9_=&]+)?$').test(path)||allowCompare&&comparison.test(path),'invalid_params');
     const active=AbortSignal.any([signal,AbortSignal.timeout(10000)].filter(Boolean));
     let response,reader;
     try{
@@ -36,7 +39,8 @@ export function candidateReader({token,signal,fetchImpl=globalThis.fetch}={}){
     }
   };
 }
-export async function collectCandidate(input,{get,token,signal,authorize=()=>{}}={}){
+export async function collectCandidate(input,{get,token,signal,authorize=()=>{},includeEvidenceFingerprint=false}={}){
+  requireCandidate(typeof includeEvidenceFingerprint==='boolean','invalid_params');
   const p=candidateSelection(input),active=AbortSignal.any([signal,AbortSignal.timeout(90000)].filter(Boolean));
   const allowed=()=>assertClientAuthorized(authorize,active);
   const read=get??candidateReader({token,signal:active});let requests=0;
@@ -85,5 +89,13 @@ export async function collectCandidate(input,{get,token,signal,authorize=()=>{}}
     JSON.stringify(ordered(reviews,reviewStamp))===JSON.stringify(ordered(lastReviews,reviewStamp)),'candidate_changed');
   requireCandidate(JSON.stringify(binding(await call(pullPath)))===JSON.stringify(bound),'candidate_changed');
   const report=evaluateCandidate(p,jsonCopy({pull,commit,runs,reviews,jobs}));allowed();
-  return Object.freeze({...report,observed_at:new Date().toISOString(),github_get_requests:requests,evidence_source:get?'caller-supplied-transport':'github-rest-api'});
+  // Optional cross-layer reobservation token. A blocked/invalid review can change
+  // without changing the report's status, so fingerprint evidence, not just verdicts.
+  // Hashes bind observations, not authenticity; raw bodies never leave this function.
+  const jobStamp=j=>({id:j.id,run_id:j.run_id,run_attempt:j.run_attempt,status:j.status,conclusion:j.conclusion});
+  const observation=includeEvidenceFingerprint?{observation_sha256:createHash('sha256').update(JSON.stringify({
+    pull:bound,commit:{sha:commit.sha,tree:commit.tree.sha},runs:ordered(runs,stamp),reviews:ordered(reviews,reviewStamp),
+    jobs:Object.keys(jobs).sort((a,b)=>Number(a)-Number(b)).map(id=>({run_id:Number(id),jobs:ordered(jobs[id],jobStamp)})),
+  })).digest('hex')}:{};
+  allowed();return Object.freeze({...report,...observation,observed_at:new Date().toISOString(),github_get_requests:requests,evidence_source:get?'caller-supplied-transport':'github-rest-api'});
 }
