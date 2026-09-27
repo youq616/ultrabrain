@@ -94,3 +94,20 @@ labels do not prove equal owners; sides do not imply chronology, and neither a
 missing group nor a smaller count authorizes deletion. The existing file and byte
 APIs support the same operation. No network, models, automatic repair or writes.
 See `docs/SNAPSHOT-DUPLICATE-COMPARISON.md` in the matching repository commit.
+
+## Explicit single-memory inspection and review
+
+`ultrabrain-memory-review --profile /absolute/profile.json` accepts one bounded JSON
+request on stdin. `inspect` requires a pinned identity, workspace and consent and
+hides text unless `include_text:true`. `apply` additionally requires the existing
+`allow_capture` write gate, exact observed revision/content hash/status/visibility/
+project, a stable event ID and an explicit active/archived choice. Only owned,
+non-document entries can be changed; server-side CAS protects competing updates.
+There are no automatic confirmations, bulk changes, models or retries.
+
+`replay` requires an advanced current revision and retrieves only an existing
+exact event receipt; it never treats historical status as current. The one-shot
+Node entry is `reviewClientMemory` in `dist/memory-review.cjs`. Cancellation and
+cleanup errors preserve locally verified write-delivery facts without exposing
+withheld records. See repository `docs/CLIENT-MEMORY-REVIEW.md` at the exact build
+commit for request schemas, shared-visibility implications and failure recovery.

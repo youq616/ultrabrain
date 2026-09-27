@@ -1,3 +1,4 @@
+import {deliverMemoryReview} from '../../../src/client-memory-review.mjs';
 import {deliverClientOverview} from '../../../src/client-overview.mjs';
 import {assertClientAuthorized,deliverClientRequest} from '../../../src/client-authorization.mjs';
 import {deliverClientLineage} from '../../../src/client-lineage.mjs';
@@ -14,7 +15,7 @@ import {UltraError,requireThat} from '../../../src/core.mjs';
 function decoded(r) {
   requireThat(r&&Array.isArray(r.content),'mcp_contract_changed','Invalid MCP response');
   let value;try{value=JSON.parse(r.content.filter(x=>x.type==='text').map(x=>x.text).join('\n'));}catch{throw new UltraError('mcp_contract_changed','Invalid JSON result');}
-  if(r.isError)throw new UltraError(['permission_denied','capture_disabled','conflict','revision_conflict','agent_not_registered','not_found'].includes(value?.error)?value.error:'mcp_rejected','Memory request rejected');
+  if(r.isError)throw new UltraError(['insufficient_scope','permission_denied','capture_disabled','conflict','revision_conflict','agent_not_registered','not_found'].includes(value?.error)?value.error:'mcp_rejected','Memory request rejected');
   requireThat(!r._meta?.brain_hot_memory,'mcp_contract_changed','Unexpected ungoverned metadata');return value;
 }
 export const READ_TOOLS=Object.freeze(['ultra_personal_overview','ultra_identity','ultra_personal_context','ultra_memory_read','ultra_memory_profile','ultra_memory_search','ultra_agent_list','ultra_personal_jobs','ultra_personal_document_list','ultra_personal_document_read']);
@@ -68,6 +69,11 @@ export async function connectClient(input,{signal,authorize=()=>{}}={}) {
           }});
       },
       async context(){await check();return clientContext(await invoke('ultra_personal_context',{limit:20,budget_bytes:profile.budgetBytes,...(profile.projectId?{project_id:profile.projectId}:{})}),profile);},
+      async reviewMemory(p,{authorize:operationAuthority=()=>{},signal:requestSignal}={}){
+        const activeSignal=requestSignal?AbortSignal.any([requestSignal,signal].filter(Boolean)):signal;
+        return deliverMemoryReview(p,profile,{checkIdentity:check,invoke,signal:activeSignal,
+          authorize:()=>{allowed(activeSignal);return operationAuthority();}});
+      },
       async overview(p,{authorize:readAuthority=()=>{},signal:requestSignal}={}){
         const activeSignal=requestSignal?AbortSignal.any([requestSignal,signal].filter(Boolean)):signal;
         return deliverClientOverview(p,profile,{checkIdentity:check,invoke,signal:activeSignal,
