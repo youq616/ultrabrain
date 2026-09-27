@@ -1,0 +1,53 @@
+{
+  "base_commit": "1fbb3821b34ddb1bdc1d9420f69cf228a6962f24",
+  "base_tree": "0498e5fc1dd1db7c0cde49208516f1ef37c792ab",
+  "node_full": {
+    "tests": 3320,
+    "pass": 3320,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "uid": 1000,
+    "exit": 0
+  },
+  "new_tests": 78,
+  "self_review_tests": 14,
+  "independent_review": "PENDING",
+  "database": {
+    "passed": true,
+    "adapter_checks": 13,
+    "engine_checks": 0,
+    "mode": "actual packaged runtime, synthetic execution context, official MCP/HTTP, PostgreSQL; NOT n8n engine",
+    "inspection_adapter_checks": 15,
+    "inspection_engine_checks": 0,
+    "host_version": null,
+    "six_personal_tables_unchanged": true,
+    "body_fields_returned": "only with explicit disclosure",
+    "generator_calls": 0,
+    "external_model_calls": 0,
+    "user_host_verified": false
+  },
+  "original_adapter_regression_checks": 18,
+  "offline_compiled_client_checks": 43,
+  "package_sha256": "9bf1250d5503dd860a9ed44a19a3fe1be948999a25110438d7b3e86b4e9c06db",
+  "local_engine_executed": false,
+  "windows_locally_executed": false,
+  "log_sha256": {
+    "module-first.tap": "31f1393f252777274632142653d8c27ce651e0e8fa04641f2241943a5cec7641",
+    "review-first.tap": "b5d9937034b8d7f43617c88e27c3e17430b8e6b1f5f5f212b222938b5f5985ed",
+    "full-first.tap": "67e517660d6a85e2d7442aa3afefa003e1d9783fafe0d917856a7a34fbc84b05",
+    "full-final.tap": "85d33d434efa050ee7d1037bd183f566a1537009aeea8614112727a5820d0032",
+    "package-first.log": "28cb3f231a011d0a033f27ba5da0e40430e51cb25bbd928b2a0743f50f0e64eb",
+    "package-final.log": "a41d62e2f97a6316db7592b8a498d7557e389a124729d1f16a8fd68b6477edd6",
+    "database-first.json": "0b9eaace8972f6888f142834633c7dbd0250d33e2868a67b2f4045ef0c8dfd8b",
+    "database-final.json": "0b9eaace8972f6888f142834633c7dbd0250d33e2868a67b2f4045ef0c8dfd8b",
+    "candidates-regression.log": "cb67200d5aa8cf1ada203a3c07f333977e93787ba67f97ed29bf0f74d56f2505",
+    "legacy-database-first.log": "5ac2690c24688bdfb57ab32ae21262a3567cca9de4b655ad1723176988b38144",
+    "legacy-database.log": "8c17e3830bfb5893873ce7049539e5b850ca3cd16ab9df2e7d0a767b1fa272be",
+    "client-build.log": "dc06073eec7b88a7d864e429613d5f79de6a00658cf3965bcabdf9c70465f1bd",
+    "offline-regression.log": "72f9891e822db771b0cda774c6caffe418c2d2d6dfcfadbaa6f38ce87a3c10b6",
+    "db-init.log": "5aaeb7e801b4b486d2ac9ad2495b39c42bc025049b08db77fbf40b4dffdfd066",
+    "db-migrate.log": "5afebefc5c980598a5ae20fbc1a7d3060e99351ae4a717c8e2d2eede82a4688c",
+    "db-stop.log": "96b39dd1e701bcb75300d11272951b2517a5d864eb7f34b11e8ead4a98f48360"
+  }
+}

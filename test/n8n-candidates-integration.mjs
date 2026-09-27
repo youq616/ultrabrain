@@ -26,6 +26,8 @@ const tokens=[0,1].map(()=> 'gbrain_'+randomBytes(32).toString('hex'));
 const tables=['personal_memories','personal_events','personal_consolidations','agent_registry','personal_documents','personal_document_fragments'];
 const fingerprint=async()=>{const out={};for(const t of tables)out[t]=(await engine.executeRaw(
  `SELECT md5(coalesce(string_agg(row_to_json(t)::text,',' ORDER BY row_to_json(t)::text),'')) AS h FROM ultrabrain.${t} t WHERE source_id=$1`,[source]))[0].h;return out;};
+const inspectEnabled=process.argv.includes('--inspect');
+let inspectChecks=0,inspectEngineChecks=0,sharedId;
 let server,checks=0,engineChecks=0,hostVersion=null;const pass=()=>checks++;
 const listener=createServer();listener.listen(0,'127.0.0.1');await once(listener,'listening');const port=listener.address().port;await new Promise(r=>listener.close(r));
 const endpoint=`http://127.0.0.1:${port}/mcp`;
@@ -63,6 +65,11 @@ try{
      ...(i>=26?{project_id:i<29?'mine':'foreign'}:{}),visibility:i%2?'source':'private'};});
     list.push(...(await call('ultra_memory_commit',{agent_id:'n8n-candidate-fixture',event_id:'seed-'+start,consent:true,memories})).entries);
    }
+   if(owner===1&&inspectEnabled){
+    sharedId=(await call('ultra_memory_commit',{agent_id:'n8n-candidate-fixture',event_id:'shared-inspection-fixture',consent:true,
+     memories:[{type:'goal',content:'PRIVATE_INSPECT_OTHER_SHARED',visibility:'source'}]})).entries[0].id;
+    await call('ultra_personal_review',{memory_id:sharedId,expected_revision:1,event_id:'activate-shared-inspection',status:'active'});
+   }
    if(owner===0){
     await call('ultra_personal_review',{memory_id:own[24].id,expected_revision:1,event_id:'activate',status:'active'});
     await call('ultra_personal_review',{memory_id:own[25].id,expected_revision:1,event_id:'archive',status:'archived'});
@@ -76,7 +83,7 @@ try{
  // Listing must work with genuine read-only tokens and without capture permission.
  await engine.executeRaw("UPDATE access_tokens SET scopes='{read}'::text[] WHERE name=ANY($1::text[])",[[source+'-0',source+'-1']]);
  const credentials=identities.map((id,i)=>({endpoint,token:tokens[i],rootUri:`ultra://${source}/`,allowCapture:false,allowSharedCapture:false,
-  expectedInstance:id.instance_id,expectedActor:id.actor_key,candidateProject:'mine'}));
+  expectedInstance:id.instance_id,expectedActor:id.actor_key,candidateProject:'mine',...(inspectEnabled?{inspectProject:'mine'}:{})}));
  const expected=own.slice(0,24).map(r=>r.id).concat(capturedId).sort(),before=await fingerprint();
  const read=async(rows=[{}],credential=credentials[0],keepGoing=false)=>{
   const r=await adapter.execute(context(credential,rows,keepGoing));const s=JSON.stringify(r);
@@ -99,6 +106,30 @@ try{
  await assert.rejects(read([{}],{...credentials[0],expectedActor:'a'.repeat(64)}),{code:'identity_mismatch'});pass();
  await assert.rejects(read([{candidateScope:'global-and-project'}],{...credentials[0],candidateProject:''}),{code:'candidates_project_required'});pass();
  assert.deepEqual(await fingerprint(),before);pass();
+ const inspectDefaults=()=>({operation:'personal_inspect',inspectMemoryId:own[0].id,inspectScope:'global-only',inspectConsent:true,inspectIncludeText:false,timeoutMs:10000});
+ const inspect=async(extra={},credential=credentials[0],keepGoing=false)=>{
+  const result=await adapter.execute(context(credential,[{...inspectDefaults(),...extra}],keepGoing));
+  const json=JSON.stringify(result);for(const token of tokens)assert.ok(!json.includes(token));assert.ok(!json.includes('PRIVATE_INPUT'));
+  if(!extra.inspectIncludeText)assert.ok(!json.includes('PRIVATE_N8N_CANDIDATE'));
+  return result[0].json;
+ };
+ if(inspectEnabled){
+  // Pick an ID from the actual list, but never treat its metadata as write authority.
+  let r=await inspect({inspectMemoryId:first.memories[0].id});assert.equal(r.ok,true);assert.equal(r.result.memory.id,first.memories[0].id);
+  assert.equal(r.result.text,undefined);assert.equal(r.result.read_requests,1);inspectChecks++;
+  r=await inspect({inspectIncludeText:true});assert.equal(r.result.text.content,'PRIVATE_N8N_CANDIDATE_0_0'+'x'.repeat(60000));inspectChecks++;
+  for(const [entry,status]of [[own[24],'active'],[own[25],'archived']]){r=await inspect({inspectMemoryId:entry.id});assert.equal(r.result.memory.status,status);inspectChecks++;}
+  await assert.rejects(inspect({inspectMemoryId:own[26].id}),{code:'memory_inspect_project_mismatch'});inspectChecks++;
+  r=await inspect({inspectMemoryId:own[26].id,inspectScope:'global-and-project'});assert.equal(r.result.memory.project_id,'mine');inspectChecks++;
+  await assert.rejects(inspect({inspectMemoryId:own[29].id,inspectScope:'global-and-project'}),{code:'memory_inspect_project_mismatch'});inspectChecks++;
+  await assert.rejects(inspect({inspectMemoryId:other[0].id}),{code:'not_found'});inspectChecks++;
+  await assert.rejects(inspect({inspectMemoryId:sharedId}),{code:'memory_inspect_not_owned'});inspectChecks++;
+  await assert.rejects(inspect({inspectMemoryId:fragmentId}),{code:'memory_inspect_document_bound'});inspectChecks++;
+  r=await inspect({inspectMemoryId:capturedId});assert.equal(r.ok,true);inspectChecks++;
+  r=await inspect({inspectConsent:false},credentials[0],true);assert.equal(r.error,'memory_inspect_consent_required');assert.equal(r.read_delivery,'not_started');inspectChecks++;
+  await assert.rejects(inspect({}, {...credentials[0],expectedActor:'a'.repeat(64)}),{code:'identity_mismatch'});inspectChecks++;
+  assert.deepEqual(await fingerprint(),before);inspectChecks++;
+ }
  if(process.argv.includes('--engine')){
   const binary=process.env.ULTRABRAIN_N8N_BIN;assert.ok(binary,'Actual n8n binary required');
   hostVersion=JSON.parse(readFileSync(resolve(binary,'../../package.json'),'utf8')).version;assert.equal(hostVersion,'2.38.7');
@@ -137,12 +168,30 @@ try{
   assert.ok(run.execution.data.resultData.error,'Actual engine must refuse lack of consent');
   assert.ok(JSON.stringify(run.execution.data.resultData.error).includes('candidates_consent_required'));engineChecks++;
   assert.deepEqual(await fingerprint(),before);engineChecks++;
+  if(inspectEnabled){
+   flow.nodes[1].parameters=inspectDefaults();run=await execute();assert.equal(run.code,0);
+   let result=run.execution.data.resultData.runData.Candidates[0].data.main[0][0];
+   assert.equal(result.json.result.memory.id,own[0].id);assert.equal(result.json.result.text,undefined);inspectEngineChecks++;
+   flow.nodes[1].parameters.inspectIncludeText=true;run=await execute();assert.equal(run.code,0);
+   result=run.execution.data.resultData.runData.Candidates[0].data.main[0][0];
+   assert.equal(result.json.result.text.content,'PRIVATE_N8N_CANDIDATE_0_0'+'x'.repeat(60000));inspectEngineChecks++;
+   Object.assign(flow.nodes[1].parameters,{inspectMemoryId:own[26].id,inspectScope:'global-and-project',inspectIncludeText:false});
+   run=await execute();assert.equal(run.code,0);result=run.execution.data.resultData.runData.Candidates[0].data.main[0][0];
+   assert.equal(result.json.result.memory.project_id,'mine');inspectEngineChecks++;
+   flow.nodes[1].parameters.inspectMemoryId=sharedId;run=await execute();
+   assert.ok(JSON.stringify(run.execution.data.resultData.error).includes('memory_inspect_not_owned'));inspectEngineChecks++;
+   flow.nodes[1].parameters.inspectConsent=false;run=await execute();
+   assert.ok(JSON.stringify(run.execution.data.resultData.error).includes('memory_inspect_consent_required'));inspectEngineChecks++;
+   assert.deepEqual(await fingerprint(),before);inspectEngineChecks++;
+  }
  }
  await engine.executeRaw('UPDATE access_tokens SET revoked_at=now() WHERE name=$1',[source+'-0']);
  await assert.rejects(read());assert.deepEqual(await fingerprint(),before);pass();
+ if(inspectEnabled){await assert.rejects(inspect());assert.deepEqual(await fingerprint(),before);inspectChecks++;}
  const report={passed:true,adapter_checks:checks,engine_checks:engineChecks,
   mode:process.argv.includes('--engine')?'actual installed n8n engine, official MCP/HTTP, PostgreSQL':'actual packaged runtime, synthetic execution context, official MCP/HTTP, PostgreSQL; NOT n8n engine',
-  host_version:hostVersion,six_personal_tables_unchanged:true,body_fields_returned:0,generator_calls:0,external_model_calls:0,user_host_verified:false};
+  ...(inspectEnabled?{inspection_adapter_checks:inspectChecks,inspection_engine_checks:inspectEngineChecks}:{}),
+  host_version:hostVersion,six_personal_tables_unchanged:true,body_fields_returned:inspectEnabled?'only with explicit disclosure':0,generator_calls:0,external_model_calls:0,user_host_verified:false};
  if(process.env.ULTRABRAIN_N8N_CANDIDATES_REPORT)writeFileSync(process.env.ULTRABRAIN_N8N_CANDIDATES_REPORT,JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify(report));
 }finally{

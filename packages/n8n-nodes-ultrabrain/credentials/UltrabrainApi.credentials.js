@@ -15,10 +15,12 @@ class UltrabrainApi {
         description:'Whether capture may use world visibility within this authorized source. Private remains host-private, not remote-user-private.'},
       {displayName:'Candidate Project ID',name:'candidateProject',type:'string',default:'',
         description:'Trusted project for List Personal Candidates. Empty permits global-only selection; nonempty enables global plus this project. Never read from an input item.'},
+      {displayName:'Inspection Project ID',name:'inspectProject',type:'string',default:'',
+        description:'Trusted project for Inspect Personal Memory. Independent of Candidate Project ID; empty allows global-only. Never selected from an input item.'},
       {displayName:'Expected Instance UUID',name:'expectedInstance',type:'string',default:'',
-        description:'Pin from Check Connection; required for Personal Memory Overview and List Personal Candidates, optional for other operations. Backups retain this logical instance identity.'},
+        description:'Pin from Check Connection; required for Personal Memory Overview, List Personal Candidates and Inspect Personal Memory, optional for other operations. Backups retain this logical instance identity.'},
       {displayName:'Expected Actor SHA-256',name:'expectedActor',type:'string',default:'',
-        description:'Pin from Check Connection; required for Personal Memory Overview and List Personal Candidates, optional for other operations. A different token may represent a different actor.'},
+        description:'Pin from Check Connection; required for Personal Memory Overview, List Personal Candidates and Inspect Personal Memory, optional for other operations. A different token may represent a different actor.'},
     ];
   }
 }

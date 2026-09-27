@@ -1,0 +1,3 @@
+error: Cannot find module '@modelcontextprotocol/sdk/client/index.js' from '/mnt/data/ub-next/packages/n8n-nodes-ultrabrain/dist/runtime.cjs'
+
+Bun v1.3.13 (Linux x64)

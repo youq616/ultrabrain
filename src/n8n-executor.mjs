@@ -1,3 +1,4 @@
+import {automationMemoryInspectFailure} from './automation-memory-inspect.mjs';
 /** Testable n8n execution contract. The node wrapper creates platform errors, never echoes input on failure. */
 import {automationCandidatesFailure} from './automation-candidates.mjs';
 import {automationSettings,validateAutomationRequest} from './automation-session.mjs';
@@ -6,6 +7,7 @@ import {requireThat,integer,UltraError} from './core.mjs';
 function requestFor(context,operation,index) {
   const value=name=>context.getNodeParameter(name,index);
   if(operation==='identity')return {};
+  if(operation==='personal_inspect')return {memory_id:value('inspectMemoryId'),scope:value('inspectScope'),consent:value('inspectConsent'),include_text:value('inspectIncludeText')};
   if(operation==='personal_candidates'){
     const after=value('candidateAfter');
     requireThat(typeof after==='string','invalid_params','Explicit candidate cursor required');
@@ -48,9 +50,10 @@ export async function executeN8n(context,connect) {
         const identitySettings={rootUri:credentials.rootUri,
           expectedInstance:credentials.expectedInstance??'',expectedActor:credentials.expectedActor??'',
           timeoutMs:integer(get('timeoutMs',30000),30000,1000,120000),
-          ...(operation==='personal_candidates'?{candidateProject:credentials.candidateProject??''}:{})};
+          ...(operation==='personal_candidates'?{candidateProject:credentials.candidateProject??''}:{}),
+          ...(operation==='personal_inspect'?{inspectProject:credentials.inspectProject??''}:{})};
         // The overview must not evaluate hidden query/transcript/context fields.
-        const settings=automationSettings(['personal_overview','personal_candidates'].includes(operation)?identitySettings:{...identitySettings,
+        const settings=automationSettings(['personal_overview','personal_candidates','personal_inspect'].includes(operation)?identitySettings:{...identitySettings,
           allowCapture:credentials.allowCapture===true,allowSharedCapture:credentials.allowSharedCapture===true,
           memoryPolicy:get('memoryPolicy','current'),summary:get('summary','prefer'),
           budgetBytes:integer(get('budgetBytes',16000),16000,512,131072),
@@ -68,10 +71,10 @@ export async function executeN8n(context,connect) {
         const result=await session.run(operation,request);
         output.push({json:{ok:true,operation,result},pairedItem:{item:index}});
       }catch(e){
-        const safe=operation==='personal_candidates'?automationCandidatesFailure(e):failure(e,operation==='personal_overview');
+        const safe=operation==='personal_inspect'?automationMemoryInspectFailure(e):operation==='personal_candidates'?automationCandidatesFailure(e):failure(e,operation==='personal_overview');
         if(!context.continueOnFail()) {
           const error=new UltraError(safe.error,'Ultrabrain operation failed; check operation code and delivery state');
-          if(['personal_overview','personal_candidates'].includes(operation)){error.read_delivery=safe.read_delivery;error.memory_writes_requested=false;}
+          if(['personal_overview','personal_candidates','personal_inspect'].includes(operation)){error.read_delivery=safe.read_delivery;error.memory_writes_requested=false;}
           else error.delivery=safe.delivery;error.itemIndex=index;throw error;
         }
         output.push({json:safe,pairedItem:{item:index}});
@@ -96,6 +99,11 @@ export async function executeN8n(context,connect) {
     error.read_delivery='unconfirmed';error.memory_writes_requested=false;error.itemIndex=item.pairedItem.item;
     if(!context.continueOnFail())throw error;
     item.json=automationCandidatesFailure(error);
+  }
+  if(signal?.aborted||cleanupFailed)for(const item of output)if(item.json.ok&&item.json.operation==='personal_inspect'){
+    const error=new UltraError(signal?.aborted?'cancelled':'memory_inspect_cleanup_failed','Inspection delivery was not confirmed');
+    error.read_delivery='unconfirmed';error.memory_writes_requested=false;error.itemIndex=item.pairedItem.item;
+    if(!context.continueOnFail())throw error;item.json=automationMemoryInspectFailure(error);
   }
   return output;
 }
