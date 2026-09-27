@@ -13,10 +13,12 @@ class UltrabrainApi {
         description:'Whether nodes using this credential may save explicitly consented turns. Reading never enables capture.'},
       {displayName:'Allow Source-Shared Capture',name:'allowSharedCapture',type:'boolean',default:false,
         description:'Whether capture may use world visibility within this authorized source. Private remains host-private, not remote-user-private.'},
+      {displayName:'Candidate Project ID',name:'candidateProject',type:'string',default:'',
+        description:'Trusted project for List Personal Candidates. Empty permits global-only selection; nonempty enables global plus this project. Never read from an input item.'},
       {displayName:'Expected Instance UUID',name:'expectedInstance',type:'string',default:'',
-        description:'Pin from Check Connection; required for Personal Memory Overview, optional for other operations. Backups retain this logical instance identity.'},
+        description:'Pin from Check Connection; required for Personal Memory Overview and List Personal Candidates, optional for other operations. Backups retain this logical instance identity.'},
       {displayName:'Expected Actor SHA-256',name:'expectedActor',type:'string',default:'',
-        description:'Pin from Check Connection; required for Personal Memory Overview, optional for other operations. A different token may represent a different actor.'},
+        description:'Pin from Check Connection; required for Personal Memory Overview and List Personal Candidates, optional for other operations. A different token may represent a different actor.'},
     ];
   }
 }

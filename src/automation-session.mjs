@@ -1,3 +1,4 @@
+import {automationCandidatesRequest,readAutomationCandidates,automationCandidatesFailure} from './automation-candidates.mjs';
 import {automationOverviewRequest,readAutomationOverview} from './automation-overview.mjs';
 /** Shared deterministic lifecycle adapter. No shell, filesystem, DB or arbitrary tool dispatch. */
 import {AgentMemory} from './agent-memory.mjs';
@@ -7,6 +8,7 @@ import {mode} from './memory-selection.mjs';
 const operations = Object.freeze({
   identity: [],
   personal_overview: ['scope','consent'],
+  personal_candidates: ['scope','consent','after_id','limit'],
   before_turn: ['session_id','query','project_id'],
   after_turn: ['session_id','event_id','transcript','consent','visibility'],
   session_status: ['session_id','event_id'],
@@ -35,6 +37,7 @@ export function automationSettings(input={}) {
   requireThat(!includePersonal||!root.slug,'scope_denied','Personal context requires a source root');
   if(input.factEntity)text(input.factEntity,'factEntity',2048);
   return Object.freeze({rootUri:root.uri,source:root.source,rootSlug:root.slug,allowCapture,allowSharedCapture,
+    ...(input.candidateProject===undefined?{}:{candidateProject:input.candidateProject}),
     expectedInstance,expectedActor,includeFacts,includePersonal,factEntity:input.factEntity??'',memoryPolicy:mode(input.memoryPolicy??'current'),summary,
     budgetBytes:integer(input.budgetBytes,16000,includePersonal?4096:includeFacts?2048:512,131072),
     timeoutMs:integer(input.timeoutMs,30000,1000,120000),
@@ -45,6 +48,7 @@ export function validateAutomationRequest(operation,request,settings) {
   requireThat(request && typeof request==='object'&&!Array.isArray(request) &&
     Object.keys(request).every(k=>operations[operation].includes(k)),
     'invalid_params','Unknown lifecycle field; credentials, source and command overrides are forbidden');
+  if(operation==='personal_candidates'){automationCandidatesRequest(request,settings);return;}
   if(operation==='personal_overview'){automationOverviewRequest(request,settings);return;}
   if(operation==='identity')return;
   id(request.session_id,'session_id');
@@ -105,9 +109,17 @@ export async function automationSession(client,input,{signal}={}) {
       try {
         validateAutomationRequest(operation,request,settings);
         if(operation==='personal_overview')request=automationOverviewRequest(request,settings);
+        if(operation==='personal_candidates')request=automationCandidatesRequest(request,settings);
         const identity=await identify();checkIdentity(identity,settings,original);
         requireThat(!signal?.aborted,'cancelled','Request cancelled before operation');
         if(operation==='identity')return {identity};
+        if(operation==='personal_candidates'){
+          readStarted=true;
+          const result=await readAutomationCandidates(client,request,settings,{signal});
+          const after=await identify();checkIdentity(after,settings,original);
+          requireThat(!signal?.aborted,'cancelled','Candidate page cancelled before delivery');
+          return result;
+        }
         if(operation==='personal_overview'){
           readStarted=true;
           const result=await readAutomationOverview(client,settings,{signal});
@@ -139,9 +151,9 @@ export async function automationSession(client,input,{signal}={}) {
           persistence:'server-journal-confirmed; no local filesystem outbox in this adapter'};
       } catch(error) {
         // Input, provider errors and transport errors may contain secrets. Never forward their messages.
-        const code=error instanceof UltraError?error.code:'transport_error';
+        const code=operation==='personal_candidates'?automationCandidatesFailure(error).error:error instanceof UltraError?error.code:'transport_error';
         const safe=new UltraError(code,'Lifecycle operation failed; inspect safe code and delivery status');
-        if(operation==='personal_overview'){
+        if(['personal_overview','personal_candidates'].includes(operation)){
           safe.read_delivery=readStarted?'unconfirmed':'not_started';safe.memory_writes_requested=false;
         }else safe.delivery=submitted?'unconfirmed':'not_submitted';
         throw safe;

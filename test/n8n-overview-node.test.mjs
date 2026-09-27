@@ -13,7 +13,7 @@ function nodeWith(execute=async()=>[]){
 test('overview option is additive and cannot be selected by item expression',()=>{
  const node=nodeWith(),p=node.description.properties,op=p.find(x=>x.name==='operation');
  assert.equal(op.noDataExpression,true);assert.equal(op.default,'before_turn');
- assert.deepEqual(Array.from(op.options,x=>x.value),['identity','personal_overview','before_turn','after_turn','session_status','resume_project']);
+ assert.deepEqual(Array.from(op.options,x=>x.value),['identity','personal_overview','personal_candidates','before_turn','after_turn','session_status','resume_project']);
  assert.equal(p.find(x=>x.name==='overviewConsent').default,false);assert.equal(p.find(x=>x.name==='overviewScope').default,'');
  assert.ok(p.find(x=>x.name==='sessionId').displayOptions.hide.operation.includes('personal_overview'));
  assert.equal(node.description.usableAsTool,false);

@@ -25,3 +25,18 @@ License: MIT for this adapter. MCP SDK and n8n remain separate dependencies unde
 Get Personal Memory Overview reads owner-wide statistics through the existing read-only MCP tool. It requires a source-root credential, observed instance/actor pins, explicit all-project scope and per-item consent (off by default). It sends only a fresh UUID, never body text, and requests no model calls or memory writes. It preserves item pairing; failures use `read_delivery`, never a fabricated successful empty library. Cancellation before final node delivery suppresses pending overview results, including cancellation during connection cleanup. Old capture/context operations retain their semantics.
 
 The inactive, credential-free `examples/n8n/personal-overview.private.json` and full contract `docs/N8N-PERSONAL-OVERVIEW.md` are in the matching repository commit. Counts remain private and may be retained by n8n history or downstream nodes; this operation does not change global logging. This is not an npm release or independent review approval. Identify the private package by commit and SHA-256, not its unchanged development version alone.
+
+## Explicit candidate metadata (development candidate)
+
+`List Personal Candidates` reads one verified metadata page per explicitly
+consented input item. Select global-only, or global plus the project fixed in the
+credential's new Candidate Project ID field. Source-root credentials and observed
+instance/actor pins are required; capture permission is not. Page size is1–50,
+and continuation is an explicitly supplied `page.next_after`, never automatic.
+The operation does not read item JSON/binary, hidden transcript/query parameters,
+full memory text, models or write tools. Results keep input pairing and the shared
+candidate-page contract; metadata is private and not a snapshot or write authority.
+Cancellation/cleanup failures withhold undelivered pages; no retries or fallback.
+See `docs/N8N-CANDIDATES.md` and the disabled manual example in the matching source
+commit. Old packages with the same version may not contain this operation; verify
+commit/package digests rather than only the version string.

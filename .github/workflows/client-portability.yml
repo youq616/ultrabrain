@@ -46,6 +46,8 @@ jobs:
         run: node --test test/client-memory-correction.test.mjs test/client-memory-correction-runtime.test.mjs test/client-memory-correction-cli.test.mjs test/client-memory-correction-review.test.mjs test/client-installed-resolution.test.mjs
       - name: Scoped metadata candidate pages
         run: node --test test/personal-candidates.test.mjs test/client-candidates.test.mjs test/client-candidates-cli.test.mjs test/personal-candidates-review.test.mjs
+      - name: n8n scoped candidate metadata contracts
+        run: node --test test/n8n-candidates.test.mjs test/n8n-candidates-review.test.mjs
       - run: python -m unittest discover -s test -p test_task_context_config.py -v
       - run: python -m unittest discover -s test -p test_client_config.py -v
       - run: python -m unittest discover -s test -p test_native_adapter_config.py -v
