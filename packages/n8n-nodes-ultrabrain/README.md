@@ -40,3 +40,17 @@ Cancellation/cleanup failures withhold undelivered pages; no retries or fallback
 See `docs/N8N-CANDIDATES.md` and the disabled manual example in the matching source
 commit. Old packages with the same version may not contain this operation; verify
 commit/package digests rather than only the version string.
+
+## Explicit single-memory inspection (development candidate)
+
+`Inspect Personal Memory` reads one explicitly selected owned Agent-origin record.
+It requires source-root identity pins, per-item consent, a selected global-only or
+global-plus-credential-project scope, and an exact UUID. Inspection Project ID is
+separate from Candidate Project ID. By default output contains verified metadata;
+`Include Record Text in Output` separately enables body/provenance/stored references.
+The complete record is still transmitted for validation before local scope checks.
+This local filter is not server-side transfer isolation. No reference-following,
+model calls, writes, automatic iteration or retries. Cancellation/cleanup failures
+withhold undelivered results. See `docs/N8N-MEMORY-INSPECT.md` and the inactive,
+unconsented manual example at the exact build commit. Metadata and text may be
+retained by n8n or downstream nodes; neither grants authority to write a record.
