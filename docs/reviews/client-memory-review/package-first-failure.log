@@ -1,0 +1,6 @@
+37 |  try{process.exitCode=await memoryReviewMain(undefined,{signal:c.signal});}
+                                 ^
+error: "await" can only be used inside an "async" function
+    at /mnt/data/ub-work/packages/ultrabrain-client/src/memory-review-cli.mjs:37:29
+
+Bun v1.3.13 (Linux x64)

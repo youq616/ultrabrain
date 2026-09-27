@@ -1,0 +1,22 @@
+103 |  v=await run(null,{probe:true});assert.equal(v.status,0);Object.assign(profile,{expected_instance:v.r.identity.instance_id,expected_actor:v.r.identity.actor_key});save();
+104 |  v=await run(inspect(httpId));assert.equal(v.status,0);const httpMemory=v.r.memory;
+105 |  v=await run(apply(httpMemory,'http-activate'),{sdk:true});assert.equal(v.status,0);assert.equal(v.r.receipt.status,'active');pass();
+106 |  const httpBefore=await fingerprint();v=await run(apply({...shared,status:'active',revision:2},'steal','archived'));assert.equal(v.status,1);assert.equal(v.r.error,'memory_review_not_owned');pass();
+107 |  await engine.executeRaw("UPDATE access_tokens SET scopes='{read}'::text[] WHERE name=$1",[tokenName]);
+108 |  v=await run(apply({...httpMemory,status:'active',revision:2},'read-only-denied','archived'));assert.equal(v.status,1);assert.equal(v.r.error,'permission_denied');pass();
+                                                                                                                                    ^
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ 'memory_review_unconfirmed'
+- 'permission_denied'
+
+ generatedMessage: true,
+     actual: "memory_review_unconfirmed",
+   expected: "permission_denied",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /mnt/data/ub-work/test/client-memory-review-integration.mjs:108:127
+
+Bun v1.3.13 (Linux x64)

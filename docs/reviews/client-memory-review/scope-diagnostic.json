@@ -1,0 +1,1 @@
+{"cli_error":{"ok":false,"error":"memory_review_unconfirmed","read_delivery":"unconfirmed","write_delivery":"unconfirmed","write_attempts":1,"memory_writes_requested":true},"direct_denial":{"content":[{"type":"text","text":"{\"error\":\"insufficient_scope\",\"message\":\"Operation ultra_personal_review requires 'write' scope\",\"your_scopes\":[\"read\"]}"}],"isError":true}}

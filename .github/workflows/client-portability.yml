@@ -40,6 +40,8 @@ jobs:
         run: node --test test/candidate-check.test.mjs test/candidate-github.test.mjs test/candidate-cli.test.mjs test/candidate-review.test.mjs
       - name: Explicit candidate chain contracts
         run: node --test test/candidate-chain.test.mjs test/candidate-chain-cli.test.mjs test/candidate-chain-review.test.mjs
+      - name: Explicit single-memory review client
+        run: node --test test/client-memory-review.test.mjs test/client-memory-review-runtime.test.mjs test/client-memory-review-cli.test.mjs test/client-memory-review-boundaries.test.mjs test/client-memory-review-package.test.mjs
       - run: python -m unittest discover -s test -p test_task_context_config.py -v
       - run: python -m unittest discover -s test -p test_client_config.py -v
       - run: python -m unittest discover -s test -p test_native_adapter_config.py -v

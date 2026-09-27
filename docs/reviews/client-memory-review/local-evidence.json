@@ -1,0 +1,70 @@
+{
+  "base_commit": "19fd7a64bf9eaf203f16da03282e956e66d2d49f",
+  "base_tree": "cbfec58177f2abff164b3958d640378b53f82f0a",
+  "node": {
+    "tests": 2990,
+    "pass": 2990,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "exit": 0,
+    "uid": 1000
+  },
+  "new_tests": 93,
+  "self_review": "implementation assistant, separate pass; not independent agent",
+  "independent_review": "PENDING",
+  "first_boundary_run": {
+    "tests": 8,
+    "pass": 4,
+    "fail": 4
+  },
+  "real_integration": {
+    "passed": true,
+    "checks": 20,
+    "mode": "actual built Node CLI/SDK, official MCP, PostgreSQL, stdio and authenticated HTTP",
+    "generator_calls": 0,
+    "external_model_calls": 0,
+    "read_replay_denial_phases_six_tables_unchanged": true,
+    "lifecycle_writes_explicit": true,
+    "user_host_verified": false
+  },
+  "offline_regression_checks": 43,
+  "package_method": "npm pack, isolated extraction, locked SDK dependencies linked from verified prior CI artifact; not a fresh online install",
+  "tested_build_manifest": {
+    "format": 1,
+    "version": "0.14.0-alpha.1",
+    "compiler": "Bun 1.3.13",
+    "sdk": "1.29.0",
+    "sha256": "2a5815ca4a31cad6d9ca0af888a92b84f2a6956386a9a39574be1e86cbe8b24f",
+    "artifacts": {
+      "memory-review.cjs": "df0efced984234f3c70fd74e07ce947b50181c8ceb058badedf30c7e25c5883c",
+      "memory-review-cli.cjs": "8ea02a286fbcc9b766b424adff000b89e825a632cc020d41c409e2b7fdf28c01",
+      "overview.cjs": "df179c9d505e10e1eeafb2be0614f61e925595717ea352b10c4905aedd998d25",
+      "cli.cjs": "2a5815ca4a31cad6d9ca0af888a92b84f2a6956386a9a39574be1e86cbe8b24f",
+      "native-adapters.cjs": "03e53f5ee1a023911fdc629602408ff1a84f87077f22d7064b38c7b1818d4135",
+      "openclaw.cjs": "3ea29f8c98d66e997dbb16662836b51d917facfb31df5bfcf74c585ae08d6c20",
+      "lineage.cjs": "7820faa1ee96bf379e42cd6f8a8a665fac0607c87f5c11ba2edc43d98bf87e42",
+      "snapshot.cjs": "25a03043da38052aeb653029cdb70b6f01171e9e573343df39f124f2e0586a85",
+      "snapshot-cli.cjs": "94c4d8ba8347c05e35b4b8545063f49cd9a7a46a9bf31c66d9d30fbb9d5104f6"
+    }
+  },
+  "log_sha256": {
+    "review-initial-red.tap": "3000246ea7b954459f27173a67c2f2f1b5951916a6505e294804affc27d99a17",
+    "core-first.tap": "0273cfd36a74950fbb739e6c103f201d71ad8eda53beff9ac068613619bfeb48",
+    "module-first.tap": "1211b1fabbc743f99c13cfe63eb6ca318817ce74fcee4aebdf3c48d8e1daa7dd",
+    "review-boundaries-red.tap": "d367f612bd0665277713567de7f7d4031a5a0b45e369abef9bb3b87f3b87c6dd",
+    "module-reviewed.tap": "caf84b73f3e6f8a59a8893e1389364213d9d5fc57dde3e6b6256344b9a6d47e5",
+    "full-node-final.tap": "e292fd02729ee2da7034be26879fd558ef739a06c2a0a3de802917c599b011e5",
+    "database-init.log": "5aaeb7e801b4b486d2ac9ad2495b39c42bc025049b08db77fbf40b4dffdfd066",
+    "database-migrate.log": "5afebefc5c980598a5ae20fbc1a7d3060e99351ae4a717c8e2d2eede82a4688c",
+    "package-build.log": "db50fcf99372dfa6048051072d5c79978b1049f86c2716d5fbe5ae1d2d34f0d0",
+    "package-build-corrected.log": "1e8897b1325ed8ff2eb199524e79ed14b481e9d5a41d3eb8feeef022124f53eb",
+    "package-final.log": "6cded2e7da84d51b776d2373871d336d311e94ef8f53936bb54b22f1fa950e0c",
+    "database-integration.log": "c537c349b000eabfb798bfbd87c1348e49b6349f29274141493fc65c30e5fb41",
+    "scope-diagnostic.log": "1c09b53d94da4feb1959719a9d37e543f53d243f6bdcf32eb4257980d7e69fbf",
+    "database-final.json": "8c1c5a5fde225c13ee74b9496bae89a51112f6ff5562720256628e8b49e31963",
+    "database-final.log": "2afc58cb3fe0c363aa457e1b4cae5088fc9943be20646d6fe50d7e1ee5938370",
+    "offline-regression.json": "01dcc777e8d422d8b3ad9832df7cdec43eca7d068296dfefd69e30e7af6d653e",
+    "git-access.log": "934ca3faad44daa84ab3142ddc3eee22405149d55c6aa42d7fb7b747c24120e7"
+  }
+}
