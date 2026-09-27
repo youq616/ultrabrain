@@ -7,9 +7,10 @@ const mode=process.env.ULTRABRAIN_REVIEW_FIXTURE;
 const pause=phase=>new Promise(resolve=>{process.once('message',resolve);process.send?.({phase});});
 state.onCall=async req=>{
  if(req.name==='ultra_identity')return identity;
- if(req.name==='ultra_memory_read')return {source_id:'default',memory:row(1,{content:'PRIVATE_BODY'}),read_only:true,trust:'untrusted-memory-data',coverage:'one'};
- if(req.name!=='ultra_personal_review')throw Error('Unexpected fixture call');
+ if(req.name==='ultra_memory_read')return {source_id:'default',memory:row(1,{content:'PRIVATE_BODY',revision:mode==='correction-replay'?3:1}),read_only:true,trust:'untrusted-memory-data',coverage:'one'};
+ if(!['ultra_personal_review','ultra_personal_update'].includes(req.name))throw Error('Unexpected fixture call');
  if(mode==='lost')throw Error('PRIVATE_REMOTE');if(mode==='response-change')await pause('response');
+ if(req.name==='ultra_personal_update')return {id:uuid(1),revision:2,status:'candidate',replayed:mode==='correction-replay',review_required:true};
  return {id:uuid(1),revision:2,status:'active',replayed:false,assurance:'caller review'};
 };
 if(mode==='cleanup-change'){const close=Client.prototype.close;Client.prototype.close=async function(){await close.call(this);await pause('cleanup');};}

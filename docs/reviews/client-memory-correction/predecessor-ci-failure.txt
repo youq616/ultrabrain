@@ -1,0 +1,7 @@
+Source: GitHub Actions run36312132100, job108600002162, commitf29a42069ed5e55a0471cf0ebf777dc46ab64372.
+Exact relevant log excerpt (the full log was read through the authenticated repository connector):
+2026-09-27T10:28:21.9306113Z +   "Error: Cannot find module '/home/runner/work/_temp/task-host/node_modules/ultrabrain-client/node_modules/@modelcontextprotocol/sdk/dist/cjs/client/index.js'\n" +
+2026-09-27T10:28:21.9314727Z +   "  code: 'MODULE_NOT_FOUND',\n" +
+2026-09-27T10:28:21.9327127Z       at run (/home/runner/work/ultrabrain/ultrabrain/test/client-memory-review-integration.mjs:46:39)
+2026-09-27T10:28:21.9391269Z ##[error]Process completed with exit code 1.
+The failing path is a test-generated preload, not the installed client's public dependency resolution.

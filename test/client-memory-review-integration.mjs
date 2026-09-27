@@ -2,6 +2,7 @@
  * Explicit synthetic setup and lifecycle writes. No generators or external models.
  */
 import assert from 'node:assert/strict';
+import {memoryReadBarrierPreload} from './helpers/installed-client-preload.mjs';
 import {randomBytes,createHash} from 'node:crypto';
 import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {join} from 'node:path';import {tmpdir} from 'node:os';
@@ -32,9 +33,7 @@ async function run(input,{sdk=false,probe=false,race}={}){
  let raceError;
  if(race){
   const preload=join(dir,'preload.cjs');
-  writeFileSync(preload,`const {Client}=require(${JSON.stringify(join(pkg,'node_modules/@modelcontextprotocol/sdk/dist/cjs/client/index.js'))});
-const original=Client.prototype.callTool;let stopped=false;Client.prototype.callTool=async function(request,...rest){const result=await original.call(this,request,...rest);
-if(!stopped&&request.name==='ultra_memory_read'){stopped=true;await new Promise(resolve=>{process.once('message',resolve);process.send({observed:true});});process.disconnect();}return result;};`,{mode:0o600});
+  writeFileSync(preload,memoryReadBarrierPreload(pkg),{mode:0o600});
   args.unshift('--require',preload);
  }
  const child=spawn('node',args,{cwd:ROOT,env:process.env,stdio:['pipe','pipe','pipe',...(race?['ipc']:[])]});

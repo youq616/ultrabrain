@@ -2,7 +2,7 @@
 /** Manual explicit review; no hooks, directory scanning, automatic confirmation or retry. */
 import {resolve} from 'node:path';
 import {reviewClientMemory} from './memory-review.mjs';
-import {memoryReviewFailure} from '../../../src/client-memory-review.mjs';
+import {memoryReviewFailure,MEMORY_REVIEW_INPUT_MAX_BYTES} from '../../../src/client-memory-review.mjs';
 import {readClientProfile,clientProfileAuthorization} from '../../../src/client-profile-file.mjs';
 import {parseSnapshotJSON} from '../../../src/personal-snapshot-contract.mjs';
 import {requireThat} from '../../../src/core.mjs';
@@ -10,17 +10,18 @@ export async function memoryReviewMain(args=process.argv.slice(2),{stdin=process
  let result;
  try{
   if(args.length===1&&args[0]==='--help'){
-   write('Usage: ultrabrain-memory-review --profile ABSOLUTE_PATH < request.json\nOperations: inspect, apply, replay. Explicit consent and bound workspace required.\nInspect hides text unless include_text:true. Apply activates or archives one pinned version; existing allow_capture required.\nReplay requires an advanced current revision and returns only the original event receipt, not current state. No automatic retries.\n');return 0;
+   write('Usage: ultrabrain-memory-review --profile ABSOLUTE_PATH < request.json\nOperations: inspect, apply, replay, correct, replay-correction. Explicit consent and bound workspace required.\nInspect hides text unless include_text:true. Apply activates or archives one pinned version; existing allow_capture required.\nReplay requires an advanced current revision and returns only the original event receipt, not current state. No automatic retries.\nCorrect replaces all seven editable fields with acknowledge_reset:true; candidate status requires a separate review.\n');return 0;
   }
   requireThat(args.length===2&&args[0]==='--profile','invalid_params','Use --profile PATH');
   requireThat(!signal?.aborted,'aborted','Cancelled');
   const path=resolve(args[1]),{input}=readClientProfile(path),authorize=clientProfileAuthorization(path,input);
   const chunks=[];let size=0;
   for await(const chunk of stdin){requireThat(!signal?.aborted,'aborted','Cancelled');const b=Buffer.from(chunk);size+=b.length;
-   requireThat(size<=16384,'input_too_large','Input exceeds 16 KiB');chunks.push(b);}
+   requireThat(size<=MEMORY_REVIEW_INPUT_MAX_BYTES,'input_too_large','Input exceeds 128 KiB');chunks.push(b);}
   requireThat(!signal?.aborted,'aborted','Cancelled');
   let text;try{text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(Buffer.concat(chunks));}catch{requireThat(false,'invalid_params','UTF-8 required');}
   let request;try{request=parseSnapshotJSON(text);}catch{requireThat(false,'invalid_params','Unambiguous JSON required');}
+  requireThat(['correct','replay-correction'].includes(request?.operation)||size<=16384,'input_too_large','Non-correction input exceeds 16 KiB');
   authorize();result=await run(input,request,{authorize,signal});authorize();requireThat(!signal?.aborted,'aborted','Cancelled');
   write(JSON.stringify(result)+'\n');return 0;
  }catch(error){
