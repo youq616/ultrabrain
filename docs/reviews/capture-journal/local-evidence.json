@@ -41,5 +41,40 @@
     "client-build-final.log": "dc06073eec7b88a7d864e429613d5f79de6a00658cf3965bcabdf9c70465f1bd",
     "package-final.json": "d1a0d5b1f82aa0869c1e89638a435e322a27bdff2063abc790a28c821cbf68bd",
     "ultrabrain-client-0.14.0-alpha.1.tgz": "8aae504a38f4177d85017a1eeb5926baee2d0a021d757ad725a904c164ce1724"
+  },
+  "initial_candidate": "fa20976ad5dba36dacd1ae18281dca5670ae9fb2",
+  "post_independent_review": {
+    "review_id": 5348163898,
+    "finding_id": 4130007887,
+    "reviewer": "chatgpt-codex-connector[bot]",
+    "severity": "P2",
+    "initial_review_verdict": "COMMENTED; correction required",
+    "full_tests": 3679,
+    "module_tests_included": 64,
+    "added_regressions": 7,
+    "affected_before": {
+      "tests": 11,
+      "pass": 6,
+      "fail": 5
+    },
+    "affected_after": {
+      "tests": 11,
+      "pass": 11,
+      "fail": 0
+    },
+    "final_package_cases": 5,
+    "final_js_artifacts": 11,
+    "final_contention_rounds": 25,
+    "final_package_sha256": "d59356daa3b88635fed4f47c4db4f813569a469ad9b0c106c9fe44a9ce08f03a",
+    "corrected_sha_re_review": "must be obtained separately; not implied",
+    "logs_sha256": {
+      "independent-review-before.tap": "cd2fee9535dedca97f9cad8065cd2e0782fc2da01c40eecb06ca202d2b04591b",
+      "independent-review-fixed.tap": "2edec3a051f68792fb4342f1e841ffcdc325ad580447515880bceeaf4faca594",
+      "full-reviewed.tap": "e6ddc9736be381bf90bdef5d3c5b8c5e9f362144b78c0853bd8a3688212f2e5a",
+      "module-reviewed.tap": "b496efd0e726f002cae8c80de1814fed0b99907591f4efd1b91c93c5c5108c19",
+      "contention-reviewed.json": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7",
+      "client-build-reviewed.log": "dc06073eec7b88a7d864e429613d5f79de6a00658cf3965bcabdf9c70465f1bd",
+      "package-reviewed.json": "39ca4c78cf12dd90c1748ce68d36bbe486a5065d0cc75b5e1d80ec942fb66847"
+    }
   }
 }

@@ -96,7 +96,12 @@ export async function main(args=process.argv.slice(2)) {
         else{requireThat(profile.allowCapture,'capture_disabled','Capture permission required before delivery');writing=true;}
         try {result={...(queued?{queued}:{}),delivery:await queue.flush(connectClient,{limit:4,retryBlocked:args[3]==='--retry-blocked',signal:controller.signal,
           authorize:assertProfile})};}
-        catch(e){if(!queued)throw e;result={queued,delivery:{delivered:0,retained:1,last_error:captureCode(e)}};}
+        catch(e){if(!queued)throw e;
+          // Keep the established local receipt AND authentic IO diagnostics.
+          // The outer catch is not entered for this partial-success boundary.
+          const lock=captureLockDiagnostic(e),journal=captureJournalDiagnostic(e);
+          result={queued,delivery:{delivered:0,retained:1,last_error:captureCode(e),...(lock?{lock}:{}),...(journal?{journal}:{})}};
+        }
         if(result.delivery.retained||result.delivery.blocked||result.delivery.last_error||result.delivery.remaining_pending||result.delivery.remaining_blocked)process.exitCode=1;
       }
       process.stdout.write(JSON.stringify({ok:!process.exitCode,result})+'\n');return;

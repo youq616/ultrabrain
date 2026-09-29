@@ -6,6 +6,8 @@ import {requireThat,UltraError,sha256} from './core.mjs';
 import {captureRequest} from './client-kit.mjs';
 import {matchingWorkspace,readClientProfile} from './client-profile-file.mjs';
 import {CaptureOutbox} from './capture-outbox.mjs';
+import {captureJournalDiagnostic} from './capture-journal.mjs';
+import {captureLockDiagnostic} from './capture-lock.mjs';
 const uuid=x=>typeof x==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(x);
 const id=x=>typeof x==='string'&&x.length>0&&x.length<=256&&x.isWellFormed()&&!/[\x00-\x1f\x7f]/.test(x);
 export const AUTO_SCOPES=Object.freeze(['claude-user','claude-assistant','opencode-user','opencode-assistant']);
@@ -88,7 +90,10 @@ export function automaticCapture(profilePath,connect,{authorizedProfileInput}={}
           const delivery=await queue.flush(async(config,options)=>{current();return connect(config,options);},
             {limit:1,eventId:stored.event_id,signal:controller.signal,authorize:()=>current()});
           return {...stored,delivery};
-        }catch(e){return {...stored,delivery:{delivered:0,retained:1,last_error:captureCode(e)}};}
+        }catch(e){
+          const lock=captureLockDiagnostic(e),journal=captureJournalDiagnostic(e);
+          return {...stored,delivery:{delivered:0,retained:1,last_error:captureCode(e),...(lock?{lock}:{}),...(journal?{journal}:{})}};
+        }
       }finally{clearTimeout(timer);active.delete(controller);}
     },
     close(){closed=true;for(const controller of active)controller.abort();},

@@ -16,7 +16,7 @@ The first write/fsync error survives a subsequent file-close failure. The direct
 
 A local journal failure is `outbox_journal_io`. `captureJournalDiagnostic(error)` recognizes only locally tracked error objects; spreading, cloning or attaching fields to an unrelated error does not create a diagnostic. Only fixed categories and allowlisted native error codes are retained. Unknown codes become null; getters, raw messages, stacks, native paths, event IDs, payloads and credentials are not copied to the diagnostic.
 
-Queue CLI errors include a `journal` object when available. For example:
+Queue CLI errors include a `journal` object when available. When `queue-capture` has already enqueued an event and its immediate flush fails, `result.queued` remains the local receipt and `result.delivery.journal` / `result.delivery.lock` retain only authentic local IO diagnostics. The automatic-capture manager preserves the same diagnostics under its returned `delivery` object. A remote or copied exception cannot populate them, and neither path upgrades the local receipt to server confirmation. For example:
 
 ```json
 {"ok":false,"error":"outbox_journal_io","delivery":"unconfirmed","journal":{"target":"entry","operation":"create","phase":"publish","system_code":"EPERM","publication":"unconfirmed","directory_sync":"not_attempted","secondary":[]}}

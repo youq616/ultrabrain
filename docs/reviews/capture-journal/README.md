@@ -19,3 +19,7 @@ Ordinary Linux UID1000, Node22.16.0: final full suite **3672/3672**, zero failur
 Bun1.3.13 rebuilt the client with official SDK1.29.0 from locally available exact dependencies. `npm pack --ignore-scripts` produced a new private tgz; independent unpack verified all11 JavaScript artifact hashes and four real compiled-CLI cases (status, binding fault, entry fault, attempt replacement fault). These are local dependency links, not a fresh registry installation, live MCP test or user installation. Complete raw logs, package checks and checksums are in the delivery archive.
 
 This is a separate implementation-assistant review, not a second-agent verdict. New remote CI and final-SHA independent review must be read separately and must not be inferred from these results. Old Windows writer_failed root cause remains unconfirmed. No new Windows, PostgreSQL/MCP, browser, complete Python suite or user deployment result is asserted here. Keep the candidate draft until outstanding gates are resolved; do not merge main or modify previous PR heads/user services.
+
+## Independent-review correction
+
+The first publication was reviewed by the actual Codex repository reviewer and received a P2 diagnostic-propagation finding. See `independent-review.md` for the exact review identity, file/line finding, retained negative regression, correction and updated3679/64/five-package-case evidence. Earlier numbers above remain the pre-review implementation history, not the final candidate totals. A corrected-commit review is mandatory before acceptance.
