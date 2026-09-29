@@ -141,3 +141,7 @@ new or reclassified earlier IDs require a restart. Raw captured inputs may be
 candidates. Continue manually with `next_after`; inspect a selected ID before
 any edit/review. No prefetch, retries, hidden search fallback, model or writes.
 See `docs/CLIENT-CANDIDATES.md` and the default-denied example in this source.
+
+### Journal publication failures
+
+Queue commands report `outbox_journal_io` with a bounded `journal` diagnostic for local publication failures. `publication: visible` means only that a local directory entry was published before a later error, not that a server accepted the event. A failed write preserves temporary evidence, does not retry native IO, and never automatically repairs or deletes interrupted files. The first publication failure survives secondary close/lock-release failures. See `docs/CAPTURE-JOURNAL-PUBLICATION.md` in the repository for phases, crash boundaries and recovery restrictions.

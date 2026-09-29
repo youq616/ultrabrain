@@ -6,6 +6,8 @@ import {requireThat,UltraError,sha256} from './core.mjs';
 import {captureRequest} from './client-kit.mjs';
 import {matchingWorkspace,readClientProfile} from './client-profile-file.mjs';
 import {CaptureOutbox} from './capture-outbox.mjs';
+import {captureJournalDiagnostic} from './capture-journal.mjs';
+import {captureLockDiagnostic} from './capture-lock.mjs';
 const uuid=x=>typeof x==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(x);
 const id=x=>typeof x==='string'&&x.length>0&&x.length<=256&&x.isWellFormed()&&!/[\x00-\x1f\x7f]/.test(x);
 export const AUTO_SCOPES=Object.freeze(['claude-user','claude-assistant','opencode-user','opencode-assistant']);
@@ -54,7 +56,7 @@ export function openCodeCapture(kind,input,output,profile,workspace) {
   return observation(profile,'opencode','assistant',[input.sessionID,input.messageID,input.partID],[output.text]);
 }
 const safe=new Set(['capture_disabled','workspace_mismatch','stable_event_required','invalid_params','identity_mismatch',
-  'invalid_profile','insecure_profile','insecure_outbox','outbox_full','outbox_busy','outbox_corrupt','conflict']);
+  'invalid_profile','insecure_profile','insecure_outbox','outbox_full','outbox_busy','outbox_corrupt','outbox_lock_io','outbox_journal_io','outbox_lock_changed','aborted','conflict']);
 export const captureCode=e=>e instanceof UltraError&&safe.has(e.code)?e.code:'capture_unavailable';
 /** Shared manager for one immutable trusted profile. Revocation is re-read before capture/send. */
 export function automaticCapture(profilePath,connect,{authorizedProfileInput}={}) {
@@ -75,16 +77,24 @@ export function automaticCapture(profilePath,connect,{authorizedProfileInput}={}
   return {
     scopes:initial.profile.automaticCapture,
     async submit(payload,workspace,scope) {
-      const {input,profile}=current();captureScope(profile,scope,workspace);
-      const queue=new CaptureOutbox(input),stored=await queue.enqueue(payload,{authorize:()=>captureScope(current().profile,scope,workspace)});
-      // The file is committed before network activity. A blocked drainer cannot block enqueue.
-      const controller=new AbortController();active.add(controller);const timer=setTimeout(()=>controller.abort(),5000);timer.unref();
+      // Track the entire operation, including enqueue lock waits, so close()
+      // cannot leave a pending writer outside the cancellation lifecycle.
+      const controller=new AbortController();active.add(controller);
+      const timer=setTimeout(()=>controller.abort(),5000);timer.unref();
       try {
-        const delivery=await queue.flush(async(config,options)=>{current();return connect(config,options);},
-          {limit:1,eventId:stored.event_id,signal:controller.signal,authorize:()=>current()});
-        return {...stored,delivery};
-      }catch(e){return {...stored,delivery:{delivered:0,retained:1,last_error:captureCode(e)}};}
-      finally{clearTimeout(timer);active.delete(controller);}
+        const {input,profile}=current();captureScope(profile,scope,workspace);
+        const queue=new CaptureOutbox(input),stored=await queue.enqueue(payload,
+          {signal:controller.signal,authorize:()=>captureScope(current().profile,scope,workspace)});
+        // Once the local receipt exists, a cancellation must not deny that fact.
+        try {
+          const delivery=await queue.flush(async(config,options)=>{current();return connect(config,options);},
+            {limit:1,eventId:stored.event_id,signal:controller.signal,authorize:()=>current()});
+          return {...stored,delivery};
+        }catch(e){
+          const lock=captureLockDiagnostic(e),journal=captureJournalDiagnostic(e);
+          return {...stored,delivery:{delivered:0,retained:1,last_error:captureCode(e),...(lock?{lock}:{}),...(journal?{journal}:{})}};
+        }
+      }finally{clearTimeout(timer);active.delete(controller);}
     },
     close(){closed=true;for(const controller of active)controller.abort();},
   };

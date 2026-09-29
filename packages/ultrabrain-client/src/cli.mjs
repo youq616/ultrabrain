@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import {captureJournalDiagnostic} from '../../../src/capture-journal.mjs';
+import {captureLockDiagnostic} from '../../../src/capture-lock.mjs';
 import {parseSnapshotJSON} from '../../../src/personal-snapshot-contract.mjs';
 import {inspectClientOverview} from './overview.mjs';
 import {clientOverviewRequest,clientOverviewFailure} from '../../../src/client-overview.mjs';
@@ -20,6 +22,11 @@ export async function readBounded(stream,limit=65536,parseJSON=JSON.parse){const
 export async function main(args=process.argv.slice(2)) {
   let connection,autoWriter,hook=args[0]==='claude-hook'||args[0]==='claude-capture-hook'||args[0]==='claude-task-hook',writing=false,taskQueryStarted=false,lineageReadCompleted=false,overviewReadCompleted=false;
   const controller=new AbortController(),deadline=setTimeout(()=>{controller.abort();process.stdin.destroy();},25000);deadline.unref();
+  // Queue commands own cooperative locks; graceful cancellation must reach waits
+  // instead of leaving an owned delivery lock on an ordinary SIGINT/SIGTERM.
+  const queueCommand=['queue-status','queue-capture','queue-flush'].includes(args[0]);
+  const cancelQueue=()=>{controller.abort();process.stdin.destroy();};
+  if(queueCommand){process.once('SIGINT',cancelQueue);process.once('SIGTERM',cancelQueue);}
   try{
     const command=args[0];
     const regular=['overview','lineage','task-context','claude-task-hook','document-import','probe','context','bound-context','capture','claude-hook','claude-capture-hook','mcp','queue-capture','queue-status','queue-flush'];
@@ -80,16 +87,21 @@ export async function main(args=process.argv.slice(2)) {
     }
     if(command.startsWith('queue-')){
       const queue=new CaptureOutbox(input);let result;
-      if(command==='queue-status')result=await queue.status();
+      if(command==='queue-status')result=await queue.status({signal:controller.signal});
       else if(command==='queue-lock')result=queue.inspectLock(args[4]);
       else if(command==='queue-recover-lock')result=queue.recoverLock(args[4],args[6],{writerStopped:true});
       else {
         let queued;
-        if(command==='queue-capture'){payload=await readBounded(process.stdin,220000);captureRequest(payload,profile);writing=true;queued=await queue.enqueue(payload,{authorize:assertProfile});}
+        if(command==='queue-capture'){payload=await readBounded(process.stdin,220000);captureRequest(payload,profile);writing=true;queued=await queue.enqueue(payload,{authorize:assertProfile,signal:controller.signal});}
         else{requireThat(profile.allowCapture,'capture_disabled','Capture permission required before delivery');writing=true;}
         try {result={...(queued?{queued}:{}),delivery:await queue.flush(connectClient,{limit:4,retryBlocked:args[3]==='--retry-blocked',signal:controller.signal,
           authorize:assertProfile})};}
-        catch(e){if(!queued)throw e;result={queued,delivery:{delivered:0,retained:1,last_error:captureCode(e)}};}
+        catch(e){if(!queued)throw e;
+          // Keep the established local receipt AND authentic IO diagnostics.
+          // The outer catch is not entered for this partial-success boundary.
+          const lock=captureLockDiagnostic(e),journal=captureJournalDiagnostic(e);
+          result={queued,delivery:{delivered:0,retained:1,last_error:captureCode(e),...(lock?{lock}:{}),...(journal?{journal}:{})}};
+        }
         if(result.delivery.retained||result.delivery.blocked||result.delivery.last_error||result.delivery.remaining_pending||result.delivery.remaining_blocked)process.exitCode=1;
       }
       process.stdout.write(JSON.stringify({ok:!process.exitCode,result})+'\n');return;
@@ -113,7 +125,10 @@ export async function main(args=process.argv.slice(2)) {
       const failure=overviewError?{ok:false,error:overviewError.code,read_delivery:overviewError.read_delivery,memory_writes_requested:false}:args[0]==='lineage'?{ok:false,error:code,read_delivery:e.read_delivery==='unconfirmed'||lineageReadCompleted?'unconfirmed':'not_started',memory_writes_requested:false}:
         args[0]==='task-context'?{ok:false,error:code,query_delivery:taskQueryStarted?'unconfirmed':'not_started',memory_writes_requested:false}:
         {ok:false,error:code,delivery:writing?'unconfirmed':'not_submitted'};
+      const lock=captureLockDiagnostic(e);if(lock)failure.lock=lock;
+      const journal=captureJournalDiagnostic(e);if(journal)failure.journal=journal;
       out.write(JSON.stringify(failure)+'\n');process.exitCode=1;}
-  }finally{autoWriter?.close();clearTimeout(deadline);if(connection)try{await connection.close();}catch{}}
+  }finally{if(queueCommand){process.removeListener('SIGINT',cancelQueue);process.removeListener('SIGTERM',cancelQueue);}
+    autoWriter?.close();clearTimeout(deadline);if(connection)try{await connection.close();}catch{}}
 }
 void main();

@@ -1,0 +1,80 @@
+{
+  "date": "2026-09-29",
+  "full": {
+    "tests": 3672,
+    "pass": 3672,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "exit": 0,
+    "uid": 1000,
+    "node": "22.16.0",
+    "platform": "linux"
+  },
+  "new_tests_included": 57,
+  "focused_overlapping": 193,
+  "contention": {
+    "rounds": 25,
+    "writers_per_round": 8,
+    "requests": 600,
+    "records": 425,
+    "replays": 175,
+    "passed": true
+  },
+  "package": {
+    "compiler": "Bun1.3.13",
+    "sdk": "1.29.0",
+    "verified_js_artifacts": 11,
+    "cli_cases": 4,
+    "server_starts": 0
+  },
+  "review": "implementation assistant adversarial pass; independent final-SHA reviewer not implied",
+  "scope": "new temporary synthetic queues only; no user services, server/schema/model/permission changes",
+  "logs_sha256": {
+    "regression-before.tap": "3c58437d60903a9f13a933ffc397700e3eca1fb199e0f5f8a8b5f09c7cfe88af",
+    "audit-before.tap": "e6127333c48a71644641a5bfc162aa12f2c4b635be28d9fa982a675f13e8d181",
+    "audit-corrected-before.tap": "16145f3e6f737ca775e8176bbe7a2e72fbcb5d8d4d93ed9b36409f6d2804a9c6",
+    "focused-final.tap": "05b5da2432bb88f30ec8034ea538655706496f6bca47f2f078a83c1257774430",
+    "focused-fixed.tap": "a976ae813ce890b9bdda0907e8fccf8009756cc5521ba342d32ba7e925d7db58",
+    "full-final.tap": "ab4177c53db77a00ec1e2daffaec411e8e36ff35826b52d988f0901365dd7217",
+    "contention-final.json": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7",
+    "client-build-final.log": "dc06073eec7b88a7d864e429613d5f79de6a00658cf3965bcabdf9c70465f1bd",
+    "package-final.json": "d1a0d5b1f82aa0869c1e89638a435e322a27bdff2063abc790a28c821cbf68bd",
+    "ultrabrain-client-0.14.0-alpha.1.tgz": "8aae504a38f4177d85017a1eeb5926baee2d0a021d757ad725a904c164ce1724"
+  },
+  "initial_candidate": "fa20976ad5dba36dacd1ae18281dca5670ae9fb2",
+  "post_independent_review": {
+    "review_id": 5348163898,
+    "finding_id": 4130007887,
+    "reviewer": "chatgpt-codex-connector[bot]",
+    "severity": "P2",
+    "initial_review_verdict": "COMMENTED; correction required",
+    "full_tests": 3679,
+    "module_tests_included": 64,
+    "added_regressions": 7,
+    "affected_before": {
+      "tests": 11,
+      "pass": 6,
+      "fail": 5
+    },
+    "affected_after": {
+      "tests": 11,
+      "pass": 11,
+      "fail": 0
+    },
+    "final_package_cases": 5,
+    "final_js_artifacts": 11,
+    "final_contention_rounds": 25,
+    "final_package_sha256": "d59356daa3b88635fed4f47c4db4f813569a469ad9b0c106c9fe44a9ce08f03a",
+    "corrected_sha_re_review": "must be obtained separately; not implied",
+    "logs_sha256": {
+      "independent-review-before.tap": "cd2fee9535dedca97f9cad8065cd2e0782fc2da01c40eecb06ca202d2b04591b",
+      "independent-review-fixed.tap": "2edec3a051f68792fb4342f1e841ffcdc325ad580447515880bceeaf4faca594",
+      "full-reviewed.tap": "e6ddc9736be381bf90bdef5d3c5b8c5e9f362144b78c0853bd8a3688212f2e5a",
+      "module-reviewed.tap": "b496efd0e726f002cae8c80de1814fed0b99907591f4efd1b91c93c5c5108c19",
+      "contention-reviewed.json": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7",
+      "client-build-reviewed.log": "dc06073eec7b88a7d864e429613d5f79de6a00658cf3965bcabdf9c70465f1bd",
+      "package-reviewed.json": "39ca4c78cf12dd90c1748ce68d36bbe486a5065d0cc75b5e1d80ec942fb66847"
+    }
+  }
+}
