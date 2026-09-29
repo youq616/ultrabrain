@@ -1,0 +1,27 @@
+Exact relevant excerpt from the original GitHub job log (not the full log)
+Head:847e5151dbd42a581802ff30ba61904b5551063d
+Run:36513385952 / Job:109230238094
+Node:v24.21.0 / Ubuntu24.04.5
+Step:Source verification contracts and separate review probes
+Command:node --test test/n8n-memory-lineage.test.mjs test/n8n-memory-lineage-audit.test.mjs
+
+2026-09-29T02:40:10.0194691Z ℹ tests 65
+2026-09-29T02:40:10.0195090Z ℹ pass 63
+2026-09-29T02:40:10.0195273Z ℹ fail 2
+2026-09-29T02:40:10.0195465Z ℹ cancelled 0
+2026-09-29T02:40:10.0195667Z ℹ skipped 0
+
+cleanup audit: native retry recovers transient EPERM
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  assert.ok(calls>=3&&calls<=6)
+
+cleanup audit: native retry does not swallow persistent EPERM
+AssertionError [ERR_ASSERTION]: Missing expected exception.
+  actual: undefined
+  expected: { code: 'EPERM' }
+
+The rmdirSync monkey-patch was not reached by rmSync. The probe did not inject
+the intended fault on Node24, so neither assertion established retry behavior.
+The production lineage functional cases passed, but subsequent database, package
+and actual n8n steps were skipped because this audit step failed.
+Fix the injection seam, do not remove the error-propagation check or skip tests.

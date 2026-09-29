@@ -61,15 +61,24 @@ test('cleanup audit: prior failing test opts into bounded native retries without
  assert.match(s,/t\.after\(\(\)=>rmSync\(dir,\{recursive:true,force:true,maxRetries:5,retryDelay:100\}\)\);/);
  assert.ok(s.includes('assert.equal(r.status,0)'));
 });
-for(const permanent of [false,true])test('cleanup audit: native retry '+(permanent?'does not swallow persistent EPERM':'recovers transient EPERM'),async()=>{
+for(const errorMode of [false,true])test('cleanup audit: actual hook '+(errorMode?'propagates removal failure':'delegates bounded removal to native rmSync'),async()=>{
  const {spawnSync}=await import('node:child_process');
- const code=`const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ub-retry-audit-')),original=fs.rmdirSync;let calls=0;
- fs.rmdirSync=(...args)=>{if(${permanent?'(++calls,true)':'++calls<=2'})throw Object.assign(Error('Injected test EPERM'),{code:'EPERM'});return original(...args);};
- try{${permanent?"assert.throws(()=>fs.rmSync(dir,{recursive:true,force:true,maxRetries:5,retryDelay:1}),{code:'EPERM'});assert.ok(calls>1);":
- "fs.rmSync(dir,{recursive:true,force:true,maxRetries:5,retryDelay:1});assert.ok(calls>=3&&calls<=6);assert.equal(fs.existsSync(dir),false);"}}
- finally{fs.rmdirSync=original;fs.rmSync(dir,{recursive:true,force:true,maxRetries:5,retryDelay:100});}`;
- const result=spawnSync(process.execPath,['-e',code],{encoding:'utf8',timeout:10000});
+ // Run the exact current cleanup hook, not a copy or an assumed Node internal path.
+ // New Node releases may implement rmSync without calling exported fs.rmdirSync.
+ const source=read('test/client-snapshot-impact-cli.test.mjs');
+ const hook=/t\.after\((\(\)=>rmSync\(dir,\{[^}]+\}\))\);/.exec(source)?.[1];
+ assert.ok(hook,'Expected the existing after-hook, without an error-swallowing wrapper');
+ const code=`const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ub-cleanup-hook-'));let calls=0;
+ const failure=Object.assign(Error('Injected native rmSync failure'),{code:'EPERM'});
+ const hook=vm.runInNewContext('('+process.argv[1]+')',{dir,rmSync:(target,options)=>{
+  calls++;assert.equal(target,dir);assert.deepEqual({...options},{recursive:true,force:true,maxRetries:5,retryDelay:100});
+  if(${errorMode})throw failure;return fs.rmSync(target,options);
+ }});
+ try{${errorMode?"assert.throws(hook,e=>e===failure);assert.equal(fs.existsSync(dir),true);":
+ "hook();assert.equal(fs.existsSync(dir),false);"}assert.equal(calls,1);}
+ finally{fs.rmSync(dir,{recursive:true,force:true,maxRetries:5,retryDelay:100});}`;
+ const result=spawnSync(process.execPath,['-e',code,hook],{encoding:'utf8',timeout:10000});
  assert.ifError(result.error);assert.equal(result.status,0,result.stderr);
 });
 test('lineage audit: inactive sample and real-engine CI use actual private node and test paths',()=>{

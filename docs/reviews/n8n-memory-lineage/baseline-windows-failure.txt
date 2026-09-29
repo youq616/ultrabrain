@@ -11,5 +11,10 @@ The Ubuntu job (109213014473) and full Validate workflow (36507784621) succeeded
 Fix: use rmSync(dir,{recursive:true,force:true,maxRetries:5,retryDelay:100})
 in the existing cleanup hook, without a catch or removal of any behavior assertion.
 Native rmSync can retry transient EPERM; a persistent error still fails the hook.
-New tests inject transient and persistent EPERM into real Node fs.rmdirSync in
-an isolated subprocess. Those are injection tests, not actual Windows file locks.
+Initial Node22 probes injected transient and persistent EPERM into exported
+fs.rmdirSync. They were not portable to the Node24 rmSync implementation.
+The corrected tests execute the exact after-hook, assert bounded native options,
+perform a real successful removal and inject failure at the public rmSync seam.
+The original error must propagate. This tests delegation/failure propagation,
+not an internal retry count or actual Windows file locks. No tests are skipped.
+See node24-first-failure.txt and the post-publication README note.
