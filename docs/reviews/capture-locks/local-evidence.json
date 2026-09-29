@@ -1,0 +1,109 @@
+{
+  "date": "2026-09-29",
+  "remote_base_commit": "f53e1c8fda8caca2f90ced2adb15b76ad0494626",
+  "base_tree": "0eb8b4359e257223fbebfc3e9c2dde43025b9789",
+  "node_full": {
+    "node": "22.16.0",
+    "platform": "linux",
+    "uid": 1000,
+    "tests": 3615,
+    "pass": 3615,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "exit": 0
+  },
+  "new_tests": 80,
+  "focused_final": {
+    "tests": 80,
+    "pass": 80,
+    "fail": 0,
+    "exit": 0
+  },
+  "initial_cancellation_probes": {
+    "tests": 5,
+    "pass": 0,
+    "fail": 5,
+    "exit": 1
+  },
+  "initial_deadline_audit": {
+    "tests": 3,
+    "pass": 2,
+    "fail": 1,
+    "exit": 1
+  },
+  "cli_fixture_preparation_failure": {
+    "tests": 77,
+    "pass": 73,
+    "fail": 4,
+    "exit": 1,
+    "cause": "test preload selected an incomplete SDK loader; corrected only the fixture loader"
+  },
+  "final_contention": {
+    "rounds": 25,
+    "writers": 200,
+    "requests": 600,
+    "records": 425,
+    "identical_replays": 175,
+    "busy_retries": 0,
+    "passed": true,
+    "platform": "linux",
+    "node": "v22.16.0",
+    "temporary_synthetic_queues_only": true,
+    "network_calls": 0,
+    "model_calls": 0
+  },
+  "previous_windows": {
+    "commit": "f53e1c8fda8caca2f90ced2adb15b76ad0494626",
+    "run_id": 36507784802,
+    "job_id": 109213014310,
+    "status": "failed",
+    "diagnostic": "one of eight child writers: writer_failed; errno absent",
+    "root_cause": "UNCONFIRMED; not claimed fixed"
+  },
+  "review": {
+    "self_review": "implementation assistant, separate adversarial pass",
+    "independent_agent": "NOT EXECUTED / PENDING"
+  },
+  "publication": "LOCAL ONLY; current connector has no write actions, command-line GitHub DNS failed; no new branch/PR on remote",
+  "not_executed": [
+    "new remote CI",
+    "Windows",
+    "compiled client package build",
+    "new PostgreSQL/MCP integration",
+    "full Python suite",
+    "user deployment"
+  ],
+  "test_scope": "actual local filesystem and independent Node processes; server replies and SDK imports in lifecycle/CLI tests explicitly synthetic",
+  "interrupted_launcher": "full-first.tap is incomplete from a tool timeout, no final exit. Not counted as a completed suite; full-rerun.tap 3603 is earlier than final 3615.",
+  "log_sha256": {
+    "audit-deadline-before.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "audit-deadline-before.tap": "901b7846ca3b88e784fe52c17a76c0c4e05b43158320f77ef4af33a7b85a42be",
+    "audit-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "audit-final.tap": "0c75ff363fc5e479c711a0beb503158f1aaa8670d45a1237c6015e06022cff84",
+    "audit-runtime-fixed.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "audit-runtime-fixed.tap": "3490e94143d26a98bcb095659854a640d0ec90deb03a80c0b9045a7483620701",
+    "audit-runtime.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "audit-runtime.tap": "823bae1b027ca185b7d02ebe112ddef9474201ca42a1def64c6c4b30e5f3b154",
+    "baseline-verification.json": "44b60dbc35d89e38ff0a37d201e1c26ba7d54968687aefec8c976d30aa0f23bf",
+    "cancellation-before.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "cancellation-before.tap": "7d1fee1ddf11c7e185e1b4dd0c1e054d5838859678e48ae378f93794623b4136",
+    "contention-25.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "contention-25.json": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7",
+    "contention-25.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contention-final-25.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "contention-final-25.json": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7",
+    "contention-final-25.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contention-unit.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "contention-unit.tap": "36305ae5b85b7c2a952a15b5df47b818b1c3c396b9619b7b039d17fa31f6d9f0",
+    "full-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "full-final.tap": "3a15fa5d867ef51f7271f1a43a4c5aeb8fa5cf7557b05335ea57bce26150c68c",
+    "full-first.tap": "00bf958e2d7430ca358e694101a8634966e2bcbbead94d0370e45499896256e9",
+    "full-rerun.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "full-rerun.tap": "311b749dc0f197f919019591379345b9ddb012ae9015d258723079deec847b72",
+    "initial-fixed.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "initial-fixed.tap": "46ebb07e08c8c1f0e0262cd2d064b4029ed408eb9e27a27410b8c713c726f7c7",
+    "lock-focused.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "lock-focused.tap": "08aaf78a9b440d42cc52150ef9592bb3a6fdb8eec3066424471d78286dac9dc1"
+  }
+}

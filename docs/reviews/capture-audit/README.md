@@ -1,0 +1,9 @@
+# Capture audit: implementation and self-review record
+
+Base: the verified source tree 6901ca832526610862cdc3a586a804d2f2628d3a from the local-only 661db1fa delivery. Its remote ancestor is PR41 f53e1c8fda8caca2f90ced2adb15b76ad0494626. Reconstructed local Git ancestors are not remote commit history and must never be force-pushed over it.
+
+Scope: read-only local queue auditing, shared unchanged disk-contract validation, integrated/standalone CLI, current-code client build and a dedicated CI matrix. No server tool, applied migration, upstream pin, active service or other project is changed.
+
+First failures are preserved, not deleted or reclassified as passing: six initial CLI cases failed because the new command did not yet exist; then 52/55 passed with three test-fixture failures because a read guard also intercepted the test's post-audit preservation check. The guard was scoped to the audit execution, keeping both no-read and preservation assertions. A later separate implementation-review pass was 5/7: a duplicated directory observation could double-count an entry and still report healthy, and the blocked finding count was 1 despite three blocked entries. The enumerator now rejects duplicate names as changed, and aggregate findings reflect the actual blocked count. Corrected review passed 7/7. These faults are not evidence about the original Windows writer_failed root cause.
+
+The review test file was authored/executed by the implementation assistant. A fresh test file/directory is not a separate agent. Independent second-agent approval remains a release gate; actual final-commit review requests/responses and CI must be checked in the PR, not inferred from this document. No approval is asserted here. Test totals/hashes and delivery limits are recorded in the accompanying final report and evidence manifest; repeated full runs are not additive coverage.

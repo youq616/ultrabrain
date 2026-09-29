@@ -141,3 +141,7 @@ new or reclassified earlier IDs require a restart. Raw captured inputs may be
 candidates. Continue manually with `next_after`; inspect a selected ID before
 any edit/review. No prefetch, retries, hidden search fallback, model or writes.
 See `docs/CLIENT-CANDIDATES.md` and the default-denied example in this source.
+
+## Read-only local queue audit
+
+`ultrabrain-client queue-audit --profile PATH` inspects an existing private capture queue without creating a directory, taking a lock, repairing files or submitting capture. The standalone `ultrabrain-queue-audit --profile PATH` / `node dist/queue-audit-cli.cjs --profile PATH` does not import the MCP SDK and works without installing it. Normal read access and the existing workspace/identity binding are required, but capture consent need not be enabled. Entry bytes are read into memory to validate their contract; output contains only aggregate counts and fixed diagnostics, never payloads, file names, event IDs or paths. A present lock returns `busy` without reading record bytes. Concurrent changes and incomplete scans must not be treated as healthy. `snapshot_consistent` and `server_confirmation` are always false. Exit 0 means absent, uninitialized or healthy at this best-effort local observation; every other status exits 1. No repair/force flags exist. OS read side effects such as atime are outside the no-application-writes guarantee. See repository `docs/CAPTURE-QUEUE-AUDIT.md` for statuses, limits, cancellation and platform boundaries.

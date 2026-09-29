@@ -1,0 +1,18 @@
+Observed previous revision: f53e1c8fda8caca2f90ced2adb15b76ad0494626 / PR41
+Workflow: Personal client portability, run36507784802
+Windows job: 109213014310; Ubuntu job109213014303 succeeded.
+Source: https://api.github.com/repos/youq616/ultrabrain/actions/jobs/109213014310/logs
+This is a retrieved failure EXCERPT, not the entire original job log.
+
+# Subtest: multiple independent processes enqueue without lost updates
+not ok 66 - multiple independent processes enqueue without lost updates
+location: 'D:\\a\\ultrabrain\\ultrabrain\\test\\capture-outbox.test.mjs:96:1'
+failureType: 'testCodeFailure'
+error: '[{"exit":0,"signal":null,"ok":true,"busy_retries":0,"code":"ok"},{"exit":0,"signal":null,"ok":true,"busy_retries":0,"code":"ok"},{"exit":0,"signal":null,"ok":true,"busy_retries":0,"code":"ok"},{"exit":1,"signal":null,"ok":false,"busy_retries":0,"code":"writer_failed"},{"exit":0,"signal":null,"ok":true,"busy_retries":0,"code":"ok"},{"exit":0,"signal":null,"ok":true,"busy_retries":0,"code":"ok"},{"exit":0,"signal":null,"ok":true,"busy_retries":0,"code":"ok"},{"exit":0,"signal":null,"ok":true,"busy_retries":0,"code":"ok"}]'
+code: 'ERR_ASSERTION'
+expected: true
+actual: false
+
+Root cause not established: errno/syscall were absent from this prior diagnostic.
+Do not equate the subsequent cancellation/deadline fixes with a proven fix for
+this Windows failure. No new Windows result was available during local work.

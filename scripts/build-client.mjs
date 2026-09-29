@@ -6,16 +6,16 @@ import {createHash} from 'node:crypto';
 const root=fileURLToPath(new URL('../',import.meta.url)),dir=join(root,'packages/ultrabrain-client'),out=join(dir,'dist');mkdirSync(out,{recursive:true});
 const result=await Bun.build({entrypoints:[join(dir,'src/cli.mjs')],outdir:out,naming:'cli.cjs',format:'cjs',target:'node',external:['@modelcontextprotocol/sdk/*'],minify:false,sourcemap:'none'});
 if(!result.success){for(const log of result.logs)console.error(log.message);process.exit(1);}
-for(const [entry,name] of [['candidates.mjs','candidates.cjs'],['candidates-cli.mjs','candidates-cli.cjs'],['memory-review.mjs','memory-review.cjs'],['memory-review-cli.mjs','memory-review-cli.cjs'],['overview.mjs','overview.cjs'],['snapshot.mjs','snapshot.cjs'],['snapshot-cli.mjs','snapshot-cli.cjs'],['lineage.mjs','lineage.cjs'],['native-adapters.mjs','native-adapters.cjs'],['openclaw.mjs','openclaw.cjs']]) {
+for(const [entry,name] of [['queue-audit-cli.mjs','queue-audit-cli.cjs'],['candidates.mjs','candidates.cjs'],['candidates-cli.mjs','candidates-cli.cjs'],['memory-review.mjs','memory-review.cjs'],['memory-review-cli.mjs','memory-review-cli.cjs'],['overview.mjs','overview.cjs'],['snapshot.mjs','snapshot.cjs'],['snapshot-cli.mjs','snapshot-cli.cjs'],['lineage.mjs','lineage.cjs'],['native-adapters.mjs','native-adapters.cjs'],['openclaw.mjs','openclaw.cjs']]) {
   const built=await Bun.build({entrypoints:[join(dir,'src',entry)],outdir:out,naming:name,format:'cjs',target:'node',external:['@modelcontextprotocol/sdk/*'],minify:false,sourcemap:'none'});
   if(!built.success)throw new Error('Native adapter build failed');
 }
 const hashes={};
-for(const name of ['candidates.cjs','candidates-cli.cjs','memory-review.cjs','memory-review-cli.cjs','overview.cjs','cli.cjs','native-adapters.cjs','openclaw.cjs','lineage.cjs','snapshot.cjs','snapshot-cli.cjs']) {
+for(const name of ['queue-audit-cli.cjs','candidates.cjs','candidates-cli.cjs','memory-review.cjs','memory-review-cli.cjs','overview.cjs','cli.cjs','native-adapters.cjs','openclaw.cjs','lineage.cjs','snapshot.cjs','snapshot-cli.cjs']) {
   const code=readFileSync(join(out,name),'utf8');
   for(const forbidden of ['executeRaw','pg_advisory','Bun.','PersonalMemoryStore','/vendor/gbrain/'])
     if(code.includes(forbidden))throw Error('Server code leaked into client '+name);
-  if(name.startsWith('snapshot'))for(const forbidden of ['@modelcontextprotocol/sdk','connectClient','readClientProfile','node:child_process','node:http','node:net','node:tls','fetch('])
+  if(name.startsWith('snapshot')||name==='queue-audit-cli.cjs')for(const forbidden of ['@modelcontextprotocol/sdk','connectClient',...(name.startsWith('snapshot')?['readClientProfile']:[]),'node:child_process','node:http','node:net','node:tls','fetch('])
     if(code.includes(forbidden))throw Error('Online capability leaked into offline bundle '+name);
   hashes[name]=createHash('sha256').update(code).digest('hex');
 }
