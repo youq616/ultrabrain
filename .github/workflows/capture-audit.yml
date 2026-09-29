@@ -1,0 +1,46 @@
+name: Read-only capture queue audit
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+        node: ['22.16.0', '22']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Read-only audit and existing journal contracts
+        shell: bash
+        run: node --test test/capture-audit*.test.mjs test/capture-outbox.test.mjs test/capture-hardening.test.mjs test/capture-lock*.test.mjs > "$RUNNER_TEMP/audit-tests.tap"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Build current client code
+        shell: bash
+        run: bun scripts/build-client.mjs > "$RUNNER_TEMP/audit-build.txt"
+      - name: Actual isolated compiled CLI with network and mutation guards
+        shell: bash
+        run: node scripts/check-capture-audit-package.mjs > "$RUNNER_TEMP/audit-package.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capture-audit-${{ matrix.os }}-${{ matrix.node }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/audit-tests.tap
+            ${{ runner.temp }}/audit-build.txt
+            ${{ runner.temp }}/audit-package.json
+          if-no-files-found: warn
+          retention-days: 14
+# This job needs no user profile, database, SDK install, secret or capture permission.

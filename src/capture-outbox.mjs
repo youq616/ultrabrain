@@ -6,18 +6,13 @@ import {constants,openSync,closeSync,writeFileSync,readSync,fsyncSync,lstatSync,
   mkdirSync,readdirSync,renameSync,unlinkSync,linkSync,realpathSync} from 'node:fs';
 import {resolve,dirname,parse,isAbsolute,relative,sep,join} from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {setTimeout as delay} from 'node:timers/promises';
+import {acquireCaptureLock,captureLockError,checkCaptureSignal} from './capture-lock.mjs';
 import {captureRequest,clientProfile,clientIdentity} from './client-kit.mjs';
 import {requireThat,UltraError,sha256,integer} from './core.mjs';
-const MAX_RECORD=220000, MAX_FILES=256, MAX_BYTES=8*1024*1024, MAX_ATTEMPTS=8;
-const RECORD=/^[a-f0-9]{64}\.entry$/;
-const TEMP=/^\.tmp-[a-f0-9-]{36}$/;
-const UUID=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
+import {MAX_RECORD,MAX_FILES,MAX_BYTES,MAX_ATTEMPTS,RECORD,TEMP,UUID,journalDigest as digest,journalBinding,verifyJournalBinding,verifyJournalRecord} from './capture-journal-contract.mjs';
 const terminal=new Set(['conflict','permission_denied','capture_disabled','identity_mismatch','revision_conflict','mcp_contract_changed']);
-const safeCodes=new Set([...terminal,'mcp_rejected','missing_credentials','outbox_corrupt','outbox_busy','outbox_full','aborted']);
+const safeCodes=new Set([...terminal,'mcp_rejected','missing_credentials','outbox_corrupt','outbox_busy','outbox_full','outbox_lock_io','outbox_lock_changed','aborted']);
 const codeOf=e=>safeCodes.has(e?.code)?e.code:'delivery_unconfirmed';
-const canonical=x=>Array.isArray(x)?x.map(canonical):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,canonical(x[k])])):x;
-const digest=x=>sha256(JSON.stringify(canonical(x)));
 function assertAuthorization(authorize) {
   requireThat(typeof authorize==='function','invalid_params','Synchronous authorization assertion required');
   const result=authorize();
@@ -78,8 +73,7 @@ export class CaptureOutbox {
     privateStat(lstatSync(this.directory),'dir');
     const queue=realpathSync(this.directory),rel=relative(workspace,queue);
     requireThat(rel!==''&&(rel==='..'||rel.startsWith('..'+sep)||isAbsolute(rel)),'insecure_outbox','Put the private outbox outside the Agent workspace');
-    this.binding={format:1,source:p.source,instance:p.expectedInstance,actor:p.expectedActor,project:p.projectId,
-      workspace_sha256:sha256(process.platform==='win32'?workspace.toLowerCase():workspace),server_sha256:digest(p.server)};
+    this.binding=journalBinding(p,workspace);
     this.bindingHash=digest(this.binding);
     this.durability=process.platform==='win32'?'file-fsync; directory-flush-not-available':'file-and-directory-fsync';
   }
@@ -92,20 +86,40 @@ export class CaptureOutbox {
       requireThat(readdirSync(this.directory).every(n=>['.queue.lock','.delivery.lock'].includes(n)),'outbox_unbound','Nonempty outbox has no binding');
       this.#write('binding.json',{...this.binding,binding_sha256:this.bindingHash},false);
     }
-    const value=decode(path,4096);requireThat(value.binding_sha256===this.bindingHash&&digest(Object.fromEntries(Object.entries(value).filter(([k])=>k!=='binding_sha256')))===this.bindingHash,
-      'identity_mismatch','Outbox is bound to a different destination or workspace');
+    verifyJournalBinding(decode(path,4096),this.bindingHash);
   }
-  async #acquire(name,wait=1000) {
-    this.#checkDir();const path=this.#path(name),deadline=Date.now()+wait;
-    for(;;){
+  async #acquire(name,wait=1000,{signal,authorize=()=>{}}={}) {
+    const kind=name==='.queue.lock'?'queue':'delivery',path=this.#path(name);
+    return acquireCaptureLock(()=>{
       const bytes=Buffer.from(JSON.stringify({format:1,lock_id:randomUUID(),pid:process.pid,created_at:new Date().toISOString()})+'\n');
-      try{newFile(path,bytes);syncDirectory(this.directory);
-        const hash=sha256(bytes);
-        return ()=>{requireThat(exists(path)&&sha256(readBytes(path,2048))===hash,'outbox_lock_changed','Never remove another writer lock');unlinkSync(path);syncDirectory(this.directory);};
-      }catch(e){if(e.code!=='EEXIST')throw e;if(Date.now()>=deadline)throw new UltraError('outbox_busy','A journal writer is active or its lock needs explicit recovery');await delay(15);}
-    }
+      let phase='create',fd,primary;
+      try {
+        fd=openSync(path,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|(constants.O_NOFOLLOW??0),0o600);
+        phase='write';writeFileSync(fd,bytes);phase='file-sync';fsyncSync(fd);
+      }catch(error){primary=captureLockError(error,kind,phase);}
+      finally{if(fd!==undefined)try{closeSync(fd);}catch(error){primary??=captureLockError(error,kind,'close');}}
+      // A partially initialized lock is preserved for explicit recovery, never
+      // deleted by a failed claimant or retried as a mere EEXIST collision.
+      if(primary)throw primary;
+      try{syncDirectory(this.directory);}catch(error){throw captureLockError(error,kind,'directory-sync');}
+      const hash=sha256(bytes);
+      return ()=>{
+        let phase='verify-release';
+        try{
+          this.#checkDir();
+          requireThat(exists(path)&&sha256(readBytes(path,2048))===hash,'outbox_lock_changed','Never remove another writer lock');
+          phase='unlink';unlinkSync(path);phase='release-sync';syncDirectory(this.directory);
+        }catch(error){throw captureLockError(error,kind,phase);}
+      };
+    },{kind,waitMs:wait,signal,check:()=>{assertAuthorization(authorize);this.#checkDir();}});
   }
-  async #queue(action){const release=await this.#acquire('.queue.lock');try{this.#manifest();return action();}finally{release();}}
+  async #queue(action,{signal,authorize=()=>{}}={}){
+    const release=await this.#acquire('.queue.lock',1000,{signal,authorize});
+    try{
+      checkCaptureSignal(signal);assertAuthorization(authorize);checkCaptureSignal(signal);
+      this.#manifest();return action();
+    }finally{release();}
+  }
   #write(name,data,replace=true){
     const temp=this.#path('.tmp-'+randomUUID()),path=this.#path(name),bytes=Buffer.from(JSON.stringify(data)+'\n');
     requireThat(bytes.length<=MAX_RECORD,'outbox_full','Journal record too large');newFile(temp,bytes);
@@ -119,22 +133,15 @@ export class CaptureOutbox {
       'outbox_corrupt','Unexpected journal contents; nothing was removed');
     return names.filter(n=>RECORD.test(n)).sort();
   }
-  #record(name){
-    const r=decode(this.#path(name));
-    requireThat(r?.format===1&&r.binding_sha256===this.bindingHash&&['pending','blocked'].includes(r.state)&&
-      Number.isInteger(r.attempts)&&r.attempts>=0&&r.attempts<=MAX_ATTEMPTS&&Number.isFinite(r.next_attempt_at)&&r.next_attempt_at>=0,
-      'outbox_corrupt','Invalid journal state');
-    let normalized;try{normalized=captureRequest(r.payload,{...this.profile,allowCapture:true});}catch{throw new UltraError('outbox_corrupt','Invalid stored request');}
-    requireThat(digest(normalized)===r.request_sha256&&sha256(r.payload.event_id)+'.entry'===name,'outbox_corrupt','Journal request fingerprint mismatch');
-    return r;
-  }
-  async enqueue(payload,{authorize=()=>{}}={}) {
+  #record(name){return verifyJournalRecord(name,decode(this.#path(name)),this.bindingHash,this.profile);}
+  async enqueue(payload,{authorize=()=>{},signal}={}) {
+    checkCaptureSignal(signal);
     // Consent is checked BEFORE creating a new raw-text record, independent of the network.
     const snapshot=structuredClone(payload);
     const normalized=captureRequest(snapshot,this.profile);
     assertAuthorization(authorize);
     return this.#queue(()=>{
-      assertAuthorization(authorize);
+      assertAuthorization(authorize);checkCaptureSignal(signal);
       const name=sha256(normalized.event_id)+'.entry',requestHash=digest(normalized);
       if(exists(this.#path(name))){const old=this.#record(name);requireThat(old.request_sha256===requestHash,'conflict','Event already exists with different content');return {storage:'client_journal',event_id:normalized.event_id,state:old.state,replayed:true,durability:this.durability};}
       const names=this.#names();let total=0;
@@ -144,9 +151,10 @@ export class CaptureOutbox {
       requireThat(names.length<MAX_FILES&&total+Buffer.byteLength(JSON.stringify(record))<=MAX_BYTES,'outbox_full','Queue full; existing events were preserved');
       this.#write(name,record,false);
       return {storage:'client_journal',event_id:normalized.event_id,state:'pending',replayed:false,durability:this.durability};
-    });
+    },{signal,authorize});
   }
-  async status() {
+  async status({signal}={}) {
+    checkCaptureSignal(signal);
     return this.#queue(()=>{
       const counts={pending:0,blocked:0};let bytes=0;
       for(const name of this.#names()){const r=this.#record(name);counts[r.state]++;bytes+=lstatSync(this.#path(name)).size;}
@@ -156,7 +164,7 @@ export class CaptureOutbox {
       return {format:1,source_id:this.profile.source,...counts,bytes,limits:{entries:MAX_FILES,bytes:MAX_BYTES,automatic_attempts:MAX_ATTEMPTS},
         temporary_files:readdirSync(this.directory).filter(n=>TEMP.test(n)).length,locks,durability:this.durability,
         warning:'Client journal counts are not server confirmations or completed knowledge; files contain plaintext consented input'};
-    });
+    },{signal});
   }
   /** Snapshot an existing lock without acquiring it, for human-approved crash recovery. */
   inspectLock(kind) {
@@ -176,11 +184,11 @@ export class CaptureOutbox {
   async flush(connect,{limit=4,retryBlocked=false,eventId,signal,authorize=()=>{}}={}) {
     requireThat(this.profile.allowCapture,'capture_disabled','Enable capture explicitly before delivery');
     integer(limit,4,1,16);requireThat(typeof retryBlocked==='boolean','invalid_params','retryBlocked must be boolean');
-    const allowed=()=>assertAuthorization(authorize);allowed();
-    const release=await this.#acquire('.delivery.lock',0);let connection;
+    const allowed=()=>{checkCaptureSignal(signal);assertAuthorization(authorize);checkCaptureSignal(signal);};allowed();
+    const release=await this.#acquire('.delivery.lock',0,{signal,authorize});let connection;
     const report={storage:'client_journal',delivered:0,retained:0,blocked:0,skipped:0,last_error:null};
     try {
-      const names=await this.#queue(()=>this.#names().filter(name=>!eventId||name===sha256(eventId)+'.entry'));
+      const names=await this.#queue(()=>this.#names().filter(name=>!eventId||name===sha256(eventId)+'.entry'),{signal,authorize});
       for(const name of names){
         if(report.delivered+report.retained+report.blocked>=limit||signal?.aborted)break;
         const r=await this.#queue(()=>{
@@ -192,7 +200,7 @@ export class CaptureOutbox {
           // Persist the attempt before contacting the server; a crash does not reset attempts.
           if(x.attempts>MAX_ATTEMPTS){x.attempts=MAX_ATTEMPTS;x.state='blocked';this.#write(name,x);return null;}
           this.#write(name,x);return x;
-        });
+        },{signal,authorize});
         if(!r){report.skipped++;continue;}
         try {
           requireThat(!signal?.aborted,'aborted','Delivery cancelled');
@@ -202,6 +210,8 @@ export class CaptureOutbox {
           const receipt=await connection.capture(captureRequest(r.payload,{...this.profile,allowCapture:true}),{authorize:allowed});
           requireThat(receipt?.source_id===this.profile.source&&receipt.event_id===r.payload.event_id&&receipt.storage==='journaled'&&UUID.test(receipt.job_id??''),
             'mcp_contract_changed','No matching server journal acknowledgement');
+          // Once dispatch has occurred, complete local acknowledgement bookkeeping
+          // even after cancellation/revocation; never undo a confirmed receipt.
           await this.#queue(()=>{const current=this.#record(name);requireThat(current.request_sha256===r.request_sha256,'outbox_corrupt','Journal changed during delivery');unlinkSync(this.#path(name));syncDirectory(this.directory);});
           report.delivered++;
         }catch(e){

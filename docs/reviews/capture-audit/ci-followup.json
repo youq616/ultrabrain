@@ -1,0 +1,15 @@
+{
+  "head": "f1281267dc9bf69d66d5248cf3955319c8ccf074",
+  "run_id": 36519807832,
+  "windows22_job": 109249967748,
+  "windows22_tests": {
+    "total": 176,
+    "pass": 173,
+    "fail": 1,
+    "skip": 2
+  },
+  "tap_sha256": "a2db18632a2a1fa08e6d6684127f7ff512bbfb90357f624adafc246ca28a730c",
+  "windows2216_job": 109249967645,
+  "windows2216_result": "Bun download HTTP500; test/build/package steps not executed",
+  "fix_scope": "test timing contract and CI step order only; production code unchanged"
+}

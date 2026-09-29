@@ -1,0 +1,40 @@
+name: Capture queue lock lifecycle
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lock-contracts:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+        node: ['22.16.0', '22']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Lock lifecycle, native failure injection, CLI and existing capture contracts
+        shell: bash
+        run: node --test test/capture-lock.test.mjs test/capture-lock-cancellation.test.mjs test/capture-lock-io.test.mjs test/capture-lock-lifecycle.test.mjs test/capture-lock-cli.test.mjs test/capture-lock-audit.test.mjs test/capture-contention.test.mjs test/capture-outbox.test.mjs test/capture-hardening.test.mjs test/automatic-capture.test.mjs test/capture-profile-binding.test.mjs > "$RUNNER_TEMP/capture-lock-tests.tap"
+      - name: Twenty-five real eight-process queue rounds, no user data or server
+        shell: bash
+        run: node scripts/check-capture-contention.mjs --rounds 25 > "$RUNNER_TEMP/capture-contention.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capture-locks-${{ matrix.os }}-${{ matrix.node }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/capture-lock-tests.tap
+            ${{ runner.temp }}/capture-contention.json
+          if-no-files-found: warn
+          retention-days: 14
+# No permissions changes, user queues, server calls or raw native diagnostics.
+# These files describe this matrix job only, not a deployment or reviewer approval.
