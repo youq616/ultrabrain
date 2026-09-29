@@ -97,6 +97,7 @@ test('multiple independent processes enqueue without lost updates',async t=>{
  const {input,q,dir}=setup(t);const runner=join(dir,'writer.mjs');writeFileSync(runner,`
 import {CaptureOutbox} from ${JSON.stringify(new URL('../src/capture-outbox.mjs',import.meta.url).href)};
 import {setTimeout as delay} from 'node:timers/promises';
+import {captureProcessDiagnostic} from ${JSON.stringify(new URL('./helpers/capture-process-diagnostic.mjs',import.meta.url).href)};
 let busyRetries=0;
 try {
  const q=new CaptureOutbox(JSON.parse(process.argv[2])),payload=JSON.parse(process.argv[3]);
@@ -112,8 +113,8 @@ try {
  }
  process.stdout.write(JSON.stringify({ok:true,busy_retries:busyRetries}));
 }catch(e){
- const code=['outbox_busy','identity_mismatch','conflict','insecure_outbox','outbox_corrupt','outbox_unbound','outbox_full','capture_disabled','invalid_profile','invalid_params','outbox_lock_changed'].includes(e?.code)?e.code:'writer_failed';
- process.stdout.write(JSON.stringify({ok:false,code,busy_retries:busyRetries}));process.exitCode=1;
+ const code=['outbox_busy','identity_mismatch','conflict','insecure_outbox','outbox_corrupt','outbox_unbound','outbox_full','capture_disabled','invalid_profile','invalid_params','outbox_lock_changed','outbox_lock_io'].includes(e?.code)?e.code:'writer_failed';
+ process.stdout.write(JSON.stringify({ok:false,code,busy_retries:busyRetries,diagnostic:captureProcessDiagnostic(e)}));process.exitCode=1;
 }
 `);
  const results=await Promise.all(Array.from({length:8},(_,i)=>new Promise(resolve=>{
@@ -125,9 +126,9 @@ try {
   p.once('close',(exit,signal)=>{
    clearTimeout(timer);let report;
    try{report=JSON.parse(output);}catch{}
-   const codes=['outbox_busy','identity_mismatch','conflict','insecure_outbox','outbox_corrupt','outbox_unbound','outbox_full','capture_disabled','invalid_profile','invalid_params','outbox_lock_changed','writer_failed'];
+   const codes=['outbox_busy','identity_mismatch','conflict','insecure_outbox','outbox_corrupt','outbox_unbound','outbox_full','capture_disabled','invalid_profile','invalid_params','outbox_lock_changed','outbox_lock_io','writer_failed'];
    const valid=!overflow&&report&&typeof report.ok==='boolean'&&Number.isInteger(report.busy_retries)&&report.busy_retries>=0&&report.busy_retries<=7;
-   resolve({exit,signal,ok:valid&&report.ok,busy_retries:valid?report.busy_retries:null,code:valid&&codes.includes(report.code)?report.code:valid&&report.ok?'ok':'invalid_diagnostic'});
+   resolve({exit,signal,ok:valid&&report.ok,busy_retries:valid?report.busy_retries:null,code:valid&&codes.includes(report.code)?report.code:valid&&report.ok?'ok':'invalid_diagnostic',diagnostic:valid?report.diagnostic??null:null});
   });
  })));
  assert.ok(results.every(r=>r.exit===0&&r.ok),JSON.stringify(results));assert.equal((await q.status()).pending,8);

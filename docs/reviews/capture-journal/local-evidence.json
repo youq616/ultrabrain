@@ -1,0 +1,45 @@
+{
+  "date": "2026-09-29",
+  "full": {
+    "tests": 3672,
+    "pass": 3672,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "exit": 0,
+    "uid": 1000,
+    "node": "22.16.0",
+    "platform": "linux"
+  },
+  "new_tests_included": 57,
+  "focused_overlapping": 193,
+  "contention": {
+    "rounds": 25,
+    "writers_per_round": 8,
+    "requests": 600,
+    "records": 425,
+    "replays": 175,
+    "passed": true
+  },
+  "package": {
+    "compiler": "Bun1.3.13",
+    "sdk": "1.29.0",
+    "verified_js_artifacts": 11,
+    "cli_cases": 4,
+    "server_starts": 0
+  },
+  "review": "implementation assistant adversarial pass; independent final-SHA reviewer not implied",
+  "scope": "new temporary synthetic queues only; no user services, server/schema/model/permission changes",
+  "logs_sha256": {
+    "regression-before.tap": "3c58437d60903a9f13a933ffc397700e3eca1fb199e0f5f8a8b5f09c7cfe88af",
+    "audit-before.tap": "e6127333c48a71644641a5bfc162aa12f2c4b635be28d9fa982a675f13e8d181",
+    "audit-corrected-before.tap": "16145f3e6f737ca775e8176bbe7a2e72fbcb5d8d4d93ed9b36409f6d2804a9c6",
+    "focused-final.tap": "05b5da2432bb88f30ec8034ea538655706496f6bca47f2f078a83c1257774430",
+    "focused-fixed.tap": "a976ae813ce890b9bdda0907e8fccf8009756cc5521ba342d32ba7e925d7db58",
+    "full-final.tap": "ab4177c53db77a00ec1e2daffaec411e8e36ff35826b52d988f0901365dd7217",
+    "contention-final.json": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7",
+    "client-build-final.log": "dc06073eec7b88a7d864e429613d5f79de6a00658cf3965bcabdf9c70465f1bd",
+    "package-final.json": "d1a0d5b1f82aa0869c1e89638a435e322a27bdff2063abc790a28c821cbf68bd",
+    "ultrabrain-client-0.14.0-alpha.1.tgz": "8aae504a38f4177d85017a1eeb5926baee2d0a021d757ad725a904c164ce1724"
+  }
+}

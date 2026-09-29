@@ -54,6 +54,8 @@ jobs:
         run: node --test test/n8n-memory-review.test.mjs test/n8n-memory-review-audit.test.mjs
       - name: n8n explicit full-memory correction
         run: node --test test/n8n-memory-correction.test.mjs test/n8n-memory-correction-audit.test.mjs
+      - name: Cancellable capture locks and safe contention diagnostics
+        run: node --test test/capture-lock.test.mjs test/capture-lock-cancellation.test.mjs test/capture-lock-io.test.mjs test/capture-lock-lifecycle.test.mjs test/capture-lock-cli.test.mjs test/capture-lock-audit.test.mjs test/capture-contention.test.mjs
       - run: python -m unittest discover -s test -p test_task_context_config.py -v
       - run: python -m unittest discover -s test -p test_client_config.py -v
       - run: python -m unittest discover -s test -p test_native_adapter_config.py -v
