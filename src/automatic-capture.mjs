@@ -56,7 +56,8 @@ export function openCodeCapture(kind,input,output,profile,workspace) {
   return observation(profile,'opencode','assistant',[input.sessionID,input.messageID,input.partID],[output.text]);
 }
 const safe=new Set(['capture_disabled','workspace_mismatch','stable_event_required','invalid_params','identity_mismatch',
-  'invalid_profile','insecure_profile','insecure_outbox','outbox_full','outbox_busy','outbox_corrupt','outbox_lock_io','outbox_journal_io','outbox_lock_changed','aborted','conflict']);
+  'invalid_profile','insecure_profile','insecure_outbox','outbox_full','outbox_busy','outbox_corrupt','outbox_lock_io','outbox_journal_io','outbox_lock_changed','outbox_paused','outbox_control_exhausted','aborted','conflict']);
+
 export const captureCode=e=>e instanceof UltraError&&safe.has(e.code)?e.code:'capture_unavailable';
 /** Shared manager for one immutable trusted profile. Revocation is re-read before capture/send. */
 export function automaticCapture(profilePath,connect,{authorizedProfileInput}={}) {

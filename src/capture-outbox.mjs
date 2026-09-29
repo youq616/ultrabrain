@@ -8,6 +8,7 @@ import {resolve,dirname,parse,isAbsolute,relative,sep,join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {commitCaptureJournal,retainCaptureJournalFailure,syncCaptureDirectory as syncDirectory} from './capture-journal.mjs';
 import {acquireCaptureLock,captureLockError,checkCaptureSignal} from './capture-lock.mjs';
+import {DELIVERY_CONTROL_FILE,decodeDeliveryControl,deliveryControlView,nextDeliveryControl,requireResumeObservation} from './capture-delivery-control.mjs';
 import {captureRequest,clientProfile,clientIdentity} from './client-kit.mjs';
 import {requireThat,UltraError,sha256,integer} from './core.mjs';
 const MAX_RECORD=220000, MAX_FILES=256, MAX_BYTES=8*1024*1024, MAX_ATTEMPTS=8;
@@ -15,7 +16,7 @@ const RECORD=/^[a-f0-9]{64}\.entry$/;
 const TEMP=/^\.tmp-[a-f0-9-]{36}$/;
 const UUID=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const terminal=new Set(['conflict','permission_denied','capture_disabled','identity_mismatch','revision_conflict','mcp_contract_changed']);
-const safeCodes=new Set([...terminal,'mcp_rejected','missing_credentials','outbox_corrupt','outbox_busy','outbox_full','outbox_lock_io','outbox_lock_changed','aborted']);
+const safeCodes=new Set([...terminal,'mcp_rejected','missing_credentials','outbox_corrupt','outbox_busy','outbox_full','outbox_lock_io','outbox_lock_changed','outbox_paused','outbox_control_exhausted','aborted']);
 const codeOf=e=>safeCodes.has(e?.code)?e.code:'delivery_unconfirmed';
 const canonical=x=>Array.isArray(x)?x.map(canonical):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,canonical(x[k])])):x;
 const digest=x=>sha256(JSON.stringify(canonical(x)));
@@ -120,6 +121,7 @@ export class CaptureOutbox {
       this.#manifest();return action();
     }catch(error){failure=error;throw error;}
     finally{try{release();}catch(error){throw retainCaptureJournalFailure(failure,error);}}
+
   }
   #write(name,data,replace=true){
     const bytes=Buffer.from(JSON.stringify(data)+'\n');
@@ -129,7 +131,7 @@ export class CaptureOutbox {
   #names(){
     const names=readdirSync(this.directory);
     requireThat(names.length<=MAX_FILES+16,'outbox_full','Too many journal files');
-    requireThat(names.every(n=>RECORD.test(n)||TEMP.test(n)||['binding.json','.queue.lock','.delivery.lock'].includes(n)),
+    requireThat(names.every(n=>RECORD.test(n)||TEMP.test(n)||['binding.json',DELIVERY_CONTROL_FILE,'.queue.lock','.delivery.lock'].includes(n)),
       'outbox_corrupt','Unexpected journal contents; nothing was removed');
     return names.filter(n=>RECORD.test(n)).sort();
   }
@@ -141,6 +143,39 @@ export class CaptureOutbox {
     let normalized;try{normalized=captureRequest(r.payload,{...this.profile,allowCapture:true});}catch{throw new UltraError('outbox_corrupt','Invalid stored request');}
     requireThat(digest(normalized)===r.request_sha256&&sha256(r.payload.event_id)+'.entry'===name,'outbox_corrupt','Journal request fingerprint mismatch');
     return r;
+  }
+  #control(){
+    this.#checkDir();const path=this.#path(DELIVERY_CONTROL_FILE);
+    return exists(path)?decodeDeliveryControl(readBytes(path,4096),this.bindingHash):null;
+  }
+  #requireRunning(){
+    requireThat(this.#control()?.state!=='paused','outbox_paused','Journal delivery paused; consented local enqueue remains enabled');
+  }
+  /** Pause cooperatively without waiting for an in-flight network request.
+   * Each pause rotates the observation, including an already-paused queue. */
+  async pauseDelivery({signal,authorize=()=>{}}={}){
+    checkCaptureSignal(signal);assertAuthorization(authorize);
+    return this.#queue(()=>{
+      this.#names();
+      const previous=this.#control(),next=nextDeliveryControl(previous,this.bindingHash,'paused');
+      checkCaptureSignal(signal);assertAuthorization(authorize);checkCaptureSignal(signal);
+      this.#write(DELIVERY_CONTROL_FILE,next,previous!==null);return deliveryControlView(next);
+    },{signal,authorize});
+  }
+  /** An explicit CAS transition only: no network, event reset or implicit flush. */
+  async resumeDelivery(expectedHash,{confirm=false,signal,authorize=()=>{}}={}){
+    requireResumeObservation(expectedHash,confirm);
+    requireThat(this.profile.allowCapture,'capture_disabled','Enable capture explicitly before resuming journal delivery');
+    checkCaptureSignal(signal);assertAuthorization(authorize);
+    return this.#queue(()=>{
+      this.#names();
+      const previous=this.#control();
+      requireThat(previous?.state==='paused'&&deliveryControlView(previous).control_sha256===expectedHash,
+        'conflict','Pause observation changed; inspect the current delivery control before resuming');
+      const next=nextDeliveryControl(previous,this.bindingHash,'running');
+      checkCaptureSignal(signal);assertAuthorization(authorize);checkCaptureSignal(signal);
+      this.#write(DELIVERY_CONTROL_FILE,next);return deliveryControlView(next);
+    },{signal,authorize});
   }
   async enqueue(payload,{authorize=()=>{},signal}={}) {
     checkCaptureSignal(signal);
@@ -171,6 +206,7 @@ export class CaptureOutbox {
         locks[kind]={sha256:sha256(bytes),pid:Number.isInteger(value?.pid)?value.pid:null};}}
       return {format:1,source_id:this.profile.source,...counts,bytes,limits:{entries:MAX_FILES,bytes:MAX_BYTES,automatic_attempts:MAX_ATTEMPTS},
         temporary_files:readdirSync(this.directory).filter(n=>TEMP.test(n)).length,locks,durability:this.durability,
+        delivery:deliveryControlView(this.#control()),
         warning:'Client journal counts are not server confirmations or completed knowledge; files contain plaintext consented input'};
     },{signal});
   }
@@ -192,14 +228,16 @@ export class CaptureOutbox {
   async flush(connect,{limit=4,retryBlocked=false,eventId,signal,authorize=()=>{}}={}) {
     requireThat(this.profile.allowCapture,'capture_disabled','Enable capture explicitly before delivery');
     integer(limit,4,1,16);requireThat(typeof retryBlocked==='boolean','invalid_params','retryBlocked must be boolean');
-    const allowed=()=>{checkCaptureSignal(signal);assertAuthorization(authorize);checkCaptureSignal(signal);};allowed();
+    const allowed=()=>{checkCaptureSignal(signal);assertAuthorization(authorize);checkCaptureSignal(signal);this.#requireRunning();};allowed();
     const release=await this.#acquire('.delivery.lock',0,{signal,authorize});let connection,failure;
+
     const report={storage:'client_journal',delivered:0,retained:0,blocked:0,skipped:0,last_error:null};
     try {
-      const names=await this.#queue(()=>this.#names().filter(name=>!eventId||name===sha256(eventId)+'.entry'),{signal,authorize});
+      const names=await this.#queue(()=>{allowed();return this.#names().filter(name=>!eventId||name===sha256(eventId)+'.entry');},{signal,authorize});
       for(const name of names){
         if(report.delivered+report.retained+report.blocked>=limit||signal?.aborted)break;
-        const r=await this.#queue(()=>{
+        let r;
+        try{r=await this.#queue(()=>{
           allowed(); // A lock wait cannot spend retries under a revoked authorization.
           if(!exists(this.#path(name)))return null;const x=this.#record(name);
           if(x.state==='blocked'&&!retryBlocked||!retryBlocked&&x.next_attempt_at>Date.now())return null;
@@ -208,7 +246,13 @@ export class CaptureOutbox {
           // Persist the attempt before contacting the server; a crash does not reset attempts.
           if(x.attempts>MAX_ATTEMPTS){x.attempts=MAX_ATTEMPTS;x.state='blocked';this.#write(name,x);return null;}
           this.#write(name,x);return x;
-        },{signal,authorize});
+        },{signal,authorize});}
+        catch(error){
+          // A pause between entries must not erase earlier server confirmations.
+          // No attempt was reserved for this entry; remaining counts explain it.
+          if(error instanceof UltraError&&error.code==='outbox_paused'){report.last_error='outbox_paused';break;}
+          throw error;
+        }
         if(!r){report.skipped++;continue;}
         try {
           requireThat(!signal?.aborted,'aborted','Delivery cancelled');

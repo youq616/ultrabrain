@@ -127,3 +127,10 @@ context/profile 改为先排名后取前 100（修复旧 high 偏好被时间窗
 ## 个人服务状态（按提交验收）
 
 新增只读 `personal-status [--expect-worker]`，区分管理器不可访问、缺少单元、管理台/Worker状态和重启记录。诊断不启停服务、不读记忆或秘密，不把用户单元的活动状态当作数据库/HTTP/MCP就绪。说明见 [个人服务状态](docs/PERSONAL-STATUS.md)。验收以最终提交的独立代理审核及真实systemd CI为准，不是整个个人V1已完成的声明。
+
+### Pause capture-queue delivery
+
+The personal client supports local `queue-pause` and explicitly confirmed,
+current-checksum `queue-resume`. Pausing retains consented local input, does not
+revoke an in-flight request, and does not disable capture itself. Resuming never
+resets attempts or automatically flushes. See [delivery control](docs/CAPTURE-DELIVERY-CONTROL.md).

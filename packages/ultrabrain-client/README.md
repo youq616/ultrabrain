@@ -145,3 +145,16 @@ See `docs/CLIENT-CANDIDATES.md` and the default-denied example in this source.
 ### Journal publication failures
 
 Queue commands report `outbox_journal_io` with a bounded `journal` diagnostic for local publication failures. `publication: visible` means only that a local directory entry was published before a later error, not that a server accepted the event. A failed write preserves temporary evidence, does not retry native IO, and never automatically repairs or deletes interrupted files. The first publication failure survives secondary close/lock-release failures. See `docs/CAPTURE-JOURNAL-PUBLICATION.md` in the repository for phases, crash boundaries and recovery restrictions.
+
+### Local delivery pause / explicit resume
+
+`ultrabrain-client queue-pause --profile /absolute/private/profile.json` persists
+a gate for this queue. `queue-status` returns `result.delivery`; resume requires
+`queue-resume --profile /absolute/private/profile.json --expected-sha CURRENT_PAUSE_SHA256 --confirm-resume`.
+Use the exact current pause checksum; another pause invalidates older values.
+These local commands never start the server, reset retries or automatically send.
+A paused queue still stores explicitly consented plaintext locally. Already-sent
+requests can complete; direct non-queue capture is unaffected. A failed control
+command leaves the outcome unconfirmed: inspect status and retained evidence,
+never delete the gate or auto-retry to work around it. The source repository's
+`docs/CAPTURE-DELIVERY-CONTROL.md` describes compatibility and durability limits.

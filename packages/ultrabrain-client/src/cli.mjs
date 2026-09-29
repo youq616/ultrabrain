@@ -20,17 +20,18 @@ import {claudeContext,captureRequest} from '../../../src/client-kit.mjs';
 import {requireThat,UltraError} from '../../../src/core.mjs';
 export async function readBounded(stream,limit=65536,parseJSON=JSON.parse){const chunks=[];let size=0;for await(const c of stream){const b=Buffer.from(c);size+=b.length;requireThat(size<=limit,'input_too_large','Input too large');chunks.push(b);}try{return parseJSON(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));}catch{throw new UltraError('invalid_params','Invalid input JSON');}}
 export async function main(args=process.argv.slice(2)) {
-  let connection,autoWriter,hook=args[0]==='claude-hook'||args[0]==='claude-capture-hook'||args[0]==='claude-task-hook',writing=false,taskQueryStarted=false,lineageReadCompleted=false,overviewReadCompleted=false;
+  let connection,autoWriter,hook=args[0]==='claude-hook'||args[0]==='claude-capture-hook'||args[0]==='claude-task-hook',writing=false,taskQueryStarted=false,lineageReadCompleted=false,overviewReadCompleted=false,controlMutationStarted=false;
   const controller=new AbortController(),deadline=setTimeout(()=>{controller.abort();process.stdin.destroy();},25000);deadline.unref();
   // Queue commands own cooperative locks; graceful cancellation must reach waits
   // instead of leaving an owned delivery lock on an ordinary SIGINT/SIGTERM.
-  const queueCommand=['queue-status','queue-capture','queue-flush'].includes(args[0]);
+  const queueCommand=['queue-status','queue-capture','queue-flush','queue-pause','queue-resume'].includes(args[0]);
   const cancelQueue=()=>{controller.abort();process.stdin.destroy();};
   if(queueCommand){process.once('SIGINT',cancelQueue);process.once('SIGTERM',cancelQueue);}
   try{
     const command=args[0];
-    const regular=['overview','lineage','task-context','claude-task-hook','document-import','probe','context','bound-context','capture','claude-hook','claude-capture-hook','mcp','queue-capture','queue-status','queue-flush'];
+    const regular=['overview','lineage','task-context','claude-task-hook','document-import','probe','context','bound-context','capture','claude-hook','claude-capture-hook','mcp','queue-capture','queue-status','queue-flush','queue-pause'];
     const valid=regular.includes(command)&&(args.length===3||command==='queue-flush'&&args.length===4&&args[3]==='--retry-blocked')||
+      command==='queue-resume'&&args.length===6&&args[3]==='--expected-sha'&&args[5]==='--confirm-resume'||
       command==='queue-lock'&&args.length===5&&args[3]==='--kind'||
       command==='queue-recover-lock'&&args.length===8&&args[3]==='--kind'&&args[5]==='--expected-sha'&&args[7]==='--confirm-writer-stopped';
     requireThat(valid&&args[1]==='--profile','invalid_params','Use a supported client command and --profile PATH');
@@ -88,6 +89,8 @@ export async function main(args=process.argv.slice(2)) {
     if(command.startsWith('queue-')){
       const queue=new CaptureOutbox(input);let result;
       if(command==='queue-status')result=await queue.status({signal:controller.signal});
+      else if(command==='queue-pause'){controlMutationStarted=true;result=await queue.pauseDelivery({signal:controller.signal,authorize:assertProfile});}
+      else if(command==='queue-resume'){controlMutationStarted=true;result=await queue.resumeDelivery(args[4],{confirm:true,signal:controller.signal,authorize:assertProfile});}
       else if(command==='queue-lock')result=queue.inspectLock(args[4]);
       else if(command==='queue-recover-lock')result=queue.recoverLock(args[4],args[6],{writerStopped:true});
       else {
@@ -104,7 +107,7 @@ export async function main(args=process.argv.slice(2)) {
         }
         if(result.delivery.retained||result.delivery.blocked||result.delivery.last_error||result.delivery.remaining_pending||result.delivery.remaining_blocked)process.exitCode=1;
       }
-      process.stdout.write(JSON.stringify({ok:!process.exitCode,result})+'\n');return;
+      process.stdout.write(JSON.stringify({ok:!process.exitCode,result,...(controlMutationStarted?{local_control:'confirmed',delivery:'not_submitted'}:{})})+'\n');return;
     }
     if(args[0]==='bound-context'){event=await readBounded(process.stdin);requireThat(event&&typeof event==='object'&&!Array.isArray(event)&&Object.keys(event).every(k=>k==='workspace'),'invalid_params','Only workspace metadata is accepted');matchingWorkspace(profile,event.workspace);}
     if(command==='claude-hook'){event=await readBounded(process.stdin);requireThat(['SessionStart','UserPromptSubmit'].includes(event?.hook_event_name),'unsupported_hook','Unsupported hook');
@@ -125,6 +128,7 @@ export async function main(args=process.argv.slice(2)) {
       const failure=overviewError?{ok:false,error:overviewError.code,read_delivery:overviewError.read_delivery,memory_writes_requested:false}:args[0]==='lineage'?{ok:false,error:code,read_delivery:e.read_delivery==='unconfirmed'||lineageReadCompleted?'unconfirmed':'not_started',memory_writes_requested:false}:
         args[0]==='task-context'?{ok:false,error:code,query_delivery:taskQueryStarted?'unconfirmed':'not_started',memory_writes_requested:false}:
         {ok:false,error:code,delivery:writing?'unconfirmed':'not_submitted'};
+      if(['queue-pause','queue-resume'].includes(args[0]))failure.local_control=controlMutationStarted?'unconfirmed':'not_started';
       const lock=captureLockDiagnostic(e);if(lock)failure.lock=lock;
       const journal=captureJournalDiagnostic(e);if(journal)failure.journal=journal;
       out.write(JSON.stringify(failure)+'\n');process.exitCode=1;}
