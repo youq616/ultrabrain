@@ -1,0 +1,64 @@
+{
+  "name": "Ultrabrain - explicitly review one owned memory",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "personal_review",
+        "reviewMode": "apply",
+        "reviewAction": "",
+        "reviewMemoryId": "",
+        "reviewScope": "global-only",
+        "reviewEventId": "",
+        "reviewExpectedRevision": 0,
+        "reviewExpectedHash": "",
+        "reviewExpectedStatus": "",
+        "reviewExpectedVisibility": "",
+        "reviewExpectedProject": "",
+        "reviewConsent": false,
+        "reviewAcknowledgeEffects": false,
+        "reviewSharedConsent": false,
+        "timeoutMs": 30000
+      },
+      "id": "review",
+      "name": "Review",
+      "type": "CUSTOM.ultrabrain",
+      "typeVersion": 1,
+      "position": [
+        260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  },
+  "pinData": {}
+}

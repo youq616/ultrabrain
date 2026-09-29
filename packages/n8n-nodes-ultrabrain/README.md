@@ -54,3 +54,24 @@ model calls, writes, automatic iteration or retries. Cancellation/cleanup failur
 withhold undelivered results. See `docs/N8N-MEMORY-INSPECT.md` and the inactive,
 unconsented manual example at the exact build commit. Metadata and text may be
 retained by n8n or downstream nodes; neither grants authority to write a record.
+
+## Explicit owned-memory review (development candidate)
+
+`Review Personal Memory` processes exactly one explicitly selected decision per
+execution, never a batch. Separate credential switches gate activation, archive
+and source-shared activation; conversation capture permission grants none of them.
+Select apply/replay, action, scope, stable event ID and the full observed revision/
+hash/status/visibility/project. Consent and effects acknowledgement default off.
+Source-shared activation needs a second item consent and its credential switch.
+It re-reads the full record with the existing canonical verifier, then uses the
+existing server-owned `ultra_personal_review` CAS and personal event journal.
+
+No caller-defined reviewer identity, approval token or reason journal is added.
+These controls express caller authorization, not proof of human review. They do
+not replace a trusted human approval workflow. No model, automatic retry, bulk
+mutation or deployment occurs. Archive is not deletion. Replay requires an
+advanced current revision and returns only the original server receipt, never
+asserting current state or authenticating historical extra local preconditions.
+Errors retain locally verified `write_delivery` facts, including confirmed writes
+whose results are withheld after cancellation/cleanup. Use the exact source build
+and `docs/N8N-MEMORY-REVIEW.md`; unchanged version strings are not build identity.

@@ -1,0 +1,82 @@
+{
+  "base_commit": "540f2c03fb3ae42790c13dfd75ef258a10a193fd",
+  "base_tree": "10e4f2a752a24bd0e11d9ba9d757ca0ec345a055",
+  "full_node": {
+    "tests": 3414,
+    "pass": 3414,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "uid": 1000,
+    "exit": 0
+  },
+  "new_tests": 94,
+  "initial_full_before_last_wiring_test": 3412,
+  "module_tests": 94,
+  "related_tests": 289,
+  "database": {
+    "passed": true,
+    "checks": 20,
+    "engine_checks": 0,
+    "mode": "actual installed Node runtime with synthetic n8n context, official MCP/HTTP and PostgreSQL; NOT n8n engine",
+    "lifecycle_writes_explicit": true,
+    "read_denial_replay_phases_six_tables_unchanged": true,
+    "real_competing_update": true,
+    "lost_ack_injected_after_actual_commit": true,
+    "generator_calls": 0,
+    "external_model_calls": 0,
+    "user_deployment_verified": false
+  },
+  "prior_read_regression": {
+    "passed": true,
+    "adapter_checks": 13,
+    "engine_checks": 0,
+    "mode": "actual packaged runtime, synthetic execution context, official MCP/HTTP, PostgreSQL; NOT n8n engine",
+    "inspection_adapter_checks": 15,
+    "inspection_engine_checks": 0,
+    "host_version": null,
+    "six_personal_tables_unchanged": true,
+    "body_fields_returned": "only with explicit disclosure",
+    "generator_calls": 0,
+    "external_model_calls": 0,
+    "user_host_verified": false
+  },
+  "legacy_regression_checks": 18,
+  "independent_review": "PENDING",
+  "reviewer_session": null,
+  "package_sha256": "ea0d47ed4b55535a2631e9eae3ec4e5700b34492317597acca9be902c2a117df",
+  "not_locally_executed": [
+    "actual n8n engine",
+    "Windows",
+    "full Python suites",
+    "user deployment"
+  ],
+  "package_method": "npm pack/extraction, verified pinned SDK in hoisted dependency layout; not fresh network npm install",
+  "evidence_sha256": {
+    "baseline.json": "c7ce69aae770dff71e1c3bcf57734071a7bb43391afee0efa5d35b9e4955356b",
+    "ci-wiring-red.tap": "d2ea6e8a85ec4b86aa714449c627b810a05579ad4056bcd466a7bdc821203d21",
+    "ci-wiring-red.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "module-release.tap": "e3518e0edb9522256aac048ca70ba5d2d7809a0c1fe1ceee89151a2c7e9f288e",
+    "module-release.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "full-release.tap": "ca7958db529852cfe45992612169ddc2a635e40f32b693e840b76ca01ecbf698",
+    "full-release.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "db-release.json": "f9afe2211aa7329a79ed7124b8df59b98b0c2d21b56436f24c76b7b300fc37a8",
+    "db-release.log": "ec3cdb09df96aa29eb0b389314a16a598a977df4430ac28af04b044580cf6c6f",
+    "db-release.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "db-release-stop.log": "96b39dd1e701bcb75300d11272951b2517a5d864eb7f34b11e8ead4a98f48360",
+    "db-release-stop.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "package-release.log": "c52494eb24b8a5b2daa501101939b8f87b0c3efd14e5e7e49366a8cae80261ad",
+    "package-release.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "inspect-regression.json": "0b9eaace8972f6888f142834633c7dbd0250d33e2868a67b2f4045ef0c8dfd8b",
+    "inspect-regression.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "legacy-regression.log": "8c17e3830bfb5893873ce7049539e5b850ca3cd16ab9df2e7d0a767b1fa272be",
+    "legacy-regression.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "legacy-interrupted.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final_diff_cleanup": "Removed two unreachable duplicate dispatch branches; corrected credential identity hints and nonexistent CI test path; exact release code retested and packaged.",
+  "first_ci_wiring_failure": {
+    "tests": 23,
+    "pass": 22,
+    "fail": 1
+  }
+}
