@@ -26,7 +26,7 @@ jobs:
         run: node scripts/check-local-file-read.mjs > "$RUNNER_TEMP/local-file-probe.json"
       - name: Reader boundaries, profile and capture regressions
         shell: bash
-        run: node --test test/local-file-read*.test.mjs test/client-profile-authorization.test.mjs test/capture-outbox.test.mjs test/capture-hardening.test.mjs test/capture-delivery-control.test.mjs > "$RUNNER_TEMP/local-file-tests.tap"
+        run: node --test test/local-file-read*.test.mjs test/local-file-anchor*.test.mjs test/client-profile-authorization.test.mjs test/capture-outbox.test.mjs test/capture-hardening.test.mjs test/capture-delivery-control.test.mjs > "$RUNNER_TEMP/local-file-tests.tap"
       - name: Eight-process queue contention
         shell: bash
         run: node scripts/check-capture-contention.mjs --rounds 25 > "$RUNNER_TEMP/local-file-contention.json"

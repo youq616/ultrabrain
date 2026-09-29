@@ -14,11 +14,18 @@ const main=()=>{
   const relation=before.dev===handle.dev?'exact':localDeviceCompatible(before.dev,handle.dev)?'windows-wide-path-narrow-handle':'unrecognized';
   observation={device_relation:relation,path_device_class:deviceClass(before.dev),handle_device_class:deviceClass(handle.dev),inode_equal:before.ino===handle.ino,
    inode_signed:before.ino<0n,other_metadata_equal:['size','mode','nlink','uid','gid','mtimeNs','ctimeNs','birthtimeNs'].every(k=>before[k]===handle[k])};
-  phase='identity';assert.notEqual(relation,'unrecognized');assert.equal(before.ino,handle.ino);
+  phase='identity';assert.equal(before.ino,handle.ino);assert.equal(observation.other_metadata_equal,true);
+  // An unrecognized Win32 cross-domain number is not evidence of two files.
+  // Qualify it through the actual reader below, which holds and compares two
+  // descriptors. Other platforms and unknown zero IDs must still refuse.
+  if(relation==='unrecognized'){
+   assert.equal(process.platform,'win32');assert.notEqual(before.dev,0n);assert.notEqual(handle.dev,0n);
+  }
+  const confirmation=relation==='unrecognized'?'dual-descriptor-required':'existing-stat-domain-comparison';
   phase='reads';for(let i=0;i<100;i++){assert.deepEqual(readLocalFileBytes(path,'profile'),bytes);assert.deepEqual(readLocalFileBytes(path,'outbox'),bytes);}
   phase='alias';fs.linkSync(path,join(root,'alias'));assert.throws(()=>readLocalFileBytes(path,'outbox'));assert.deepEqual(readLocalFileBytes(path,'profile'),bytes);
   return {passed:true,format:'ultrabrain-native-local-read-v1',platform:process.platform,node:process.version,uv:process.versions.uv,
-   device_relation:relation,observation,reads:201,aliases_rejected:true,bigint_identity:true,user_paths_selected:false,server_calls:0,model_calls:0};
+   device_relation:relation,confirmation,observation,reads:201,aliases_rejected:true,bigint_identity:true,user_paths_selected:false,server_calls:0,model_calls:0};
  }finally{if(fd!==undefined)fs.closeSync(fd);const failedPhase=phase;phase='cleanup';fs.rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});phase=failedPhase;}
 };
 try{process.stdout.write(JSON.stringify(main())+'\n');}catch(error){process.stdout.write(JSON.stringify({passed:false,error:'local_read_probe_failed',phase,observation,diagnostic:localFileReadDiagnostic(error)})+'\n');process.exitCode=1;}

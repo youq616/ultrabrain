@@ -158,3 +158,13 @@ requests can complete; direct non-queue capture is unaffected. A failed control
 command leaves the outcome unconfirmed: inspect status and retained evidence,
 never delete the gate or auto-retry to work around it. The source repository's
 `docs/CAPTURE-DELIVERY-CONTROL.md` describes compatibility and durability limits.
+
+### Local file descriptor confirmation
+
+Profiles and capture journals retain bounded BigInt identity, metadata and permission
+checks. When Win32 path and handle device representations cannot be compared,
+the reader requires a second held read-only descriptor and exact same-domain
+identity checks before and after reading. It does not ignore device differences,
+retry permission errors, steal locks or change file formats. No new command or
+network capability is added. See `docs/LOCAL-FILE-DESCRIPTOR-ANCHOR.md` at the
+matching source commit; simulated stat tests do not certify native Windows.

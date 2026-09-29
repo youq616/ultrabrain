@@ -1,0 +1,15 @@
+Exact failure summary; full original TAP is preserved in the handoff.
+SHA256: 57b97cf9318fa3ecfa160976bc3ab9dc3d3203f3d82ef3273f15d40958416065
+
+not ok 12 - anchor audit: worker report preserves authentic nested read diagnosis 2
+not ok 13 - anchor audit: worker report preserves authentic nested read diagnosis 4
+not ok 14 - anchor audit: serialized worker details remain allowlisted, not arbitrary data or authenticated receipts
+
+# tests 15
+# suites 0
+# pass 12
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 141.265088

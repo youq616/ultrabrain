@@ -3,11 +3,19 @@
 import {captureProcessDiagnostic} from './capture-process-diagnostic.mjs';
 const object=x=>x&&typeof x==='object'&&!Array.isArray(x);
 const one=(x,values)=>values.includes(x)?x:null;
-const errno=x=>one(x,['EEXIST','EACCES','EPERM','EBUSY','ENOENT','ENOSPC','EDQUOT','EIO','EMFILE','ENFILE','EROFS','ENOTDIR','EISDIR','EINVAL','ELOOP','ENOTSUP','EXDEV','ENAMETOOLONG']);
+const errno=x=>one(x,['EEXIST','EACCES','EPERM','EBUSY','ENOENT','ENOSPC','EDQUOT','EIO','EMFILE','ENFILE','EROFS','ENOTDIR','EISDIR','EINVAL','ELOOP','ENOTSUP','EXDEV','ENAMETOOLONG','EBADF']);
+function localRead(x){
+ if(!object(x))return null;
+ const kind=one(x.kind,['profile','outbox']);
+ const phase=one(x.phase,['path-before','open','handle-before','anchor-open','anchor-before','path-anchor','read','handle-after','anchor-after','path-after','anchor-close','close']);
+ const reason=one(x.reason,['type','metadata','bounds','aliases','permissions','identity','changed','read-count','io']);
+ return kind&&phase&&reason&&typeof x.close_failed==='boolean'?{kind,phase,reason,system_code:errno(x.system_code),close_failed:x.close_failed}:null;
+}
 function lock(x){
  if(!object(x))return null;
  const kind=one(x.kind,['queue','delivery']),phase=one(x.phase,['create','write','file-sync','close','directory-sync','verify-release','unlink','release-sync']);
- return kind&&phase?{kind,phase,system_code:errno(x.system_code)}:null;
+ const file_read=localRead(x.file_read);
+ return kind&&phase?{kind,phase,system_code:errno(x.system_code),...(file_read?{file_read}:{})}:null;
 }
 function journal(x){
  if(!object(x))return null;
