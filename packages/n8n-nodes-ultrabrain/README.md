@@ -75,3 +75,22 @@ asserting current state or authenticating historical extra local preconditions.
 Errors retain locally verified `write_delivery` facts, including confirmed writes
 whose results are withheld after cancellation/cleanup. Use the exact source build
 and `docs/N8N-MEMORY-REVIEW.md`; unchanged version strings are not build identity.
+
+## Explicit complete-memory correction (development candidate)
+
+`Correct Personal Memory` replaces exactly one owned Agent-origin memory and
+returns it to candidate; it never activates the correction. The source-root
+credential must pin the observed instance/actor and separately enable Allow Memory
+Correction. Correction Project ID is independent of other project settings. Both
+old and replacement projects must fit the selected scope; changing project or
+visibility requires a second credential grant and explicit scope-change consent.
+All seven replacement fields and old revision/hash/status/visibility/project are
+mandatory. A full-read/reset acknowledgement covers candidate status, cleared
+references and last confirmation. An empty or unchanged replacement is refused.
+The existing server CAS/events protect concurrent changes and exact event replay.
+`replay` needs an advanced current revision and recovers history, not current state;
+it cannot reset a record later reactivated. No bulk changes, automatic retries,
+models or human-authentication claim. n8n may retain parameter text even though
+outputs omit it. See `docs/N8N-MEMORY-CORRECTION.md` and the inactive, unconsented
+manual example at the exact commit. The unchanged version string does not identify
+this build; verify commit and package digest.

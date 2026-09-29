@@ -25,10 +25,16 @@ class UltrabrainApi {
         description:'Whether explicit single-version archive is permitted. Archive is not physical deletion. Independent of activation and capture.'},
       {displayName:'Allow Source-Shared Activation',name:'allowSourceActivation',type:'boolean',default:false,
         description:'Additional activation gate for source-shared records; each decision still needs explicit shared consent.'},
+      {displayName:'Allow Memory Correction',name:'allowMemoryCorrection',type:'boolean',default:false,
+        description:'Whether this credential may explicitly replace one owned memory and reset it to candidate. Independent of capture, activation and archive grants.'},
+      {displayName:'Allow Correction Project or Visibility Change',name:'allowCorrectionScopeChange',type:'boolean',default:false,
+        description:'Whether an explicit correction may change project or visibility within its fixed scope. Requires a separate per-operation confirmation; does not authorize activation.'},
+      {displayName:'Correction Project ID',name:'correctionProject',type:'string',default:'',
+        description:'Independent trusted project for corrections. Empty permits global-only; nonempty permits global and this project. Both original and replacement projects must fit.'},
       {displayName:'Expected Instance UUID',name:'expectedInstance',type:'string',default:'',
-        description:'Pin from Check Connection; required for Personal Memory Overview, List Personal Candidates, Inspect Personal Memory and Review Personal Memory, optional for other operations. Backups retain this logical instance identity.'},
+        description:'Pin from Check Connection; required for Personal Memory Overview, List Personal Candidates, Inspect Personal Memory, Review Personal Memory and Correct Personal Memory, optional for other operations. Backups retain this logical instance identity.'},
       {displayName:'Expected Actor SHA-256',name:'expectedActor',type:'string',default:'',
-        description:'Pin from Check Connection; required for Personal Memory Overview, List Personal Candidates, Inspect Personal Memory and Review Personal Memory, optional for other operations. A different token may represent a different actor.'},
+        description:'Pin from Check Connection; required for Personal Memory Overview, List Personal Candidates, Inspect Personal Memory, Review Personal Memory and Correct Personal Memory, optional for other operations. A different token may represent a different actor.'},
     ];
   }
 }

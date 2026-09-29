@@ -1,0 +1,78 @@
+## module-first.tap (excerpt; complete original SHA256 b24aeef4a58b4a5305fff0e8c24f72c5a5279f8480a2fec3c16d0ae89abcbf5d)
+
+not ok 54 - correction: changed observation content_hash refused without write
+  ---
+  duration_ms: 1.143261
+  type: 'test'
+  location: '/mnt/data/ub-correction-work/test/n8n-memory-correction.test.mjs:51:2'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (file:///mnt/data/ub-correction-work/test/n8n-memory-correction.test.mjs:53:29)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+
+1..96
+# tests 96
+# suites 0
+# pass 95
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 142.154368
+
+## module-audit-first.tap (excerpt; complete original SHA256 3c1aa4cff8390e58a3e1559f458d093685ca57cb3dca60a7de85977766830737)
+
+not ok 25 - correction audit: actual engine CI and portability run exact existing test filenames
+  ---
+  duration_ms: 0.414197
+  type: 'test'
+  location: '/mnt/data/ub-correction-work/test/n8n-memory-correction-audit.test.mjs:88:1'
+  failureType: 'testCodeFailure'
+  error: 'flow.match is not a function or its return value is not iterable'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (file:///mnt/data/ub-correction-work/test/n8n-memory-correction-audit.test.mjs:91:25)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+
+1..121
+# tests 121
+# suites 0
+# pass 120
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 156.460478
+
+## database-first.log (complete)
+
+73 |   [source,own[0].id,JSON.stringify(reference),identities[0].actor_key]);
+74 |  await call(0,'ultra_personal_review',{memory_id:own[0].id,expected_revision:1,event_id:'initial-activation',status:'active'});
+75 |  await call(0,'ultra_personal_review',{memory_id:input.id,expected_revision:1,event_id:'archive-reference-input',status:'archived'});
+76 |  const creds={endpoint,token:token[0],rootUri:`ultra://${source}/`,expectedInstance:identities[0].instance_id,expectedActor:identities[0].actor_key,
+77 |   correctionProject:'mine',allowMemoryCorrection:true,allowCorrectionScopeChange:false,reviewProject:'mine',allowMemoryActivation:true,allowMemoryArchive:true,allowCapture:false};
+78 |  const original=await record(own[0].id);assert.ok(original.derivation);assert.ok(original.last_confirmed);assert.equal(original.derivation_current,false);
+                                                    ^
+AssertionError: null == true
+ generatedMessage: true,
+     actual: null,
+   expected: true,
+   operator: "==",
+       code: "ERR_ASSERTION"
+
+      at /mnt/data/ub-correction-work/test/n8n-memory-correction-integration.mjs:78:48
+
+Bun v1.3.13 (Linux x64)
