@@ -1,0 +1,64 @@
+{
+  "name": "Ultrabrain - explicitly correct one owned memory",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "personal_correct",
+        "correctMode": "apply",
+        "correctMemoryId": "",
+        "correctScope": "global-only",
+        "correctEventId": "",
+        "correctExpectedRevision": 0,
+        "correctExpectedHash": "",
+        "correctExpectedStatus": "",
+        "correctExpectedVisibility": "",
+        "correctExpectedProject": "",
+        "correctReplacement": "",
+        "correctConsent": false,
+        "correctAcknowledgeReset": false,
+        "correctScopeChangeConsent": false,
+        "timeoutMs": 30000
+      },
+      "id": "correct",
+      "name": "Correct",
+      "type": "CUSTOM.ultrabrain",
+      "typeVersion": 1,
+      "position": [
+        260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Correct",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  },
+  "pinData": {}
+}

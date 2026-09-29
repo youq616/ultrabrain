@@ -1,0 +1,64 @@
+{
+  "base_commit": "97e91c25c1c8bc5e79e4f4bf14bf47ac9e12c9a1",
+  "base_tree": "9c744db6f1df4059e4cd04b1b527101c9f57d6bb",
+  "node_full": {
+    "tests": 3535,
+    "pass": 3535,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "uid": 1000,
+    "exit": 0
+  },
+  "new_tests": 121,
+  "self_review": "implementation assistant separate pass, not independent agent",
+  "independent_review": "PENDING",
+  "new_database": {
+    "passed": true,
+    "checks": 25,
+    "engine_checks": 0,
+    "mode": "actual installed Node runtime with synthetic n8n context, official MCP/HTTP and PostgreSQL; NOT n8n engine",
+    "synthetic_reference_fixture": true,
+    "correction_clears_reference_and_confirmation": true,
+    "explicit_reconfirmation_required": true,
+    "lifecycle_writes_explicit": true,
+    "read_denial_replay_phases_six_tables_unchanged": true,
+    "real_competing_update": true,
+    "lost_ack_injected_after_actual_commit": true,
+    "generator_calls": 0,
+    "external_model_calls": 0,
+    "user_deployment_verified": false
+  },
+  "regressions": {
+    "state_review": 20,
+    "candidate_metadata": 13,
+    "single_memory_inspect": 15
+  },
+  "package_sha256": "c626650d761e6ad4a30c95c27d8f04b392b882b114fe112dfd7b4e3f8d22f7de",
+  "package_method": "local npm pack, fresh isolated extraction, pinned SDK linked from previously verified artifact, not fresh network npm install",
+  "not_locally_executed": [
+    "actual n8n engine",
+    "Windows",
+    "full Python",
+    "user deployment"
+  ],
+  "log_sha256": {
+    "module-first.tap": "b24aeef4a58b4a5305fff0e8c24f72c5a5279f8480a2fec3c16d0ae89abcbf5d",
+    "module-fixed-fixture.tap": "565a977634e7352ed278d61a3ad406ed3374428e5f230df552eae7c6568b5f40",
+    "module-audit-first.tap": "3c1aa4cff8390e58a3e1559f458d093685ca57cb3dca60a7de85977766830737",
+    "module-audit-fixed.tap": "c684452a37987e72e0062d9481843b0603116142ccfdc8813d6732269c38bffc",
+    "full-first.tap": "1f7e39663bde5737351b507aa48ebfe5053006837cf6345a8f69cb4769041474",
+    "full-final.tap": "e95b2c242dbdf4d6e68dd88ceec91ae9855b9853c85a9f56b912e7d4ba9eead6",
+    "db-init.log": "5aaeb7e801b4b486d2ac9ad2495b39c42bc025049b08db77fbf40b4dffdfd066",
+    "db-migrate.log": "5afebefc5c980598a5ae20fbc1a7d3060e99351ae4a717c8e2d2eede82a4688c",
+    "package-first.log": "6976e46f7d3a6f58eea0f1bcae14bf1858e74fa8225ba8bb6519ca7e9ae7218b",
+    "package-final.log": "142784bc1ac6248d4ba424552c8c9df328030946fefb35df8d6166eb171436b0",
+    "database-first.log": "aecfffb718e513d7d9ec75242c4bc107709375ae47a0a51b133c6d03bcf98bbd",
+    "database-second.log": "ecdc56c1c182c10442e8cc6eba4dc0d09ac0893473ef2d5072af079b69cc8143",
+    "database-final.log": "ecdc56c1c182c10442e8cc6eba4dc0d09ac0893473ef2d5072af079b69cc8143",
+    "database-final.json": "ce31e4ab2bd5dc379424280c1c70750cc36f7beaeb2fde6dadc08ccd27ebece5",
+    "review-regression.log": "ec3cdb09df96aa29eb0b389314a16a598a977df4430ac28af04b044580cf6c6f",
+    "read-regression.log": "008a049462911ddaaf4e91793d87b3e80a28ee52c86fdf39c05075e9271652a8",
+    "db-stop.log": "96b39dd1e701bcb75300d11272951b2517a5d864eb7f34b11e8ead4a98f48360"
+  }
+}
