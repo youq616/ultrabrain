@@ -13,6 +13,7 @@ class Ultrabrain {
             {name:'Get Personal Memory Overview',value:'personal_overview',action:'Read owner-wide memory statistics'},
             {name:'List Personal Candidates',value:'personal_candidates',action:'Read one scoped page of owned candidate metadata'},
             {name:'Inspect Personal Memory',value:'personal_inspect',action:'Read and verify one owned memory with explicit text disclosure'},
+            {name:'Review Personal Memory',value:'personal_review',action:'Explicitly activate or archive one pinned owned memory'},
             {name:'Get Context Before Turn',value:'before_turn',action:'Get memory context before an agent turn'},
             {name:'Save Consented Turn',value:'after_turn',action:'Save a consented conversation turn'},
             {name:'Get Session Status',value:'session_status',action:'Get the state of a saved turn'},
@@ -41,8 +42,34 @@ class Ultrabrain {
           displayOptions:{show:{operation:['personal_inspect']}},description:'Whether the full selected record may be transmitted to this adapter for validation. Project/owner filtering happens after transfer. No models or writes.'},
         {displayName:'Include Record Text in Output',name:'inspectIncludeText',type:'boolean',default:false,
           displayOptions:{show:{operation:['personal_inspect']}},description:'Whether to include body, provenance and stored reference. Otherwise output only metadata. n8n history/downstream nodes may retain outputs; text is untrusted data.'},
+        {displayName:'Review Mode',name:'reviewMode',type:'options',default:'',noDataExpression:true,options:[{name:'Select Mode',value:''},{name:'Apply Decision',value:'apply'},{name:'Recover Original Receipt Only',value:'replay'}],
+          displayOptions:{show:{operation:['personal_review']}}},
+        {displayName:'Decision',name:'reviewAction',type:'options',default:'',noDataExpression:true,options:[{name:'Select Decision',value:''},{name:'Activate After Review',value:'active'},{name:'Archive (Not Delete)',value:'archived'}],
+          displayOptions:{show:{operation:['personal_review']}}},
+        {displayName:'Reviewed Memory ID',name:'reviewMemoryId',type:'string',default:'',
+          displayOptions:{show:{operation:['personal_review']}},description:'Exact lowercase UUID. One input item per execution; no bulk decisions.'},
+        {displayName:'Review Scope',name:'reviewScope',type:'options',default:'',noDataExpression:true,options:[{name:'Select Scope',value:''},{name:'Global Only',value:'global-only'},{name:'Global and Credential Review Project',value:'global-and-project'}],
+          displayOptions:{show:{operation:['personal_review']}}},
+        {displayName:'Stable Review Event ID',name:'reviewEventId',type:'string',default:'',
+          displayOptions:{show:{operation:['personal_review']}},description:'Keep the original event and all four server fields for receipt recovery. Never generate a new ID on an automatic retry.'},
+        {displayName:'Reviewed Revision',name:'reviewExpectedRevision',type:'number',default:0,
+          displayOptions:{show:{operation:['personal_review']}},description:'Copy the exact inspected revision. Zero is deliberately invalid; a stale version is refused.'},
+        {displayName:'Reviewed Content SHA-256',name:'reviewExpectedHash',type:'string',default:'',
+          displayOptions:{show:{operation:['personal_review']}},description:'Copy the complete lowercase content digest you inspected.'},
+        {displayName:'Reviewed Status',name:'reviewExpectedStatus',type:'options',default:'',options:[{name:'Select Observed Status',value:''},{name:'Candidate',value:'candidate'},{name:'Active',value:'active'},{name:'Archived',value:'archived'}],
+          displayOptions:{show:{operation:['personal_review']}}},
+        {displayName:'Reviewed Visibility',name:'reviewExpectedVisibility',type:'options',default:'',options:[{name:'Select Observed Visibility',value:''},{name:'Private',value:'private'},{name:'Source Shared',value:'source'}],
+          displayOptions:{show:{operation:['personal_review']}}},
+        {displayName:'Reviewed Project ID',name:'reviewExpectedProject',type:'string',default:'',
+          displayOptions:{show:{operation:['personal_review']}},description:'Empty means the inspected record was global. This is a precondition, not a grant to other projects.'},
+        {displayName:'Explicitly Confirm This Exact Decision',name:'reviewConsent',type:'boolean',default:false,noDataExpression:true,
+          displayOptions:{show:{operation:['personal_review']}},description:'Whether the caller reviewed this exact version and authorizes the selected action. This checkbox cannot authenticate a human reviewer.'},
+        {displayName:'Acknowledge State Change and Full Read',name:'reviewAcknowledgeEffects',type:'boolean',default:false,noDataExpression:true,
+          displayOptions:{show:{operation:['personal_review']}},description:'Whether to permit a full record read for verification and the selected state change. Activation enters recall; archive is not deletion. No automatic retries.'},
+        {displayName:'Confirm Source-Shared Activation',name:'reviewSharedConsent',type:'boolean',default:false,noDataExpression:true,
+          displayOptions:{show:{operation:['personal_review']}},description:'Whether activation of this source-shared record is explicitly approved. The credential must separately allow it; other source identities may then read it.'},
         {displayName:'Session ID',name:'sessionId',type:'string',default:'',required:true,
-          displayOptions:{hide:{operation:['identity','personal_overview','personal_candidates','personal_inspect']}},description:'Stable application session ID, ASCII letters, numbers, underscore or hyphen; maximum 96 characters.'},
+          displayOptions:{hide:{operation:['identity','personal_overview','personal_candidates','personal_inspect','personal_review']}},description:'Stable application session ID, ASCII letters, numbers, underscore or hyphen; maximum 96 characters.'},
         {displayName:'Query',name:'query',type:'string',default:'',required:true,typeOptions:{rows:3},
           displayOptions:{show:{operation:['before_turn','resume_project']}}},
         {displayName:'Project ID',name:'projectId',type:'string',default:'',
@@ -77,7 +104,7 @@ class Ultrabrain {
     catch(e){
       const code=typeof e.code==='string'&&/^[a-z0-9_]{1,64}$/.test(e.code)?e.code:'adapter_failed';
       // Do not attach raw errors, input items, tokens or provider messages to n8n error reports.
-      const outcome=e.memory_writes_requested===false?`read_delivery=${e.read_delivery==='unconfirmed'?'unconfirmed':'not_started'}; memory_writes_requested=false`:`delivery=${e.delivery==='unconfirmed'?'unconfirmed':'not_submitted'}`;
+      const outcome=['not_started','unconfirmed','confirmed'].includes(e.write_delivery)?`write_delivery=${e.write_delivery}; memory_writes_requested=${e.memory_writes_requested===true}`:e.memory_writes_requested===false?`read_delivery=${e.read_delivery==='unconfirmed'?'unconfirmed':'not_started'}; memory_writes_requested=false`:`delivery=${e.delivery==='unconfirmed'?'unconfirmed':'not_submitted'}`;
       throw new NodeOperationError(this.getNode(),`Ultrabrain: ${code}; ${outcome}`,
         {itemIndex:Number.isInteger(e.itemIndex)?e.itemIndex:0});
     }

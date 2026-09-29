@@ -1,3 +1,4 @@
+import {automationMemoryReviewError,automationMemoryReviewFailure} from './automation-memory-review.mjs';
 import {automationMemoryInspectFailure} from './automation-memory-inspect.mjs';
 /** Testable n8n execution contract. The node wrapper creates platform errors, never echoes input on failure. */
 import {automationCandidatesFailure} from './automation-candidates.mjs';
@@ -7,6 +8,14 @@ import {requireThat,integer,UltraError} from './core.mjs';
 function requestFor(context,operation,index) {
   const value=name=>context.getNodeParameter(name,index);
   if(operation==='identity')return {};
+  if(operation==='personal_review'){
+    const project=value('reviewExpectedProject');
+    requireThat(typeof project==='string','invalid_params','Explicit old project required');
+    return {mode:value('reviewMode'),action:value('reviewAction'),memory_id:value('reviewMemoryId'),scope:value('reviewScope'),
+      event_id:value('reviewEventId'),expected_revision:value('reviewExpectedRevision'),expected_content_hash:value('reviewExpectedHash'),
+      expected_status:value('reviewExpectedStatus'),expected_visibility:value('reviewExpectedVisibility'),expected_project_id:project===''?null:project,
+      consent:value('reviewConsent'),acknowledge_effects:value('reviewAcknowledgeEffects'),shared_consent:value('reviewSharedConsent')};
+  }
   if(operation==='personal_inspect')return {memory_id:value('inspectMemoryId'),scope:value('inspectScope'),consent:value('inspectConsent'),include_text:value('inspectIncludeText')};
   if(operation==='personal_candidates'){
     const after=value('candidateAfter');
@@ -47,13 +56,16 @@ export async function executeN8n(context,connect) {
         const get=(name,fallback)=>context.getNodeParameter(name,index,fallback);
         operation=get('operation','before_turn');
         requireThat(!signal?.aborted,'cancelled','Execution cancelled');
+        if(operation==='personal_review')requireThat(items.length===1,'memory_review_single_item_required','Exactly one decision per execution');
         const identitySettings={rootUri:credentials.rootUri,
           expectedInstance:credentials.expectedInstance??'',expectedActor:credentials.expectedActor??'',
           timeoutMs:integer(get('timeoutMs',30000),30000,1000,120000),
           ...(operation==='personal_candidates'?{candidateProject:credentials.candidateProject??''}:{}),
-          ...(operation==='personal_inspect'?{inspectProject:credentials.inspectProject??''}:{})};
+          ...(operation==='personal_inspect'?{inspectProject:credentials.inspectProject??''}:{}),
+          ...(operation==='personal_review'?{reviewProject:credentials.reviewProject??'',allowMemoryActivation:credentials.allowMemoryActivation===true,
+            allowMemoryArchive:credentials.allowMemoryArchive===true,allowSourceActivation:credentials.allowSourceActivation===true}:{})};
         // The overview must not evaluate hidden query/transcript/context fields.
-        const settings=automationSettings(['personal_overview','personal_candidates','personal_inspect'].includes(operation)?identitySettings:{...identitySettings,
+        const settings=automationSettings(['personal_overview','personal_candidates','personal_inspect','personal_review'].includes(operation)?identitySettings:{...identitySettings,
           allowCapture:credentials.allowCapture===true,allowSharedCapture:credentials.allowSharedCapture===true,
           memoryPolicy:get('memoryPolicy','current'),summary:get('summary','prefer'),
           budgetBytes:integer(get('budgetBytes',16000),16000,512,131072),
@@ -71,8 +83,9 @@ export async function executeN8n(context,connect) {
         const result=await session.run(operation,request);
         output.push({json:{ok:true,operation,result},pairedItem:{item:index}});
       }catch(e){
-        const safe=operation==='personal_inspect'?automationMemoryInspectFailure(e):operation==='personal_candidates'?automationCandidatesFailure(e):failure(e,operation==='personal_overview');
+        const safe=operation==='personal_review'?automationMemoryReviewFailure(e):operation==='personal_inspect'?automationMemoryInspectFailure(e):operation==='personal_candidates'?automationCandidatesFailure(e):failure(e,operation==='personal_overview');
         if(!context.continueOnFail()) {
+          if(operation==='personal_review'){const error=automationMemoryReviewError(e);error.itemIndex=index;throw error;}
           const error=new UltraError(safe.error,'Ultrabrain operation failed; check operation code and delivery state');
           if(['personal_overview','personal_candidates','personal_inspect'].includes(operation)){error.read_delivery=safe.read_delivery;error.memory_writes_requested=false;}
           else error.delivery=safe.delivery;error.itemIndex=index;throw error;
@@ -104,6 +117,11 @@ export async function executeN8n(context,connect) {
     const error=new UltraError(signal?.aborted?'cancelled':'memory_inspect_cleanup_failed','Inspection delivery was not confirmed');
     error.read_delivery='unconfirmed';error.memory_writes_requested=false;error.itemIndex=item.pairedItem.item;
     if(!context.continueOnFail())throw error;item.json=automationMemoryInspectFailure(error);
+  }
+  if(signal?.aborted||cleanupFailed)for(const item of output)if(item.json.ok&&item.json.operation==='personal_review'){
+    const error=automationMemoryReviewError(new UltraError(signal?.aborted?'cancelled':'memory_review_cleanup_failed','Result withheld'),item.json.result);
+    error.itemIndex=item.pairedItem.item;
+    if(!context.continueOnFail())throw error;item.json=automationMemoryReviewFailure(error);
   }
   return output;
 }
