@@ -94,3 +94,18 @@ models or human-authentication claim. n8n may retain parameter text even though
 outputs omit it. See `docs/N8N-MEMORY-CORRECTION.md` and the inactive, unconsented
 manual example at the exact commit. The unchanged version string does not identify
 this build; verify commit and package digest.
+
+## Explicit direct-source verification (development candidate)
+
+`Verify Personal Memory Source` checks one owned Agent-origin memory and, with
+separate consent, its one direct source. Source Verification Project ID is an
+independent credential scope; both records must fit. It reuses the canonical
+exact-read and lineage comparison contracts, re-reads the selected record after
+the source, and rejects a changed observation. At most three record reads per
+item, no recursive traversal, writes, model calls, retries or approval.
+Metadata is the default; memory/quote/source text needs separate output consent.
+Full records are nevertheless transmitted before local scope checks. Matching
+is not truth or continuously current state. Missing source is distinguished from
+denial, corruption and timeout. Cancellation or cleanup failure withholds pending
+results. See `docs/N8N-MEMORY-LINEAGE.md` and the inactive manual example at the
+exact source commit. n8n or downstream nodes may retain requested private data.

@@ -1,3 +1,4 @@
+import {automationMemoryLineageRequest,runAutomationMemoryLineage} from './automation-memory-lineage.mjs';
 import {automationMemoryCorrectionRequest,runAutomationMemoryCorrection} from './automation-memory-correction.mjs';
 import {automationMemoryReviewRequest,runAutomationMemoryReview} from './automation-memory-review.mjs';
 import {automationMemoryInspectRequest,readAutomationMemory,automationMemoryInspectFailure} from './automation-memory-inspect.mjs';
@@ -13,6 +14,7 @@ const operations = Object.freeze({
   personal_overview: ['scope','consent'],
   personal_candidates: ['scope','consent','after_id','limit'],
   personal_inspect: ['memory_id','scope','consent','include_text'],
+  personal_lineage: ['memory_id','scope','consent','follow_consent','include_text'],
   personal_correct: ['mode','memory_id','scope','event_id','expected_revision','expected_content_hash','expected_status','expected_visibility','expected_project_id','memory','consent','acknowledge_reset','scope_change_consent'],
   personal_review: ['mode','action','memory_id','scope','event_id','expected_revision','expected_content_hash','expected_status','expected_visibility','expected_project_id','consent','acknowledge_effects','shared_consent'],
   before_turn: ['session_id','query','project_id'],
@@ -45,7 +47,7 @@ export function automationSettings(input={}) {
   return Object.freeze({rootUri:root.uri,source:root.source,rootSlug:root.slug,allowCapture,allowSharedCapture,
     ...(input.candidateProject===undefined?{}:{candidateProject:input.candidateProject}),
     ...(input.inspectProject===undefined?{}:{inspectProject:input.inspectProject}),
-    ...Object.fromEntries(['reviewProject','allowMemoryActivation','allowMemoryArchive','allowSourceActivation','correctionProject','allowMemoryCorrection','allowCorrectionScopeChange'].filter(k=>input[k]!==undefined).map(k=>[k,input[k]])),
+    ...Object.fromEntries(['lineageProject','reviewProject','allowMemoryActivation','allowMemoryArchive','allowSourceActivation','correctionProject','allowMemoryCorrection','allowCorrectionScopeChange'].filter(k=>input[k]!==undefined).map(k=>[k,input[k]])),
     expectedInstance,expectedActor,includeFacts,includePersonal,factEntity:input.factEntity??'',memoryPolicy:mode(input.memoryPolicy??'current'),summary,
     budgetBytes:integer(input.budgetBytes,16000,includePersonal?4096:includeFacts?2048:512,131072),
     timeoutMs:integer(input.timeoutMs,30000,1000,120000),
@@ -56,6 +58,7 @@ export function validateAutomationRequest(operation,request,settings) {
   requireThat(request && typeof request==='object'&&!Array.isArray(request) &&
     Object.keys(request).every(k=>operations[operation].includes(k)),
     'invalid_params','Unknown lifecycle field; credentials, source and command overrides are forbidden');
+  if(operation==='personal_lineage'){automationMemoryLineageRequest(request,settings);return;}
   if(operation==='personal_correct'){automationMemoryCorrectionRequest(request,settings);return;}
   if(operation==='personal_review'){automationMemoryReviewRequest(request,settings);return;}
   if(operation==='personal_inspect'){automationMemoryInspectRequest(request,settings);return;}
@@ -116,6 +119,9 @@ export async function automationSession(client,input,{signal}={}) {
   return {
     identity:Object.freeze(original),
     async run(operation,request={}) {
+      if(operation==='personal_lineage')return runAutomationMemoryLineage(client,request,settings,{signal,checkIdentity:async()=>{
+        const now=await identify();checkIdentity(now,settings,original);
+      }});
       if(operation==='personal_correct')return runAutomationMemoryCorrection(client,request,settings,{signal,checkIdentity:async()=>{
         const now=await identify();checkIdentity(now,settings,original);
       }});

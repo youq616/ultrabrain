@@ -13,7 +13,7 @@ const guard=fileURLToPath(new URL('./fixtures/snapshot-offline-guard.cjs',import
 const env=Object.fromEntries(['PATH','SystemRoot','SYSTEMROOT','TEMP','TMP','HOME']
   .filter(key=>process.env[key]!==undefined).map(key=>[key,process.env[key]]));
 function run(t,extra={},rows=graph([null,1,2,1]),mode='cli',raw) {
-  const dir=mkdtempSync(join(tmpdir(),'ub-impact-cli-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
+  const dir=mkdtempSync(join(tmpdir(),'ub-impact-cli-'));t.after(()=>rmSync(dir,{recursive:true,force:true,maxRetries:5,retryDelay:100}));
   const path=join(dir,'selected 中文.json'),data=encoded(envelope(rows));writeFileSync(path,data);const mtime=statSync(path).mtimeMs;
   const request={operation:'impact',consent:true,memory_id:uuid(1),files:[{path,expected_sha256:hash(data)}],...extra};
   const script=`import fs from 'node:fs';import * as api from ${JSON.stringify(api)};

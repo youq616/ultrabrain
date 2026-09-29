@@ -17,6 +17,8 @@ class UltrabrainApi {
         description:'Trusted project for List Personal Candidates. Empty permits global-only selection; nonempty enables global plus this project. Never read from an input item.'},
       {displayName:'Inspection Project ID',name:'inspectProject',type:'string',default:'',
         description:'Trusted project for Inspect Personal Memory. Independent of Candidate Project ID; empty allows global-only. Never selected from an input item.'},
+      {displayName:'Source Verification Project ID',name:'lineageProject',type:'string',default:'',
+        description:'Independent trusted project for Verify Personal Memory Source. Both selected record and source must fit the same global/project scope; not inherited from other project fields.'},
       {displayName:'Review Project ID',name:'reviewProject',type:'string',default:'',
         description:'Independent trusted project for Review Personal Memory; never inferred from candidate/inspection project or item JSON.'},
       {displayName:'Allow Memory Activation',name:'allowMemoryActivation',type:'boolean',default:false,
@@ -32,9 +34,9 @@ class UltrabrainApi {
       {displayName:'Correction Project ID',name:'correctionProject',type:'string',default:'',
         description:'Independent trusted project for corrections. Empty permits global-only; nonempty permits global and this project. Both original and replacement projects must fit.'},
       {displayName:'Expected Instance UUID',name:'expectedInstance',type:'string',default:'',
-        description:'Pin from Check Connection; required for Personal Memory Overview, List Personal Candidates, Inspect Personal Memory, Review Personal Memory and Correct Personal Memory, optional for other operations. Backups retain this logical instance identity.'},
+        description:'Pin from Check Connection; required for Personal Memory Overview, List Personal Candidates, Inspect Personal Memory, Review Personal Memory, Correct Personal Memory and Verify Personal Memory Source, optional for other operations. Backups retain this logical instance identity.'},
       {displayName:'Expected Actor SHA-256',name:'expectedActor',type:'string',default:'',
-        description:'Pin from Check Connection; required for Personal Memory Overview, List Personal Candidates, Inspect Personal Memory, Review Personal Memory and Correct Personal Memory, optional for other operations. A different token may represent a different actor.'},
+        description:'Pin from Check Connection; required for Personal Memory Overview, List Personal Candidates, Inspect Personal Memory, Review Personal Memory, Correct Personal Memory and Verify Personal Memory Source, optional for other operations. A different token may represent a different actor.'},
     ];
   }
 }
