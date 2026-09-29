@@ -1,8 +1,9 @@
+import {readLocalFileBytes} from './local-file-read.mjs';
 /** Client-only delivery journal for personal capture. Not a second memory database.
  * Entries are removed only after an identity-bound, matching server journal receipt.
  * Separate short queue locks and delivery locks let hooks enqueue during network outages.
  */
-import {constants,openSync,closeSync,writeFileSync,readSync,fsyncSync,lstatSync,fstatSync,
+import {constants,openSync,closeSync,writeFileSync,fsyncSync,lstatSync,
   mkdirSync,readdirSync,unlinkSync,realpathSync} from 'node:fs';
 import {resolve,dirname,parse,isAbsolute,relative,sep,join} from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -38,19 +39,8 @@ function parents(path) {
     const s=lstatSync(p);requireThat(s.isDirectory()&&!s.isSymbolicLink(),'insecure_outbox','Outbox parent links are forbidden');
   }
 }
-function readBytes(path,max=MAX_RECORD) {
-  const before=lstatSync(path);privateStat(before,'file');
-  requireThat(before.size<=max&&before.nlink===1,'outbox_corrupt','Outbox file exceeds bounds or has aliases');
-  const fd=openSync(path,constants.O_RDONLY|(constants.O_NOFOLLOW??0));
-  try {
-    const st=fstatSync(fd);requireThat(st.dev===before.dev&&st.ino===before.ino&&st.size<=max,'outbox_corrupt','Outbox file changed');
-    // A bound read, not readFileSync on an untrusted-sized descriptor.
-    const b=Buffer.alloc(st.size+1);let n=0;
-    // One extra byte detects concurrent growth.
-    while(n<b.length){const got=readSync(fd,b,n,b.length-n,null);if(!got)break;n+=got;}
-    const end=fstatSync(fd);requireThat(n===st.size&&end.size===st.size&&end.mtimeMs===st.mtimeMs&&end.ctimeMs===st.ctimeMs,'outbox_corrupt','Outbox changed while reading');return b.subarray(0,n);
-  }finally{closeSync(fd);}
-}
+const readBytes=(path,max=MAX_RECORD)=>readLocalFileBytes(path,'outbox',max);
+
 function decode(path,max) {
   try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(readBytes(path,max)));}
   catch(e){if(e instanceof UltraError)throw e;throw new UltraError('outbox_corrupt','Invalid journal; preserve it for inspection');}
