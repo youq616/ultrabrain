@@ -1,0 +1,32 @@
+[
+  {
+    "name": "codex-diagnostic-before.tap",
+    "bytes": 4607,
+    "sha256": "965cb305f576d8bd015484271c0fa4a389f220143c877b7fe36fba693644d8ba"
+  },
+  {
+    "name": "codex-diagnostic-final.tap",
+    "bytes": 2488,
+    "sha256": "68ebfb3a5aadcb237da9709e8c0c241efdaae45679322a29a03978f1d4cdb517"
+  },
+  {
+    "name": "full-codex-final.tap",
+    "bytes": 783554,
+    "sha256": "bb94fc535cfbd5ca5e202614804a0f50cff1084bc3065275aa3ca762c909f4e9"
+  },
+  {
+    "name": "control-codex-final.tap",
+    "bytes": 31322,
+    "sha256": "7d2de6402b24ea3360db32a09c97dc8ce0b984535b9d59ba2d1f6a5f0f08549e"
+  },
+  {
+    "name": "control-codex-stress.json",
+    "bytes": 3594,
+    "sha256": "acec0713045c4c71dc407e1f7416feda20d05ffd3fda0e454702b4fe3adb4c87"
+  },
+  {
+    "name": "contention-codex-final.json",
+    "bytes": 3040,
+    "sha256": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7"
+  }
+]

@@ -1,7 +1,8 @@
 /** Real child process, accepts only parent-created synthetic test profiles. */
 import {CaptureOutbox} from '../../src/capture-outbox.mjs';
+import {captureProcessDiagnostic} from '../helpers/capture-process-diagnostic.mjs';
 const finish=result=>{process.stdout.write(JSON.stringify(result));if(process.connected)process.disconnect();};
-const failure=error=>{finish({ok:false,code:['outbox_busy','outbox_corrupt','identity_mismatch','outbox_lock_io','outbox_lock_changed'].includes(error?.code)?error.code:'worker_failed'});process.exitCode=1;};
+const failure=error=>{finish({ok:false,...captureProcessDiagnostic(error)});process.exitCode=1;};
 process.once('message',async ({input,worker,mode})=>{
  try{
   const q=new CaptureOutbox(input);
