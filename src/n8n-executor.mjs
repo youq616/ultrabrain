@@ -1,3 +1,4 @@
+import {automationMemoryLineageError,automationMemoryLineageFailure} from './automation-memory-lineage.mjs';
 import {parseCorrectionMemory,automationMemoryCorrectionError,automationMemoryCorrectionFailure} from './automation-memory-correction.mjs';
 import {automationMemoryReviewError,automationMemoryReviewFailure} from './automation-memory-review.mjs';
 import {automationMemoryInspectFailure} from './automation-memory-inspect.mjs';
@@ -9,6 +10,8 @@ import {requireThat,integer,UltraError} from './core.mjs';
 function requestFor(context,operation,index) {
   const value=name=>context.getNodeParameter(name,index);
   if(operation==='identity')return {};
+  if(operation==='personal_lineage')return {memory_id:value('lineageMemoryId'),scope:value('lineageScope'),
+    consent:value('lineageConsent'),follow_consent:value('lineageFollowConsent'),include_text:value('lineageIncludeText')};
   if(operation==='personal_correct'){
     const project=value('correctExpectedProject');
     requireThat(typeof project==='string','invalid_params','Explicit old project required');
@@ -72,13 +75,14 @@ export async function executeN8n(context,connect) {
           expectedInstance:credentials.expectedInstance??'',expectedActor:credentials.expectedActor??'',
           timeoutMs:integer(get('timeoutMs',30000),30000,1000,120000),
           ...(operation==='personal_candidates'?{candidateProject:credentials.candidateProject??''}:{}),
+          ...(operation==='personal_lineage'?{lineageProject:credentials.lineageProject??''}:{}),
           ...(operation==='personal_inspect'?{inspectProject:credentials.inspectProject??''}:{}),
           ...(operation==='personal_correct'?{correctionProject:credentials.correctionProject??'',allowMemoryCorrection:credentials.allowMemoryCorrection===true,
             allowCorrectionScopeChange:credentials.allowCorrectionScopeChange===true}:{}),
           ...(operation==='personal_review'?{reviewProject:credentials.reviewProject??'',allowMemoryActivation:credentials.allowMemoryActivation===true,
             allowMemoryArchive:credentials.allowMemoryArchive===true,allowSourceActivation:credentials.allowSourceActivation===true}:{})};
         // The overview must not evaluate hidden query/transcript/context fields.
-        const settings=automationSettings(['personal_overview','personal_candidates','personal_inspect','personal_review','personal_correct'].includes(operation)?identitySettings:{...identitySettings,
+        const settings=automationSettings(['personal_overview','personal_candidates','personal_inspect','personal_review','personal_correct','personal_lineage'].includes(operation)?identitySettings:{...identitySettings,
           allowCapture:credentials.allowCapture===true,allowSharedCapture:credentials.allowSharedCapture===true,
           memoryPolicy:get('memoryPolicy','current'),summary:get('summary','prefer'),
           budgetBytes:integer(get('budgetBytes',16000),16000,512,131072),
@@ -96,8 +100,9 @@ export async function executeN8n(context,connect) {
         const result=await session.run(operation,request);
         output.push({json:{ok:true,operation,result},pairedItem:{item:index}});
       }catch(e){
-        const safe=operation==='personal_correct'?automationMemoryCorrectionFailure(e):operation==='personal_review'?automationMemoryReviewFailure(e):operation==='personal_inspect'?automationMemoryInspectFailure(e):operation==='personal_candidates'?automationCandidatesFailure(e):failure(e,operation==='personal_overview');
+        const safe=operation==='personal_lineage'?automationMemoryLineageFailure(e):operation==='personal_correct'?automationMemoryCorrectionFailure(e):operation==='personal_review'?automationMemoryReviewFailure(e):operation==='personal_inspect'?automationMemoryInspectFailure(e):operation==='personal_candidates'?automationCandidatesFailure(e):failure(e,operation==='personal_overview');
         if(!context.continueOnFail()) {
+          if(operation==='personal_lineage'){const error=automationMemoryLineageError(e);error.itemIndex=index;throw error;}
           if(operation==='personal_correct'){const error=automationMemoryCorrectionError(e);error.itemIndex=index;throw error;}
           if(operation==='personal_review'){const error=automationMemoryReviewError(e);error.itemIndex=index;throw error;}
           const error=new UltraError(safe.error,'Ultrabrain operation failed; check operation code and delivery state');
@@ -141,6 +146,11 @@ export async function executeN8n(context,connect) {
     const error=automationMemoryCorrectionError(new UltraError(signal?.aborted?'cancelled':'memory_correction_cleanup_failed','Result withheld'),item.json.result);
     error.itemIndex=item.pairedItem.item;
     if(!context.continueOnFail())throw error;item.json=automationMemoryCorrectionFailure(error);
+  }
+  if(signal?.aborted||cleanupFailed)for(const item of output)if(item.json.ok&&item.json.operation==='personal_lineage'){
+    const error=automationMemoryLineageError(new UltraError(signal?.aborted?'cancelled':'memory_lineage_cleanup_failed','Result withheld'),item.json.result);
+    error.itemIndex=item.pairedItem.item;
+    if(!context.continueOnFail())throw error;item.json=automationMemoryLineageFailure(error);
   }
   return output;
 }

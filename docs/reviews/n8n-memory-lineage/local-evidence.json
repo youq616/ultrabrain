@@ -1,0 +1,59 @@
+{
+  "base_commit": "f53e1c8fda8caca2f90ced2adb15b76ad0494626",
+  "full_node": {
+    "tests": 3600,
+    "pass": 3600,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "uid": 1000,
+    "exit": 0
+  },
+  "new_tests": 65,
+  "audit_tests": 16,
+  "settings_red": {
+    "tests": 16,
+    "pass": 15,
+    "fail": 1
+  },
+  "database": {
+    "passed": true,
+    "checks": 14,
+    "engine_checks": 0,
+    "mode": "actual Node package, synthetic n8n context, official MCP/HTTP, PostgreSQL; NOT actual n8n engine",
+    "synthetic_references": true,
+    "actual_parent_race": true,
+    "read_phases_six_tables_unchanged": true,
+    "model_calls": 0,
+    "generator_calls": 0,
+    "user_deployment_verified": false
+  },
+  "regressions": {
+    "candidates": 13,
+    "inspect": 15,
+    "correction": 25
+  },
+  "independent_review": "PENDING",
+  "package_sha256": "850905c9b88b062a334b69a57bd396c855dff53fb80000655c881c5afb57763b",
+  "local_n8n_engine": false,
+  "log_sha256": {
+    "focused-first.tap": "89e702932309aa01598bae8d6cd5dbe9ea49ab76e6baab7b327e5b19acae9c23",
+    "focused-fixed.tap": "4346fa0cc755c722736b55518640c947a6c1e67556c57e8be524c141fd669281",
+    "focused-final.tap": "c83ecb2d8b09c071cc9b3b220a999230216da5705efdca6afa03ec47ee83affa",
+    "focused-corrected.tap": "595ff6bb896fdbfe6378a7bcb7d226ac5bab9882ed4fecccaa62e21eaff67b29",
+    "audit-settings-red.tap": "c492878a61e5a461cdd9afc550440ec574cdfdda358812c8a756600b655e783a",
+    "module-final.tap": "e8aa702a62bd268db797a1191bc8e1db78cfc546c1b0d5d56d8e1d67a9046152",
+    "full-first.tap": "67b9e6200b8693b7afaa8bcea3911aa20b92d5ca4152ab1e2ad9a35e701c0b86",
+    "full-corrected.tap": "419cb0f976e531aded81bde8266dba816ee6d23c619b0f342b69ea713d6a1900",
+    "full-final.tap": "1b8dc88af451c4274d1ee68d8134ec0e8cd6986850b8f5a4a218036dbe3e93a4",
+    "database-first.log": "6ea64004a3b171acad390b71be7db11c95891c3740fce241e71ea46754624ed6",
+    "database-second.log": "e3198f96105566082eb8a744001f3133fb58ae6b4f2429fa017fb721d1681467",
+    "database-final.log": "e3198f96105566082eb8a744001f3133fb58ae6b4f2429fa017fb721d1681467",
+    "database-final.json": "bf4428dbb0d9ef77f16477abd4e1860bfa97338b0f4d431ccb62a53038784a00",
+    "reads-regression.log": "008a049462911ddaaf4e91793d87b3e80a28ee52c86fdf39c05075e9271652a8",
+    "correction-regression.log": "ecdc56c1c182c10442e8cc6eba4dc0d09ac0893473ef2d5072af079b69cc8143",
+    "package-final.log": "a37c7e3af6aa1bf48bbb02077507b3a7caa995b9baea5e46b0ce78fb240e804a",
+    "db-init.log": "5aaeb7e801b4b486d2ac9ad2495b39c42bc025049b08db77fbf40b4dffdfd066",
+    "db-migrate.log": "5afebefc5c980598a5ae20fbc1a7d3060e99351ae4a717c8e2d2eede82a4688c"
+  }
+}

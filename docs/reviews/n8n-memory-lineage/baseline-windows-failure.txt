@@ -1,0 +1,15 @@
+Baseline observation excerpt (not the full remote log)
+Repository: youq616/ultrabrain
+Head: f53e1c8fda8caca2f90ced2adb15b76ad0494626
+Run: 36507784802 / Personal client portability
+Job: 109213014310 / Windows
+Error: EPERM, operation not permitted, rmdir of a newly created ub-impact-cli-* directory.
+Stack points to the test.after cleanup in test/client-snapshot-impact-cli.test.mjs.
+The unit-test step failed; subsequent Windows steps did not execute.
+The Ubuntu job (109213014473) and full Validate workflow (36507784621) succeeded.
+
+Fix: use rmSync(dir,{recursive:true,force:true,maxRetries:5,retryDelay:100})
+in the existing cleanup hook, without a catch or removal of any behavior assertion.
+Native rmSync can retry transient EPERM; a persistent error still fails the hook.
+New tests inject transient and persistent EPERM into real Node fs.rmdirSync in
+an isolated subprocess. Those are injection tests, not actual Windows file locks.
