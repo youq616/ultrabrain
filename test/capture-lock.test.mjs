@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {acquireCaptureLock,captureLockError,captureLockDiagnostic} from '../src/capture-lock.mjs';
 import {UltraError} from '../src/core.mjs';
+import {performance} from 'node:perf_hooks';
 const collision=()=>captureLockError({code:'EEXIST'},'queue','create');
 for(const kind of ['queue','delivery'])test('lock: exclusive handoff and explicit release '+kind,async()=>{
  let owned=0,released=0,checks=0;
@@ -20,7 +21,22 @@ test('lock: zero wait makes exactly one claim, never waits or steals',async()=>{
 test('lock: persistent contention exhausts the bound with safe diagnostic',async()=>{
  let calls=0;await assert.rejects(acquireCaptureLock(()=>{calls++;throw collision();},{kind:'queue',waitMs:20}),error=>{
   assert.deepEqual(captureLockDiagnostic(error),{kind:'queue',phase:'create',system_code:'EEXIST'});return error.code==='outbox_busy';
- });assert.ok(calls>=2&&calls<=3);
+ });
+ // A busy event loop can consume the entire deadline after the first claim.
+ // The scheduler must not make a second attempt merely to satisfy a minimum.
+ assert.ok(calls>=1&&calls<=3);
+
+});
+test('lock: deadline exhausted by first collision makes exactly one claim',async t=>{
+ let now=0,calls=0;
+ t.mock.method(performance,'now',()=>now);
+ await assert.rejects(acquireCaptureLock(()=>{
+  calls++;now=21;throw collision();
+ },{kind:'queue',waitMs:20}),error=>{
+  assert.deepEqual(captureLockDiagnostic(error),{kind:'queue',phase:'create',system_code:'EEXIST'});
+  return error.code==='outbox_busy';
+ });
+ assert.equal(calls,1);
 });
 for(const code of ['EPERM','EACCES','EBUSY','ENOSPC','EIO','ENOENT','EMFILE','EROFS'])test('lock: no permission or IO retries '+code,async()=>{
  let calls=0;await assert.rejects(acquireCaptureLock(()=>{calls++;throw captureLockError({code},'queue','create');},{kind:'queue'}),{code:'outbox_lock_io'});
