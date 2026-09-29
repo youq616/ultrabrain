@@ -1,0 +1,10 @@
+{
+  "commit": "b81dd4c334fd4d0b77682eb374703d74a987fa53",
+  "workflow_run": 36586272203,
+  "job": 109467334479,
+  "artifact": 11041588026,
+  "archive_sha256": "5f8677986411160c92fac9d3b0e02f37d48c580ad15981f8c8c810fc9dbe8cff",
+  "entry": "local-file-probe.json",
+  "raw_device_identifiers_included": false,
+  "classification": "native prior-head failure; not proof this new module succeeds on Windows"
+}

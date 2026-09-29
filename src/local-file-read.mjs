@@ -25,17 +25,20 @@ export function localDeviceCompatible(pathDevice,handleDevice,platform=process.p
 }
 const fields=['ino','mode','nlink','uid','gid','size','mtimeNs','ctimeNs','birthtimeNs'];
 const same=(a,b)=>a.dev===b.dev&&fields.every(k=>a[k]===b[k]);
-const bridge=(path,handle)=>localDeviceCompatible(path.dev,handle.dev)&&fields.every(k=>path[k]===handle[k]);
+const sameFields=(a,b)=>fields.every(k=>a[k]===b[k]);
 export function localFileReadDiagnostic(error){return diagnostic.get(error)??null;}
 /** Callers check parent-directory/authority bindings; this reader checks the
  * selected leaf before open, both handle observations and the final path.
  * profile permits existing aliases; outbox requires exactly one hard link.
+ * Win32 stat domains may not have comparable device IDs. In that case a second
+ * read-only descriptor anchors the pathname without relaxing same-domain checks.
+ * This is not a hostile same-user sandbox or a Windows ACL/volume attestation.
  * No writes, permission changes, retries or cleanup deletion occur here. */
 export function readLocalFileBytes(path,kind,maxBytes=kind==='profile'?16384:220000){
  requireThat(typeof path==='string'&&isAbsolute(path)&&!path.includes('\0')&&['profile','outbox'].includes(kind)&&
   Number.isSafeInteger(maxBytes)&&maxBytes>=1&&maxBytes<=(kind==='profile'?16384:220000),'invalid_params','Invalid local file selection');
  const invalid=kind==='profile'?'insecure_profile':'outbox_corrupt';
- let phase='path-before',fd,result,primary;
+ let phase='path-before',fd,anchor,result,primary;
  const failure=(reason,error)=>{
   const e=new UltraError(reason==='permissions'||reason==='type'?(kind==='profile'?'insecure_profile':'insecure_outbox'):invalid,
    'Local file was not confirmed; preserve it for explicit inspection');
@@ -53,18 +56,38 @@ export function readLocalFileBytes(path,kind,maxBytes=kind==='profile'?16384:220
  try{
   const before=lstatSync(path,options);validate(before);
   phase='open';fd=openSync(path,constants.O_RDONLY|(constants.O_NOFOLLOW??0));
-  phase='handle-before';const first=fstatSync(fd,options);validate(first);check(bridge(before,first),'identity');
+  phase='handle-before';const first=fstatSync(fd,options);validate(first);
+  check(sameFields(before,first),'identity');
+  // Never infer identity by accepting arbitrary unequal device values. On
+  // Win32 only, a non-comparable path/handle pair requires a second live open
+  // of the selected path. Compare devices FULL-WIDTH within each stat domain.
+  // The anchor is held throughout the bounded read and checked a second time.
+  const anchored=!localDeviceCompatible(before.dev,first.dev);
+  if(anchored){
+   check(process.platform==='win32'&&before.dev!==0n&&first.dev!==0n,'identity');
+   phase='anchor-open';anchor=openSync(path,constants.O_RDONLY|(constants.O_NOFOLLOW??0));
+   phase='anchor-before';const witness=fstatSync(anchor,options);validate(witness);
+   check(same(first,witness),'identity');
+   phase='path-anchor';const bound=lstatSync(path,options);validate(bound);
+   check(same(before,bound)&&sameFields(bound,witness),'changed');
+  }
   // Allocate only after a precise, capped size check; one extra byte detects growth.
   phase='read';const bytes=Buffer.alloc(Number(first.size)+1);let n=0;
   while(n<bytes.length){const got=readSync(fd,bytes,n,bytes.length-n,n);if(got===0)break;
    check(Number.isSafeInteger(got)&&got>0&&got<=bytes.length-n,'read-count');n+=got;}
   phase='handle-after';const end=fstatSync(fd,options);validate(end);
   check(BigInt(n)===first.size&&same(first,end),'changed');
+  if(anchored){
+   phase='anchor-after';const witness=fstatSync(anchor,options);validate(witness);
+   check(same(first,witness)&&same(end,witness),'changed');
+  }
   phase='path-after';const last=lstatSync(path,options);validate(last);
   // Keep full-width path/path and handle/handle comparisons even on Windows.
-  check(same(before,last)&&bridge(last,end),'changed');result=bytes.subarray(0,n);
+  check(same(before,last)&&sameFields(last,end)&&
+   (anchored||localDeviceCompatible(last.dev,end.dev)),'changed');result=bytes.subarray(0,n);
  }catch(error){primary=diagnostic.has(error)?error:failure('io',error);}
- if(fd!==undefined){phase='close';try{closeSync(fd);}catch(error){
+ for(const [descriptor,closingPhase]of [[anchor,'anchor-close'],[fd,'close']])if(descriptor!==undefined){
+  phase=closingPhase;try{closeSync(descriptor);}catch(error){
   if(primary)diagnostic.set(primary,Object.freeze({...diagnostic.get(primary),close_failed:true}));
   else primary=failure('io',error);
  }}

@@ -1,0 +1,14 @@
+Exact failure summary; full original TAP is preserved in the handoff.
+SHA256: 18b75c4d4714ecb7e88736afda2a0ecf35085e599d5af44d68c6f15a98b92819
+
+not ok 4 - anchor audit: truncation while descriptors are held cannot be successful empty data
+not ok 10 - anchor audit: platform probe preserves the observed unequal relation instead of masking it
+
+# tests 11
+# suites 0
+# pass 9
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 114.912669

@@ -1,0 +1,112 @@
+{
+  "base_commit": "b81dd4c334fd4d0b77682eb374703d74a987fa53",
+  "base_tree": "ca68cc42efbc2e2aaa0bd9bb9899ebd275cda61c",
+  "full": {
+    "tests": 3889,
+    "pass": 3889,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "uid": 1000,
+    "node": "22.16.0",
+    "exit": 0
+  },
+  "new_tests": 63,
+  "audit_tests": 15,
+  "focused_tests": 210,
+  "prior_full_before_four_diagnostic_regressions": 3885,
+  "red_runs": [
+    {
+      "name": "baseline-reader",
+      "tests": 2,
+      "pass": 0,
+      "fail": 2
+    },
+    {
+      "name": "audit-fixture",
+      "tests": 11,
+      "pass": 9,
+      "fail": 2
+    },
+    {
+      "name": "worker-diagnostic-projection",
+      "tests": 15,
+      "pass": 12,
+      "fail": 3
+    }
+  ],
+  "native_probe": {
+    "passed": true,
+    "format": "ultrabrain-native-local-read-v1",
+    "platform": "linux",
+    "node": "v22.16.0",
+    "uv": "1.49.2",
+    "device_relation": "exact",
+    "confirmation": "existing-stat-domain-comparison",
+    "observation": {
+      "device_relation": "exact",
+      "path_device_class": "unsigned32",
+      "handle_device_class": "unsigned32",
+      "inode_equal": true,
+      "inode_signed": false,
+      "other_metadata_equal": true
+    },
+    "reads": 201,
+    "aliases_rejected": true,
+    "bigint_identity": true,
+    "user_paths_selected": false,
+    "server_calls": 0,
+    "model_calls": 0
+  },
+  "package": {
+    "passed": true,
+    "checks": 29,
+    "bundles": 11,
+    "mode": "actual unpacked compiled Node CLI, official SDK; native files plus labelled unsigned/signed/independent Win32 stat seams and a mismatched-anchor refusal",
+    "server_calls": 0,
+    "model_calls": 0
+  },
+  "package_sha256": "33aa44ab561260844b0d09f021647ba9593e1366f9afbe5e1825456a2628ce66",
+  "contention": {
+    "rounds": 25,
+    "workers_per_round": 8,
+    "requests": 600,
+    "records": 425,
+    "replays": 175
+  },
+  "delivery_control": {
+    "rounds": 25,
+    "workers_per_round": 8,
+    "records_per_round": 8,
+    "resume_winners_per_round": 1,
+    "stale_conflicts_per_round": 7,
+    "attempts": 0
+  },
+  "independent_review": "PENDING at source finalization; implementation assistant audit is separate from actual reviewer",
+  "not_locally_executed": [
+    "native Windows",
+    "fresh network dependency install",
+    "PostgreSQL/MCP integrations",
+    "full Python",
+    "user deployment"
+  ],
+  "log_sha256": {
+    "anchor-before.tap": "3d7ebb3a45afbafaf29c9f5ccc412d24b5852dd6502dddbe0e07d1c1a092a3f8",
+    "anchor-first.tap": "b3a35c93c7f5156eff5964090fc323a8145b766ebef7f35ec7e3446dd0e088a6",
+    "anchor-expanded.tap": "e3a50902614d09e92b5ca54ec8e421050491c03291cacb96317b869db9e18a01",
+    "audit-first.tap": "18b75c4d4714ecb7e88736afda2a0ecf35085e599d5af44d68c6f15a98b92819",
+    "audit-corrected.tap": "e286a3612648834bdca95ce160de90b642e18cd63f3819f9b8a71b5a9dc4ea5f",
+    "audit-report-before.tap": "57b97cf9318fa3ecfa160976bc3ab9dc3d3203f3d82ef3273f15d40958416065",
+    "audit-final.tap": "57e2c137f174b4c0c2973ca60146a1db74bf5e0ceaac7d0d86daa52bc031a6b3",
+    "full-first.tap": "3228ece7bcc1ce7b0bfe2623376b9ba94cda8468bd9fd92dbe01330626d1c61a",
+    "full-final.tap": "339fb9bda3e6459da656f9dfdeb47a060796be901b01afb97a477e4ccfe3c690",
+    "native-local.json": "efcb30e0c50af5f3b5d7a6a41eea8648e1a2e0d6bb2cd4529db0bb6f6b43c8b3",
+    "contention.json": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7",
+    "control.json": "acec0713045c4c71dc407e1f7416feda20d05ffd3fda0e454702b4fe3adb4c87",
+    "control-final.json": "acec0713045c4c71dc407e1f7416feda20d05ffd3fda0e454702b4fe3adb4c87",
+    "build-first.log": "b3b1ac0b5d7bd5996fcbc7d4a85f901eb8df7eddf990253115ea17e073fa5401",
+    "build-final.log": "370a5bb5e7c311fe80b9b597d59359423becab7ba77c2619aab99314007a9d47",
+    "packaged-first.json": "ba580c2834ee7082016c49b4d3a1836f90a1d7aa2cf40f4c51b781697e64a23c",
+    "packaged-final.json": "ba580c2834ee7082016c49b4d3a1836f90a1d7aa2cf40f4c51b781697e64a23c"
+  }
+}
