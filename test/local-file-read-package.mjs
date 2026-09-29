@@ -1,5 +1,5 @@
 /** Actual unpacked client CLI and official SDK imports; no server or SDK double.
- * The second scenario deliberately substitutes Windows stat metadata on Linux.
+ * Two extra scenarios substitute unsigned/signed Windows stat metadata on Linux.
  * This seam is not itself Windows execution or an NTFS stress result. */
 import assert from 'node:assert/strict';import fs from 'node:fs';import {spawnSync} from 'node:child_process';
 import {join,resolve} from 'node:path';import {tmpdir} from 'node:os';import {createHash} from 'node:crypto';
@@ -13,12 +13,13 @@ Object.defineProperty(process,'platform',{value:'win32'});
 const ls=fs.lstatSync,fsd=fs.fstatSync;
 fs.lstatSync=(...a)=>{const s=ls(...a);if(s.isFile())s.dev=typeof s.dev==='bigint'?0x7654321089abcdefn:Number(0x7654321089abcdefn);return s;};
 fs.fstatSync=(...a)=>{const s=fsd(...a);s.dev=typeof s.dev==='bigint'?0x89abcdefn:Number(0x89abcdefn);return s;};syncBuiltinESMExports();`,{mode:0o600});
- for(const seam of [false,true]){
-  const root=join(dir,seam?'seam':'native');fs.mkdirSync(root,{mode:0o700});const workspace=join(root,'work');fs.mkdirSync(workspace,{mode:0o700});
+ const signedPreload=join(dir,'signed-stat-seam.cjs');fs.writeFileSync(signedPreload,fs.readFileSync(preload,'utf8').replaceAll('0x7654321089abcdefn','BigInt.asIntN(64,0xf654321089abcdefn)'),{mode:0o600});
+ for(const seam of [false,'unsigned','signed']){
+  const root=join(dir,seam||'native');fs.mkdirSync(root,{mode:0o700});const workspace=join(root,'work');fs.mkdirSync(workspace,{mode:0o700});
   const path=join(root,'profile.json'),queue=join(root,'queue');fs.writeFileSync(path,JSON.stringify({format:1,source:'synthetic',allow_capture:true,workspace,outbox_directory:queue,
    expected_actor:'a'.repeat(64),expected_instance:'11111111-1111-4111-8111-111111111111',server:{transport:'stdio',command:'MUST_NOT_START_SERVER',args:[]}}),{mode:0o600});
   const run=(command,extra=[],input)=>{
-   const r=spawnSync(process.execPath,[...(seam?['--require',preload]:[]),join(pkg,'dist/cli.cjs'),command,'--profile',path,...extra],{encoding:'utf8',input,timeout:15000,maxBuffer:131072});
+   const r=spawnSync(process.execPath,[...(seam?['--require',seam==='signed'?signedPreload:preload]:[]),join(pkg,'dist/cli.cjs'),command,'--profile',path,...extra],{encoding:'utf8',input,timeout:15000,maxBuffer:131072});
    assert.ifError(r.error);assert.equal(r.stderr,'');assert.ok(!r.stdout.includes('PRIVATE_PACKAGE_BODY'));return {exit:r.status,value:JSON.parse(r.stdout)};
   };
   let r=run('queue-status');assert.equal(r.exit,0);assert.equal(r.value.result.pending,0);checks++;
@@ -31,5 +32,5 @@ fs.fstatSync=(...a)=>{const s=fsd(...a);s.dev=typeof s.dev==='bigint'?0x89abcdef
   const names=fs.readdirSync(queue);assert.ok(!names.some(n=>n.endsWith('.lock')||n.startsWith('.tmp-')));
   assert.equal(JSON.parse(fs.readFileSync(join(queue,names.find(n=>n.endsWith('.entry'))))).attempts,0);checks++;
  }
- console.log(JSON.stringify({passed:true,checks,bundles:Object.keys(manifest.artifacts).length,mode:'actual unpacked compiled Node CLI, official SDK; native files plus labelled Win32 stat seam',server_calls:0,model_calls:0}));
+ console.log(JSON.stringify({passed:true,checks,bundles:Object.keys(manifest.artifacts).length,mode:'actual unpacked compiled Node CLI, official SDK; native files plus labelled unsigned/signed Win32 stat seams',server_calls:0,model_calls:0}));
 }finally{fs.rmSync(dir,{recursive:true,force:true,maxRetries:5,retryDelay:100});}

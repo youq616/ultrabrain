@@ -8,16 +8,20 @@ const options=Object.freeze({bigint:true});
 const diagnostic=new WeakMap();
 const nativeCodes=new Set(['ENOENT','EACCES','EPERM','EBUSY','EIO','EMFILE','ENFILE','ELOOP','EINVAL','ENOTDIR','EBADF','ENOTSUP']);
 const own=(v,k)=>{try{return Object.getOwnPropertyDescriptor(v,k)?.value;}catch{return undefined;}};
-const unsigned=v=>typeof v==='bigint'&&v>=0n&&v<=0xffffffffffffffffn;
+// Node fills BigInt64Array stats: high-bit native IDs can be negative.
+// Preserve their exact raw representation within one stat domain.
+const nativeId=v=>typeof v==='bigint'&&v>=-0x8000000000000000n&&v<=0xffffffffffffffffn;
 /** Directional Windows compatibility only: path fast-stat may return the full
- * 64-bit volume serial while handle-stat returns its unsigned low 32 bits.
+ * 64-bit volume serial (possibly signed by Node's BigInt64 buffer), while
+ * handle-stat returns its unsigned low 32 bits.
  * Never mask two wide values, reverse the direction, or coerce rounded Numbers.
  * See Node v22.16.0 deps/uv/src/win/fs.c fs__stat_path / fs__stat_handle. */
 export function localDeviceCompatible(pathDevice,handleDevice,platform=process.platform){
- if(!unsigned(pathDevice)||!unsigned(handleDevice))return false;
+ if(!nativeId(pathDevice)||!nativeId(handleDevice))return false;
  if(pathDevice===handleDevice)return true;
- return platform==='win32'&&pathDevice>0xffffffffn&&handleDevice>0n&&handleDevice<=0xffffffffn&&
-  (pathDevice&0xffffffffn)===handleDevice;
+ const pathBits=BigInt.asUintN(64,pathDevice);
+ return platform==='win32'&&pathBits>0xffffffffn&&handleDevice>0n&&handleDevice<=0xffffffffn&&
+  (pathBits&0xffffffffn)===handleDevice;
 }
 const fields=['ino','mode','nlink','uid','gid','size','mtimeNs','ctimeNs','birthtimeNs'];
 const same=(a,b)=>a.dev===b.dev&&fields.every(k=>a[k]===b[k]);
@@ -40,7 +44,7 @@ export function readLocalFileBytes(path,kind,maxBytes=kind==='profile'?16384:220
  const check=(ok,reason)=>{if(!ok)throw failure(reason);};
  const validate=st=>{
   check(st.isFile()&&!st.isSymbolicLink(),'type');
-  check(unsigned(st.dev)&&unsigned(st.ino)&&st.ino>0n&&fields.every(k=>typeof st[k]==='bigint'),'metadata');
+  check(nativeId(st.dev)&&nativeId(st.ino)&&st.ino!==0n&&fields.every(k=>typeof st[k]==='bigint'),'metadata');
   check(st.size>=0n&&st.size<=BigInt(maxBytes),'bounds');
   check(st.nlink>=1n&&(kind!=='outbox'||st.nlink===1n),'aliases');
   if(typeof process.getuid==='function')check(st.uid===BigInt(process.getuid())&&

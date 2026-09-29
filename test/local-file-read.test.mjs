@@ -6,7 +6,7 @@ for(const [name,p,h,platform,expected]of [
  ['exact linux',19n,19n,'linux',true],['exact windows',wide,wide,'win32',true],['documented direction',wide,narrow,'win32',true],
  ['not Linux',wide,narrow,'linux',false],['not Darwin',wide,narrow,'darwin',false],['not reversed',narrow,wide,'win32',false],
  ['different narrow',wide,narrow+1n,'win32',false],['wide collision',wide,wide+0x100000000n,'win32',false],
- ['32-bit collision',narrow,1n,'win32',false],['negative',-1n,0xffffffffn,'win32',false],
+ ['32-bit collision',narrow,1n,'win32',false],['below native signed64',-0x8000000000000001n,0xffffffffn,'win32',false],
  ['too wide',2n**64n,0n,'win32',false],['rounded number',Number(wide),Number(wide),'win32',false],
  ['missing handle device',0x100000000n,0n,'win32',false],
  ['undefined',undefined,undefined,'win32',false],['string','19','19','win32',false],['nan',NaN,NaN,'win32',false]])

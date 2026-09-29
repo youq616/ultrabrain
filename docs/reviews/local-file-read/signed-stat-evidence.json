@@ -1,0 +1,32 @@
+{
+  "previous_remote_head": "2aabf458dff3c6c2b9dd36a38d6ac3b683f8d744",
+  "node_full": {
+    "tests": 3826,
+    "pass": 3826,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "exit": 0,
+    "uid": 1000
+  },
+  "new_module_tests": 67,
+  "signed_first_failure": {
+    "tests": 2,
+    "pass": 0,
+    "fail": 2
+  },
+  "package_checks": 21,
+  "package_sha256": "5e54bdfd12401c3a5a6b7ad6e6ce2d7e54b561e79fb7d2fc66b4aa5c21cb92cb",
+  "corrected_native_windows": "NOT_YET_OBSERVED",
+  "independent_final_head_review": "PENDING",
+  "logs_sha256": {
+    "signed-first-red.tap": "6605f01c23e10ec87a7f6f3674b9863246a09abc800bf0ad1fbeea04e006966d",
+    "signed-fixed.tap": "3c7968debfbe1ef9354a5897b6051de5f9b18625a9dc185be583801577c96af9",
+    "full-signed-final.tap": "d964979474807e1c0e8b90177d22074610d69e21a7379a1871040cf5c0e843f7",
+    "native-probe-signed.json": "d2ab7996ff734ae0c691d6f588441d2d0f209858c92933956570ad2c99390611",
+    "package-signed-tests.json": "85673843315d13fa96d586ffe284eb8df1cd4989fbb3da7ac71581e872ccbd68",
+    "package-signed-build.log": "717f19c59d07065baa38dfc1992b55c5e77765f81ec949dce32abe11fb719291",
+    "contention-signed-final.json": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7",
+    "control-signed-final.json": "acec0713045c4c71dc407e1f7416feda20d05ffd3fda0e454702b4fe3adb4c87"
+  }
+}
