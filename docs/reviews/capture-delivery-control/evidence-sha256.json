@@ -1,0 +1,82 @@
+[
+  {
+    "name": "control-before.tap",
+    "sha256": "23f1cdbccc53a6d55d6c4cde6ab2040a616cfaaaaa3d349300272d52a43d1646",
+    "bytes": 6876
+  },
+  {
+    "name": "control-audit-before.tap",
+    "sha256": "ae3ae69537ade9a042ab904e934e4b04761e226233c90bb9829aab2d3df7cffd",
+    "bytes": 14611
+  },
+  {
+    "name": "control-audit-fixed.tap",
+    "sha256": "24451b70c607f8e4b07ac161b21102cf82d0a506adfcc6b93b369ed4800dfe9c",
+    "bytes": 11988
+  },
+  {
+    "name": "control-pr44-final.tap",
+    "sha256": "0ce715423dbd007df3ed9e472c26af35058ab7b5e1d77d0886b986bca60a92d1",
+    "bytes": 29393
+  },
+  {
+    "name": "full-pr44-first.tap",
+    "sha256": "6ec2bafc95fe58ca3616df58e40844410fe5067fca60e0b9292a6a8f1f56c409",
+    "bytes": 781696
+  },
+  {
+    "name": "control-pr44-stress.json",
+    "sha256": "acec0713045c4c71dc407e1f7416feda20d05ffd3fda0e454702b4fe3adb4c87",
+    "bytes": 3594
+  },
+  {
+    "name": "contention-pr44-final.json",
+    "sha256": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7",
+    "bytes": 3040
+  },
+  {
+    "name": "control-mcp-first.log",
+    "sha256": "b06e7b7752b3bd5d7427f9e97ccc75cb4139490ee177e6e8aa1b5f6c6f817359",
+    "bytes": 873
+  },
+  {
+    "name": "control-mcp-diagnostic.log",
+    "sha256": "2bd063ca63b9f65ab515e56086671267a20cbb6c13f8f9cc1cb6dac26748cbf0",
+    "bytes": 928
+  },
+  {
+    "name": "control-mcp-diagnostic3.log",
+    "sha256": "9a973ab9638338eb5f9f9116ddf77db6702c9df6669e23d45f5a6122e7b20c8b",
+    "bytes": 2046
+  },
+  {
+    "name": "control-mcp-fixed.log",
+    "sha256": "fb50784f0a44f86fe3a8f6e1f0e177f906fef238bb7a5462bf651d3b26efa101",
+    "bytes": 1005
+  },
+  {
+    "name": "control-mcp-fixed2.log",
+    "sha256": "18f4949787c789ea81a021fd778e898ef15d732d35e3d0595148f54f7ba8ac52",
+    "bytes": 216
+  },
+  {
+    "name": "capture-mcp-regression.log",
+    "sha256": "a2335258040633abf0aeb010e6b33065bd6129722f52d00cceab9b2428b36c95",
+    "bytes": 129
+  },
+  {
+    "name": "build-pr44.log",
+    "sha256": "dc06073eec7b88a7d864e429613d5f79de6a00658cf3965bcabdf9c70465f1bd",
+    "bytes": 85
+  },
+  {
+    "name": "pack.json",
+    "sha256": "a91f989cc58a0381e5fac7917efe0d65e3fbef9543dd04dacf7b0fa669528230",
+    "bytes": 2027
+  },
+  {
+    "name": "db-stop.exit",
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "bytes": 2
+  }
+]

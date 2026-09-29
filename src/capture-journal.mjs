@@ -6,6 +6,7 @@ import {constants,openSync,writeFileSync,fsyncSync,closeSync,renameSync,linkSync
 import {join,isAbsolute} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {requireThat,UltraError} from './core.mjs';
+import {DELIVERY_CONTROL_FILE} from './capture-delivery-control.mjs';
 import {captureLockDiagnostic} from './capture-lock.mjs';
 const diagnostics=new WeakMap();
 const systemCodes=new Set(['EEXIST','EACCES','EPERM','EBUSY','ENOENT','ENOSPC','EDQUOT','EIO','EMFILE','ENFILE','EROFS','ENOTDIR','EISDIR','EINVAL','ELOOP','ENOTSUP','EXDEV','ENAMETOOLONG']);
@@ -31,10 +32,10 @@ export function syncCaptureDirectory(directory){
  * consent, names and quotas. This low-level primitive grants no authority. */
 export function commitCaptureJournal(directory,name,bytes,{replace=true}={}){
  requireThat(typeof directory==='string'&&isAbsolute(directory)&&!directory.includes('\0')&&
-  typeof name==='string'&&(name==='binding.json'||/^[a-f0-9]{64}\.entry$/.test(name))&&
+  typeof name==='string'&&(name==='binding.json'||name===DELIVERY_CONTROL_FILE||/^[a-f0-9]{64}\.entry$/.test(name))&&
   Buffer.isBuffer(bytes)&&bytes.length>0&&bytes.length<=220000&&typeof replace==='boolean',
   'invalid_params','Invalid capture journal publication');
- const target=name==='binding.json'?'binding':'entry',operation=replace?'replace':'create';
+ const target=name==='binding.json'?'binding':name===DELIVERY_CONTROL_FILE?'control':'entry',operation=replace?'replace':'create';
  const temp=join(directory,'.tmp-'+randomUUID()),destination=join(directory,name);
  let fd,phase='create',primary=null,publication='not_attempted',directorySync='not_attempted';const secondary=[];
  const note=error=>{const detail=Object.freeze({phase,system_code:systemCode(error)});if(primary)secondary.push(detail);else primary=detail;};
