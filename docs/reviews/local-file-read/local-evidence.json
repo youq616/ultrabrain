@@ -1,0 +1,60 @@
+{
+  "base_commit": "b879cdc2eae847eaf363c401ab32d8e5a5a7652d",
+  "base_tree": "7e8bb298b640abee7e81ee94ef7202a1e9d32120",
+  "new_tests": 65,
+  "node_final": {
+    "tests": 3824,
+    "pass": 3824,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "uid": 1000,
+    "exit": 0
+  },
+  "baseline_red": {
+    "tests": 2,
+    "pass": 0,
+    "fail": 2,
+    "mode": "real Linux files; synthetic Windows metadata representation"
+  },
+  "native_probe": {
+    "passed": true,
+    "format": "ultrabrain-native-local-read-v1",
+    "platform": "linux",
+    "node": "v22.16.0",
+    "uv": "1.49.2",
+    "device_relation": "exact",
+    "reads": 201,
+    "aliases_rejected": true,
+    "bigint_identity": true,
+    "user_paths_selected": false,
+    "server_calls": 0,
+    "model_calls": 0
+  },
+  "package": {
+    "passed": true,
+    "checks": 14,
+    "bundles": 11,
+    "mode": "actual unpacked compiled Node CLI, official SDK; native files plus labelled Win32 stat seam",
+    "server_calls": 0,
+    "model_calls": 0
+  },
+  "package_sha256": "5c96070a9da667a2e13ce3efb3840c56305d87fb37d68b99f8351ceb91db0b9e",
+  "contention_rounds": 25,
+  "control_rounds": 25,
+  "local_windows_executed": false,
+  "independent_review": "PENDING",
+  "logs_sha256": {
+    "bridge-first-red.tap": "e93327065d72f975df7dd5baf54b6111aab83c6c31bf007621be3751c06245c8",
+    "module-first.tap": "be6855a2685eeeeb690518d657a9b8744fb01331bddcba413f5c904e7172f07e",
+    "module-final.tap": "aae987641ab719d8c80b137bc982a320cf4b74bc03c31a6df2ea549e374b1aca",
+    "module-audit.tap": "0127f56f938ca875165df38d4b11341eb44b92d6d0136c25ca3ac5025516f4d3",
+    "full-local.tap": "c9af4b34ca68a73924378f2853fd9cad0a4edab1053eba08ad0b1ee51b0aae93",
+    "full-final.tap": "5c54920d7f7502c5177c5d9b0cc0d2cc13dbbdd379d031ee86163eac64ed61c5",
+    "native-probe.json": "b619ad431792ca45f5230246df6223c8373fa2e54eede1cbc35b1464cc928be1",
+    "package-tests.json": "de60c1930e404ff780ab8765e3b3a3ee4c24933c5f1a8579ca876eb39ba7be85",
+    "package-build.log": "513c658ded3cfe0159f1cff1ff94f2d4f10ab0f1850575d50a3275363af67e09",
+    "contention-final.json": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7",
+    "control-final.json": "acec0713045c4c71dc407e1f7416feda20d05ffd3fda0e454702b4fe3adb4c87"
+  }
+}

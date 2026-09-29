@@ -1,3 +1,4 @@
+import {localFileReadDiagnostic} from './local-file-read.mjs';
 /** Cooperative local capture locks: bounded, abortable wait and safe IO diagnostics.
  * Only an exclusive-create collision is retried. Never steal an old lock, retry
  * permissions/IO errors, remove an unknown lock, or retry a capture submission. */
@@ -22,7 +23,8 @@ export function captureLockError(error,kind,phase){
  let local=false;try{local=error instanceof UltraError;}catch{}
  const result=new UltraError(local&&typedCodes.has(code)?code:'outbox_lock_io',
   'Capture lock operation failed; lock and journal may need explicit inspection');
- details.set(result,Object.freeze({kind,phase,system_code:systemCodes.has(code)?code:null}));
+ const read=localFileReadDiagnostic(error);
+ details.set(result,Object.freeze({kind,phase,system_code:read?.system_code??(systemCodes.has(code)?code:null),...(read?{file_read:read}:{})}));
  return result;
 }
 export function captureLockDiagnostic(error){return details.get(error)??null;}

@@ -1,0 +1,7 @@
+{
+  "mode": "real Linux files, synthetic Windows stat backend; exact unmodified base consumers",
+  "tests": 2,
+  "pass": 0,
+  "fail": 2,
+  "original_tap_sha256": "e93327065d72f975df7dd5baf54b6111aab83c6c31bf007621be3751c06245c8"
+}

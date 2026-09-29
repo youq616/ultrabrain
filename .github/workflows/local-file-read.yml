@@ -1,0 +1,70 @@
+name: Portable local file reads
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  file-read:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+        node: ['22.16.0', '22']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Native volume identity and bounded read probe
+        shell: bash
+        run: node scripts/check-local-file-read.mjs > "$RUNNER_TEMP/local-file-probe.json"
+      - name: Reader boundaries, profile and capture regressions
+        shell: bash
+        run: node --test test/local-file-read*.test.mjs test/client-profile-authorization.test.mjs test/capture-outbox.test.mjs test/capture-hardening.test.mjs test/capture-delivery-control.test.mjs > "$RUNNER_TEMP/local-file-tests.tap"
+      - name: Eight-process queue contention
+        shell: bash
+        run: node scripts/check-capture-contention.mjs --rounds 25 > "$RUNNER_TEMP/local-file-contention.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: local-file-${{ matrix.os }}-${{ matrix.node }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/local-file-probe.json
+            ${{ runner.temp }}/local-file-tests.tap
+            ${{ runner.temp }}/local-file-contention.json
+          if-no-files-found: error
+          retention-days: 14
+  packaged-cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Build exact client and install only its pinned dependencies
+        run: |
+          bash scripts/package-client.sh "$RUNNER_TEMP/file-read-package"
+          npm install --prefix "$RUNNER_TEMP/file-read-host" --ignore-scripts --no-audit --no-fund "$RUNNER_TEMP/file-read-package/ultrabrain-client-0.14.0-alpha.1.tgz"
+      - name: Actual compiled CLI without a server
+        run: node test/local-file-read-package.mjs "$RUNNER_TEMP/file-read-host/node_modules/ultrabrain-client" > "$RUNNER_TEMP/local-file-package.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: local-file-package-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/local-file-package.json
+            ${{ runner.temp }}/file-read-package/*.tgz
+            ${{ runner.temp }}/file-read-package/*.sha256
+          if-no-files-found: error
+          retention-days: 14
