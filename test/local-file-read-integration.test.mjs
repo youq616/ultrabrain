@@ -33,9 +33,9 @@ test('bridge regression: same valid metadata permits queue write, lock release a
 test('reader diagnostics: original read errno survives the queue lock wrapper',async t=>{
  const {captureLockDiagnostic}=await import('../src/capture-lock.mjs');
  const f=setup(t),q=new CaptureOutbox(f.input),open=fs.openSync,read=fs.readSync;let target,calls=0;
- fs.openSync=(path,...args)=>{const fd=open(path,...args);if(path===join(q.directory,'.queue.lock')&&!(args[0]&fs.constants.O_CREAT))target=fd;return fd;};
+ fs.openSync=(path,...args)=>{const fd=open(path,...args);if(target===undefined&&path===join(q.directory,'.queue.lock')&&!(args[0]&fs.constants.O_CREAT))target=fd;return fd;};
  fs.readSync=(fd,...args)=>{if(fd===target){calls++;throw Object.assign(Error('PRIVATE'),{code:'EIO'});}return read(fd,...args);};syncBuiltinESMExports();
  try{await assert.rejects(q.status(),error=>{const d=captureLockDiagnostic(error);assert.equal(d.system_code,'EIO');
-  assert.equal(d.phase,'verify-release');assert.equal(d.file_read.reason,'io');assert.equal(d.file_read.phase,'read');return true;});assert.equal(calls,1);}
+  assert.equal(d.phase,process.platform==='win32'?'retire-check':'verify-release');assert.equal(d.file_read.reason,'io');assert.equal(d.file_read.phase,'read');return true;});assert.equal(calls,1);}
  finally{fs.openSync=open;fs.readSync=read;syncBuiltinESMExports();}
 });

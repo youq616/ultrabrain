@@ -1,0 +1,58 @@
+{
+  "previous_head": "717a182556755a754a5e57b86d4f9f7383088578",
+  "production_or_package_bytes_changed": false,
+  "native_reports": [
+    {
+      "artifact": 11078236734,
+      "sha256": "a167372eb3948513b20ea0f2ef92b6c6b6abc1852dd950aa873f1877dfb1ee76",
+      "pass": 213,
+      "fail": 1
+    },
+    {
+      "artifact": 11077769926,
+      "sha256": "cb5cd9dc8fa791abb7daffde112df56ba20f348339a88a61a7f2ee2dee42fb9f",
+      "pass": 207,
+      "fail": 7
+    }
+  ],
+  "reproduction": {
+    "mode": "Linux real IO with explicitly synthetic Windows zero path-device stat seam, not native Windows",
+    "before": {
+      "tests": 65,
+      "pass": 58,
+      "fail": 7
+    },
+    "after": {
+      "tests": 65,
+      "pass": 65,
+      "fail": 0
+    }
+  },
+  "correction": "Target the primary descriptor and post-read path observation instead of second global syscall; require each expected descriptor to be sampled twice and closed exactly once; retain exact EIO and read phase, using retire-check for Windows lock release only. No production checks or refusal expectations relaxed.",
+  "full_after": {
+    "tests": 4067,
+    "pass": 4067,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "exit": 0,
+    "uid": 1000
+  },
+  "unresolved_prior_native_observation": {
+    "run": 36671827540,
+    "artifact": 11078237009,
+    "sha256": "b9906ac8af808251eab2f8b938505b62d9bbe830364d914b822e39d82554d53f",
+    "platform": "ubuntu-24.04 / Node22.23.2",
+    "failed_control_round": 19,
+    "error": "outbox_busy",
+    "lock_phase": "create",
+    "system_code": "EEXIST",
+    "interpretation": "Lock remained unavailable within the bounded wait. No proof whether workload scheduling or an owner-side issue caused that observation; no timeout or failure assertion relaxed."
+  },
+  "independent_review": "717a182556 feedback is historical; request the new full head again.",
+  "log_sha256": {
+    "reader-phase-red.tap": "04ffee315f1fe1efd3407976ff57b0071de1c4ed6b799067c6857b0d0fb256d1",
+    "reader-phase-fixed.tap": "0d69d1244f8b03e15b6722ddf5a7cd105318f16530bf1363e6d42acfd4ed0144",
+    "full-reader-final.tap": "a01277d3c2c0d0b6ad070848c96395dbcf965a596bd236bedb4497ae5ce76e61"
+  }
+}
