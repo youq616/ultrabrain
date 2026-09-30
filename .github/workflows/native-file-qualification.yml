@@ -1,0 +1,33 @@
+name: Native file qualification
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+        node: ['22.16.0', '22']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Synthetic native metadata and production-reader qualification
+        shell: bash
+        run: node scripts/check-native-file-qualification.mjs > "$RUNNER_TEMP/native-qualification.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-qualification-${{ matrix.os }}-${{ matrix.node }}-${{ github.sha }}
+          path: ${{ runner.temp }}/native-qualification.json
+          if-no-files-found: error
+          retention-days: 14
