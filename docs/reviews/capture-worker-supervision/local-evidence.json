@@ -1,0 +1,78 @@
+{
+  "base_commit": "1c696a97b4d5f15882a02e8fa67b75d86aa32bfa",
+  "base_tree": "6768b4f48c821a62ac15201bf8ce8bebcaffc198",
+  "environment": {
+    "platform": "linux",
+    "node": "v22.16.0",
+    "uid": 1000
+  },
+  "full": {
+    "tests": 3962,
+    "pass": 3962,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "exit": 0
+  },
+  "new_tests": 73,
+  "new_groups": {
+    "event_and_report": 46,
+    "real_queue_faults": 11,
+    "implementer_audit": 8,
+    "native_lifecycle": 8
+  },
+  "first_failures": {
+    "exact_baseline": {
+      "tests": 2,
+      "pass": 0,
+      "fail": 2
+    },
+    "separate_implementer_audit": {
+      "tests": 8,
+      "pass": 2,
+      "fail": 6
+    }
+  },
+  "contention": {
+    "rounds": 25,
+    "workers_per_round": 8,
+    "requests": 600,
+    "records_across_rounds": 425,
+    "replays": 175
+  },
+  "control": {
+    "rounds": 25,
+    "workers_per_round": 8,
+    "entries_per_round": 8,
+    "resume_winners_per_round": 1,
+    "conflicts_per_round": 7,
+    "attempts": 0
+  },
+  "base_ci_artifact": {
+    "run": 36602677923,
+    "artifact": 11049682543,
+    "archive_sha256": "62b6a457d749d4b6eab6b58d9a6e6dd22556d42dc8d693c29074471e298e83dc",
+    "selector": "ubuntu-24.04 / Node22",
+    "failure": "early-exit expected ready but observed enqueue"
+  },
+  "independent_agent_review": "PENDING at source finalization; self-audit is not independent-agent approval",
+  "not_claimed": [
+    "Windows queue compatibility",
+    "resolution of prior EPERM or file-identity failures",
+    "fresh dependency installation",
+    "PostgreSQL/MCP integration",
+    "full Python suite",
+    "client package rebuild",
+    "user deployment"
+  ],
+  "log_sha256": {
+    "worker-baseline-red.tap": "fa638e8155f117cd119b2db013c47ecbb3f4486303e1ae9ffb5b4ef6508ab2cb",
+    "worker-audit-red.tap": "2fa3ddcd67e49be07931a1825b2abd360732dc67c0f7a7882ba5ab4709f372f0",
+    "worker-audit-fixed.tap": "65fd3bd589aae237a6aea32a3c43a23dabcb4e186aa2e4cbcf024a634c4eb2e9",
+    "worker-final-focused.tap": "b1e0e3c0815159950f1b7735acaa3beb77822b2eb30e11960519a2f830dca894",
+    "full-node.tap": "5edd5435c69b978d382b84a1037765c4a0de36d56662aa0490194e24f75f73e9",
+    "contention25.json": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7",
+    "control25.json": "acec0713045c4c71dc407e1f7416feda20d05ffd3fda0e454702b4fe3adb4c87",
+    "base-capture-delivery-control.tap": "3fd4670f0e3654667073a9ac7ee7bf6698d6e339fb4d1675c9b5cc3d2f1b8d85"
+  }
+}

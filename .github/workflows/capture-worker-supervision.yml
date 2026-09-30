@@ -1,0 +1,40 @@
+name: Capture worker supervision
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  worker-contracts:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+        node: ['22.16.0', '22']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Event ordering and real eight-process lifecycle contracts
+        shell: bash
+        run: node --test test/capture-worker-batch.test.mjs test/capture-worker-native.test.mjs > "$RUNNER_TEMP/worker-lifecycle.tap"
+      - name: Real queue failures, setup cleanup and separate audit regressions
+        shell: bash
+        run: node --test test/capture-worker-audit.test.mjs test/capture-worker-integration.test.mjs test/capture-delivery-control-diagnostic.test.mjs > "$RUNNER_TEMP/worker-integration.tap"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capture-workers-${{ matrix.os }}-${{ matrix.node }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/worker-lifecycle.tap
+            ${{ runner.temp }}/worker-integration.tap
+          if-no-files-found: error
+          retention-days: 14
+# Existing native-read, lock and delivery-control matrix/25-round commands remain.
+# Lifecycle success alone cannot certify the filesystem or authorize deployment.
