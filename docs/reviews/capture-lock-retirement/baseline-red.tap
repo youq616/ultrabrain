@@ -1,0 +1,53 @@
+TAP version 13
+# Subtest: retirement regression: stale reader cannot poison the reused queue lock name
+not ok 1 - retirement regression: stale reader cannot poison the reused queue lock name
+  ---
+  duration_ms: 8.89913
+  type: 'test'
+  location: '/mnt/data/ub-lock-work/test/capture-lock-retirement-regression.test.mjs:9:43'
+  failureType: 'testCodeFailure'
+  error: 'Capture lock operation failed; lock and journal may need explicit inspection'
+  code: 'outbox_lock_io'
+  name: 'UltraError'
+  stack: |-
+    captureLockError (file:///mnt/data/ub-lock-work/src/capture-lock.mjs:24:15)
+    acquireCaptureLock.kind.kind (file:///mnt/data/ub-lock-work/src/capture-outbox.mjs:90:29)
+    acquireCaptureLock (file:///mnt/data/ub-lock-work/src/capture-lock.mjs:54:15)
+    #acquire (file:///mnt/data/ub-lock-work/src/capture-outbox.mjs:84:12)
+    #queue (file:///mnt/data/ub-lock-work/src/capture-outbox.mjs:108:38)
+    CaptureOutbox.status (file:///mnt/data/ub-lock-work/src/capture-outbox.mjs:191:23)
+    file:///mnt/data/ub-lock-work/test/capture-lock-retirement-regression.test.mjs:18:69
+    TestContext.<anonymous> (file:///mnt/data/ub-lock-work/test/capture-lock-retirement-regression.test.mjs:19:23)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: retirement regression: stale reader cannot poison the reused delivery lock name
+not ok 2 - retirement regression: stale reader cannot poison the reused delivery lock name
+  ---
+  duration_ms: 2.858273
+  type: 'test'
+  location: '/mnt/data/ub-lock-work/test/capture-lock-retirement-regression.test.mjs:9:43'
+  failureType: 'testCodeFailure'
+  error: 'Capture lock operation failed; lock and journal may need explicit inspection'
+  code: 'outbox_lock_io'
+  name: 'UltraError'
+  stack: |-
+    captureLockError (file:///mnt/data/ub-lock-work/src/capture-lock.mjs:24:15)
+    acquireCaptureLock.kind.kind (file:///mnt/data/ub-lock-work/src/capture-outbox.mjs:90:29)
+    acquireCaptureLock (file:///mnt/data/ub-lock-work/src/capture-lock.mjs:54:15)
+    #acquire (file:///mnt/data/ub-lock-work/src/capture-outbox.mjs:84:12)
+    CaptureOutbox.flush (file:///mnt/data/ub-lock-work/src/capture-outbox.mjs:222:38)
+    action (file:///mnt/data/ub-lock-work/test/capture-lock-retirement-regression.test.mjs:18:84)
+    TestContext.<anonymous> (file:///mnt/data/ub-lock-work/test/capture-lock-retirement-regression.test.mjs:19:23)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 76.489374

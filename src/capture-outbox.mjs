@@ -1,3 +1,4 @@
+import {retireCaptureLock,RETIRED_CAPTURE_LOCK} from './capture-lock-retirement.mjs';
 import {readLocalFileBytes} from './local-file-read.mjs';
 /** Client-only delivery journal for personal capture. Not a second memory database.
  * Entries are removed only after an identity-bound, matching server journal receipt.
@@ -95,6 +96,7 @@ export class CaptureOutbox {
       try{syncDirectory(this.directory);}catch(error){throw captureLockError(error,kind,'directory-sync');}
       const hash=sha256(bytes);
       return ()=>{
+        if(process.platform==='win32')return retireCaptureLock(this.directory,kind,hash,()=>this.#checkDir());
         let phase='verify-release';
         try{
           this.#checkDir();
@@ -121,7 +123,7 @@ export class CaptureOutbox {
   #names(){
     const names=readdirSync(this.directory);
     requireThat(names.length<=MAX_FILES+16,'outbox_full','Too many journal files');
-    requireThat(names.every(n=>RECORD.test(n)||TEMP.test(n)||['binding.json',DELIVERY_CONTROL_FILE,'.queue.lock','.delivery.lock'].includes(n)),
+    requireThat(names.every(n=>RECORD.test(n)||TEMP.test(n)||RETIRED_CAPTURE_LOCK.test(n)||['binding.json',DELIVERY_CONTROL_FILE,'.queue.lock','.delivery.lock'].includes(n)),
       'outbox_corrupt','Unexpected journal contents; nothing was removed');
     return names.filter(n=>RECORD.test(n)).sort();
   }
@@ -195,7 +197,8 @@ export class CaptureOutbox {
       for(const kind of ['delivery']){const path=this.#path('.'+kind+'.lock');if(exists(path)){const bytes=readBytes(path,2048);let value;try{value=JSON.parse(bytes);}catch{}
         locks[kind]={sha256:sha256(bytes),pid:Number.isInteger(value?.pid)?value.pid:null};}}
       return {format:1,source_id:this.profile.source,...counts,bytes,limits:{entries:MAX_FILES,bytes:MAX_BYTES,automatic_attempts:MAX_ATTEMPTS},
-        temporary_files:readdirSync(this.directory).filter(n=>TEMP.test(n)).length,locks,durability:this.durability,
+        temporary_files:readdirSync(this.directory).filter(n=>TEMP.test(n)).length,
+        retired_lock_files:readdirSync(this.directory).filter(n=>RETIRED_CAPTURE_LOCK.test(n)).length,locks,durability:this.durability,
         delivery:deliveryControlView(this.#control()),
         warning:'Client journal counts are not server confirmations or completed knowledge; files contain plaintext consented input'};
     },{signal});
@@ -212,7 +215,9 @@ export class CaptureOutbox {
     const r=this.inspectLock(kind);requireThat(r.sha256===expectedHash,'conflict','Lock changed');
     if(r.pid){let gone=false;try{process.kill(r.pid,0);}catch(e){gone=e.code==='ESRCH';}requireThat(gone,'outbox_busy','Lock owner PID still exists or cannot be checked');}
     // No age-based stealing. Exact operator-reviewed lock only; payloads are never removed.
-    requireThat(this.inspectLock(kind).sha256===expectedHash,'conflict','Lock changed');unlinkSync(this.#path('.'+kind+'.lock'));syncDirectory(this.directory);
+    requireThat(this.inspectLock(kind).sha256===expectedHash,'conflict','Lock changed');
+    if(process.platform==='win32')retireCaptureLock(this.directory,kind,expectedHash,()=>this.#checkDir());
+    else {unlinkSync(this.#path('.'+kind+'.lock'));syncDirectory(this.directory);}
     return {recovered:true,kind,payloads_deleted:0};
   }
   async flush(connect,{limit=4,retryBlocked=false,eventId,signal,authorize=()=>{}}={}) {

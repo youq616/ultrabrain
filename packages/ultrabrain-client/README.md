@@ -187,3 +187,17 @@ handle: both handle devices must be nonzero and exactly equal, along with all
 other metadata. A missing handle identity still cannot anchor an unmatched path.
 See `docs/LOCAL-FILE-QUALIFICATION.md` at the exact build commit. Identify private
 packages by their source commit and digest, not the unchanged version string.
+
+### Windows lock-name retirement
+
+Windows queue and delivery releases first move the verified old lock to an
+exclusively reserved retirement name, then verify and delete only that retired
+file. Old readers cannot make the reusable name itself delete-pending. Exclusive
+acquisition, permission-error refusal and explicit recovery authorization remain.
+Errors preserve retirement evidence and whether the original name was released;
+`queue-status` reports `retired_lock_files` without automatically removing them.
+This adds recognized local residue names, not a new record or server format.
+Stop processes sharing a queue before upgrading/downgrading: older clients may
+reject these new names. It is not permission repair or hostile same-user isolation.
+See `docs/CAPTURE-LOCK-RETIREMENT.md` at the exact build commit. Native CI and
+independent review, not a version string alone, determine acceptance.

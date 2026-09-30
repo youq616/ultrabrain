@@ -1,0 +1,51 @@
+name: Capture lock name retirement
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  retirement:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+        node: ['22.16.0', '22']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Ownership, namespace and retained-error contracts
+        shell: bash
+        run: node --test test/capture-lock-retirement*.test.mjs test/capture-lock-io.test.mjs test/capture-journal-audit.test.mjs test/capture-delivery-control-audit.test.mjs > "$RUNNER_TEMP/retirement-contracts.tap"
+      - name: Actual held-reader and next-owner name reuse
+        if: always()
+        shell: bash
+        run: node scripts/check-capture-lock-retirement.mjs > "$RUNNER_TEMP/retirement-native.json"
+      - name: Original eight-process enqueue stress
+        if: always()
+        shell: bash
+        run: node scripts/check-capture-contention.mjs --rounds 25 > "$RUNNER_TEMP/retirement-contention.json"
+      - name: Original eight-process pause and resume stress
+        if: always()
+        shell: bash
+        run: node scripts/check-capture-delivery-control.mjs --rounds 25 > "$RUNNER_TEMP/retirement-control.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lock-retirement-${{ matrix.os }}-${{ matrix.node }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/retirement-contracts.tap
+            ${{ runner.temp }}/retirement-native.json
+            ${{ runner.temp }}/retirement-contention.json
+            ${{ runner.temp }}/retirement-control.json
+          if-no-files-found: error
+          retention-days: 14
+# Failing steps stay failing; always() only preserves independent evidence.
+# Existing file/lock/control/worker workflows remain, not replaced by this gate.

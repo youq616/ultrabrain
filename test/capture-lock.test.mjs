@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {performance} from 'node:perf_hooks';
 import {acquireCaptureLock,captureLockError,captureLockDiagnostic} from '../src/capture-lock.mjs';
 import {UltraError} from '../src/core.mjs';
 const collision=()=>captureLockError({code:'EEXIST'},'queue','create');
@@ -17,10 +18,13 @@ test('lock: zero wait makes exactly one claim, never waits or steals',async()=>{
  let calls=0;await assert.rejects(acquireCaptureLock(()=>{calls++;throw collision();},{kind:'queue',waitMs:0}),{code:'outbox_busy'});
  assert.equal(calls,1);
 });
-test('lock: persistent contention exhausts the bound with safe diagnostic',async()=>{
- let calls=0;await assert.rejects(acquireCaptureLock(()=>{calls++;throw collision();},{kind:'queue',waitMs:20}),error=>{
+test('lock: persistent contention exhausts the bound with safe diagnostic',async t=>{
+ // Verify the algorithm, not OS timer punctuality: advance the monotonic
+ // clock on actual claims. Real delayed-timer refusal remains in the audit.
+ let now=0;t.mock.method(performance,'now',()=>now);
+ let calls=0;await assert.rejects(acquireCaptureLock(()=>{calls++;now+=10;throw collision();},{kind:'queue',waitMs:20}),error=>{
   assert.deepEqual(captureLockDiagnostic(error),{kind:'queue',phase:'create',system_code:'EEXIST'});return error.code==='outbox_busy';
- });assert.ok(calls>=2&&calls<=3);
+ });assert.ok(calls>=2&&calls<=3);assert.equal(calls,2);assert.equal(now,20);
 });
 for(const code of ['EPERM','EACCES','EBUSY','ENOSPC','EIO','ENOENT','EMFILE','EROFS'])test('lock: no permission or IO retries '+code,async()=>{
  let calls=0;await assert.rejects(acquireCaptureLock(()=>{calls++;throw captureLockError({code},'queue','create');},{kind:'queue'}),{code:'outbox_lock_io'});

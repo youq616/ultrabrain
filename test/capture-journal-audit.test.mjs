@@ -8,12 +8,12 @@ import {captureJournalDiagnostic} from '../src/capture-journal.mjs';
 import {setupJournal,patchFS,ioError,payload} from './helpers/capture-journal-fixture.mjs';
 for(const action of ['enqueue','flush'])test('audit: '+action+' preserves journal cause across failed lock releases',async t=>{
  const {q}=setupJournal(t);if(action==='flush')await q.enqueue(payload);else await q.status();const attempted=[];let faulted=false;
- const restores=[patchFS(action==='flush'?'renameSync':'linkSync',()=>{faulted=true;throw ioError('ENOSPC');}),
- patchFS('unlinkSync',(native,path,...a)=>{if(faulted&&String(path).endsWith('.lock')){attempted.push(path.endsWith('.queue.lock')?'queue':'delivery');throw ioError('EPERM');}return native(path,...a);})];
+ const restores=[patchFS(action==='flush'?'renameSync':'linkSync',(native,a,b,...rest)=>{if(String(b).endsWith('.entry')){faulted=true;throw ioError('ENOSPC');}return native(a,b,...rest);}),
+ patchFS('unlinkSync',(native,path,...a)=>{if(faulted&&String(path).endsWith('.lock')){attempted.push((/(?:\.queue|\.retired-queue-[a-f0-9-]{36})\.lock$/.test(path))?'queue':'delivery');throw ioError('EPERM');}return native(path,...a);})];
  let e;try{if(action==='flush')await q.flush(()=>assert.fail('No connection'));else await q.enqueue(payload);}catch(error){e=error;}finally{restores.reverse().forEach(r=>r());}
  assert.equal(e.code,'outbox_journal_io');const d=captureJournalDiagnostic(e);assert.equal(d.phase,'publish');assert.equal(d.system_code,'ENOSPC');
  assert.deepEqual(d.lock_release.map(v=>v.kind),action==='flush'?['queue','delivery']:['queue']);assert.deepEqual(attempted,d.lock_release.map(v=>v.kind));
- assert.ok(Object.isFrozen(d.lock_release));assert.ok(d.lock_release.every(v=>Object.isFrozen(v)&&v.phase==='unlink'&&v.system_code==='EPERM'));
+ assert.ok(Object.isFrozen(d.lock_release));assert.ok(d.lock_release.every(v=>Object.isFrozen(v)&&v.phase===(process.platform==='win32'?'retire-unlink':'unlink')&&v.system_code==='EPERM'));
  assert.ok(!JSON.stringify(d).includes('PRIVATE'));assert.equal(fs.readdirSync(q.directory).filter(n=>n.endsWith('.entry')).length,action==='flush'?1:0);
 });
 
@@ -23,7 +23,7 @@ for(const kind of ['journal','lock','forged'])test('audit: automatic capture ret
  const profile=join(root,'profile.json');fs.writeFileSync(profile,JSON.stringify(input),{mode:0o600});
  const manager=automaticCapture(profile,()=>assert.fail('No server connection'),{authorizedProfileInput:input});
  const restores=[];
- if(kind==='journal')restores.push(patchFS('renameSync',()=>{throw ioError('ENOSPC');}));
+ if(kind==='journal')restores.push(patchFS('renameSync',(native,a,b,...rest)=>{if(String(b).endsWith('.entry'))throw ioError('ENOSPC');return native(a,b,...rest);}));
  else if(kind==='lock')restores.push(patchFS('openSync',(native,path,...a)=>{if(String(path).endsWith('.delivery.lock'))throw ioError('EPERM');return native(path,...a);}));
  else t.mock.method(CaptureOutbox.prototype,'flush',async()=>{
   const e=new UltraError('outbox_journal_io','PRIVATE_FORGED_ERROR');Object.defineProperty(e,'journal',{get(){assert.fail('No diagnostic getters');}});throw e;

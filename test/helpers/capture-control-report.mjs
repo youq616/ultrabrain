@@ -13,9 +13,10 @@ function localRead(x){
 }
 function lock(x){
  if(!object(x))return null;
- const kind=one(x.kind,['queue','delivery']),phase=one(x.phase,['create','write','file-sync','close','directory-sync','verify-release','unlink','release-sync']);
+ const kind=one(x.kind,['queue','delivery']),phase=one(x.phase,['create','write','file-sync','close','directory-sync','verify-release','unlink','release-sync','retire-check','retire-create','retire-write','retire-sync','retire-close','retire-rename','retire-verify','retire-unlink','retire-flush']);
  const file_read=localRead(x.file_read);
- return kind&&phase?{kind,phase,system_code:errno(x.system_code),...(file_read?{file_read}:{})}:null;
+ const r=x.retirement,retirement=object(r)&&['not_released','unconfirmed','released'].includes(r.namespace_state)&&typeof r.close_failed==='boolean'?{namespace_state:r.namespace_state,close_failed:r.close_failed}:null;
+ return kind&&phase?{kind,phase,system_code:errno(x.system_code),...(file_read?{file_read}:{}),...(retirement?{retirement}:{})}:null;
 }
 function journal(x){
  if(!object(x))return null;
@@ -31,9 +32,16 @@ function journal(x){
 export function controlWorkerReport(text,{overflow=false}={}){
  let r;try{if(!overflow&&typeof text==='string'&&Buffer.byteLength(text)<=4096)r=JSON.parse(text);}catch{}
  if(!object(r))return {ok:false,code:'invalid_worker_report'};
- if(r.ok===true&&['resumed','conflict'].includes(r.outcome))return {ok:true,outcome:r.outcome};
+ let waits;
+ if(Object.hasOwn(r,'lock_waits')){
+  const v=r.lock_waits;
+  if(!object(v)||Object.keys(v).length!==2||!['enqueue','resume'].every(k=>Object.hasOwn(v,k)&&Number.isSafeInteger(v[k])&&v[k]>=0&&v[k]<=7))
+   return {ok:false,code:'invalid_worker_report'};
+  waits={lock_waits:{enqueue:v.enqueue,resume:v.resume}};
+ }
+ if(r.ok===true&&['resumed','conflict'].includes(r.outcome))return {ok:true,outcome:r.outcome,...waits};
  if(r.ok!==false)return {ok:false,code:'invalid_worker_report'};
  const safe=captureProcessDiagnostic(r);
  return {ok:false,...safe,lock:lock(r.lock),journal:journal(r.journal),native_code:errno(r.native_code),
-  target:one(r.target,['queue-lock','delivery-lock','binding','entry','temporary','other'])};
+  target:one(r.target,['queue-lock','delivery-lock','binding','entry','temporary','other']),...waits};
 }

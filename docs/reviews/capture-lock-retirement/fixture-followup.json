@@ -1,0 +1,36 @@
+{
+  "previous_head": "16c1b912e10cceab4f6010091cf7c774d9785165",
+  "production_and_package_bytes_changed": false,
+  "native_failure_artifact": 11077149844,
+  "native_failure_archive_sha256": "3adc943e07af5cc8c8ca327b417b1d15e1412094f7fc57358cdebb7d54be991c",
+  "scope_reproduction": {
+    "mode": "actual Linux IO with Windows release-policy seam; not native Windows",
+    "before": {
+      "tests": 54,
+      "pass": 50,
+      "fail": 4
+    },
+    "after": {
+      "tests": 54,
+      "pass": 54,
+      "fail": 0
+    }
+  },
+  "fix": "Target journal publication/crash faults only at .entry destinations, not every rename; preserve original result/evidence assertions. Add safe checker report context to two unchanged assertions.",
+  "full_after": {
+    "tests": 4067,
+    "pass": 4067,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "exit": 0,
+    "uid": 1000
+  },
+  "independent_review": "Previous-head feedback does not cover this test-only follow-up; request final head again.",
+  "logs": {
+    "retirement-policy-scope-red.tap": "5cc2a8c4e6793570c5b0dafe877dcaab3dfe5d31f10445fe35ccaa4f9910bb33",
+    "retirement-policy-scope-fixed.tap": "e8ee909e730baa353d798367af7b4ba8af4a2af27f7251ce223517108e98fc27",
+    "report-context-fixed.tap": "8a823234e23059c5a4759dd46b98e42725d1c4653768911e1892f5663da84b6d",
+    "full-fixture-final.tap": "4680a42598a6106499968dc3ac43d83bebd2ca367064abe817d40ffd8800eb75"
+  }
+}

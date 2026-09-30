@@ -7,7 +7,7 @@ import {performance} from 'node:perf_hooks';
 import {requireThat,UltraError} from './core.mjs';
 const details=new WeakMap();
 const kinds=new Set(['queue','delivery']);
-const phases=new Set(['create','write','file-sync','close','directory-sync','verify-release','unlink','release-sync']);
+const phases=new Set(['create','write','file-sync','close','directory-sync','verify-release','unlink','release-sync','retire-check','retire-create','retire-write','retire-sync','retire-close','retire-rename','retire-verify','retire-unlink','retire-flush']);
 const systemCodes=new Set(['EEXIST','EACCES','EPERM','EBUSY','ENOENT','ENOSPC','EDQUOT','EIO','EMFILE','ENFILE','EROFS','ENOTDIR','EISDIR','EINVAL','ELOOP','ENOTSUP']);
 const typedCodes=new Set(['insecure_outbox','outbox_corrupt','outbox_lock_changed']);
 const own=(v,k)=>{try{return Object.getOwnPropertyDescriptor(v,k)?.value;}catch{return undefined;}};
@@ -17,14 +17,15 @@ export function checkCaptureSignal(signal){
 }
 /** Called around actual local IO, not remote/provider errors. Preserve no paths,
  * messages, payloads or arbitrary error properties. A diagnostic is not a receipt. */
-export function captureLockError(error,kind,phase){
+export function captureLockError(error,kind,phase,retirement){
  requireThat(kinds.has(kind)&&phases.has(phase),'invalid_params','Invalid lock diagnostic boundary');
+ requireThat(retirement===undefined||['not_released','unconfirmed','released'].includes(retirement.namespace_state)&&typeof retirement.close_failed==='boolean','invalid_params','Invalid retirement outcome');
  const code=own(error,'code');
  let local=false;try{local=error instanceof UltraError;}catch{}
  const result=new UltraError(local&&typedCodes.has(code)?code:'outbox_lock_io',
   'Capture lock operation failed; lock and journal may need explicit inspection');
  const read=localFileReadDiagnostic(error);
- details.set(result,Object.freeze({kind,phase,system_code:read?.system_code??(systemCodes.has(code)?code:null),...(read?{file_read:read}:{})}));
+ details.set(result,Object.freeze({kind,phase,system_code:read?.system_code??(systemCodes.has(code)?code:null),...(read?{file_read:read}:{}),...(retirement?{retirement:Object.freeze({namespace_state:retirement.namespace_state,close_failed:retirement.close_failed})}:{})}));
  return result;
 }
 export function captureLockDiagnostic(error){return details.get(error)??null;}

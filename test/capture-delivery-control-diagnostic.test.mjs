@@ -17,7 +17,7 @@ test('control diagnostic: native EPERM before staged preserves worker and authen
  assert.deepEqual(failed.result.lock,{kind:'queue',phase:'create',system_code:'EPERM'});
 });
 test('control diagnostic: failures after resume barrier retain authentic control publication diagnostic',()=>{
- const r=run('resume-enospc');assert.equal(r.stage,'resume');const failed=r.outcomes.find(x=>x.result.code==='outbox_journal_io');
+ const r=run('resume-enospc');assert.equal(r.stage,'resume',JSON.stringify(r));const failed=r.outcomes.find(x=>x.result.code==='outbox_journal_io');
  assert.ok(failed);assert.equal(failed.result.journal.target,'control');assert.equal(failed.result.journal.phase,'publish');assert.equal(failed.result.journal.system_code,'ENOSPC');
 });
 for(const mode of ['early-exit','overflow'])test('control diagnostic: '+mode+' is bounded and does not erase the failed round',()=>{
