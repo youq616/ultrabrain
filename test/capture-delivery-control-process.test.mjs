@@ -5,7 +5,9 @@ import {join} from 'node:path';import {tmpdir} from 'node:os';import {fileURLToP
 import {deliveryControlRound} from '../scripts/check-capture-delivery-control.mjs';
 import {CaptureOutbox} from '../src/capture-outbox.mjs';
 test('delivery process: eight enqueues while paused and exactly one CAS resume winner',async()=>{
- assert.deepEqual(await deliveryControlRound(),{passed:true,workers:8,consented_entries:8,resume_successes:1,stale_conflicts:7,payloads_unchanged:true,attempts_spent:0});
+ const {lock_waits,...result}=await deliveryControlRound();
+ assert.ok(lock_waits&&['enqueue','resume'].every(k=>Number.isSafeInteger(lock_waits[k])&&lock_waits[k]>=0&&lock_waits[k]<=56));
+ assert.deepEqual(result,{passed:true,workers:8,consented_entries:8,resume_successes:1,stale_conflicts:7,payloads_unchanged:true,attempts_spent:0});
 });
 test('delivery process: committed pause survives actual writer termination and reopening',async t=>{
  const root=mkdtempSync(join(tmpdir(),'ub-control-kill-'));t.after(()=>rmSync(root,{recursive:true,force:true}));

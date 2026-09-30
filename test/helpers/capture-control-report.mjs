@@ -32,9 +32,16 @@ function journal(x){
 export function controlWorkerReport(text,{overflow=false}={}){
  let r;try{if(!overflow&&typeof text==='string'&&Buffer.byteLength(text)<=4096)r=JSON.parse(text);}catch{}
  if(!object(r))return {ok:false,code:'invalid_worker_report'};
- if(r.ok===true&&['resumed','conflict'].includes(r.outcome))return {ok:true,outcome:r.outcome};
+ let waits;
+ if(Object.hasOwn(r,'lock_waits')){
+  const v=r.lock_waits;
+  if(!object(v)||Object.keys(v).length!==2||!['enqueue','resume'].every(k=>Object.hasOwn(v,k)&&Number.isSafeInteger(v[k])&&v[k]>=0&&v[k]<=7))
+   return {ok:false,code:'invalid_worker_report'};
+  waits={lock_waits:{enqueue:v.enqueue,resume:v.resume}};
+ }
+ if(r.ok===true&&['resumed','conflict'].includes(r.outcome))return {ok:true,outcome:r.outcome,...waits};
  if(r.ok!==false)return {ok:false,code:'invalid_worker_report'};
  const safe=captureProcessDiagnostic(r);
  return {ok:false,...safe,lock:lock(r.lock),journal:journal(r.journal),native_code:errno(r.native_code),
-  target:one(r.target,['queue-lock','delivery-lock','binding','entry','temporary','other'])};
+  target:one(r.target,['queue-lock','delivery-lock','binding','entry','temporary','other']),...waits};
 }

@@ -1,0 +1,43 @@
+{
+  "baseline": "fd9d6061f205c0156b0e6878c7f2004cc99d4fe8",
+  "run": 36673626704,
+  "scope": "Extracted observations, not complete native logs; original ZIP/TAP/JSON retained in handoff with provenance SHA256.",
+  "windows_node22": {
+    "artifact": 11079251833,
+    "tests": 142,
+    "pass": 141,
+    "fail": 1,
+    "failed_test": "delivery process: eight enqueues while paused and exactly one CAS resume winner",
+    "stage": "enqueue",
+    "unacquired_workers": [
+      1,
+      5,
+      7
+    ],
+    "code": "outbox_busy",
+    "lock": {
+      "kind": "queue",
+      "phase": "create",
+      "system_code": "EEXIST"
+    }
+  },
+  "windows_node2216": {
+    "artifact": 11078968418,
+    "tests": 142,
+    "pass": 142,
+    "fail": 0,
+    "stress_rounds_requested": 25,
+    "failed_round": 2,
+    "stage": "resume",
+    "unacquired_workers": [
+      0,
+      4
+    ],
+    "code": "outbox_busy",
+    "lock": {
+      "kind": "queue",
+      "phase": "create",
+      "system_code": "EEXIST"
+    }
+  }
+}

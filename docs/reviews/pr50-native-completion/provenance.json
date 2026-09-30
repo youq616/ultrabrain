@@ -1,0 +1,29 @@
+{
+  "baseline_sha": "fd9d6061f205c0156b0e6878c7f2004cc99d4fe8",
+  "base_tree": "bfc02b29de7bd9723f94347089f449ac3d9d948d",
+  "first_failure_run": 36673626704,
+  "artifacts": [
+    {
+      "id": 11079251833,
+      "filename": "ultrabrain-pr50-fd9-control-win22-first-failure.zip",
+      "sha256": "3651a8e26194b0b0b16cf5217e57a02800541ecac706f93b8f232ab7a21cb76a"
+    },
+    {
+      "id": 11078968418,
+      "filename": "ultrabrain-pr50-fd9-control-win2216-first-failure.zip",
+      "sha256": "f41e2164293925dd5d9a90bbf3270199c18a2e67a0715536112fb8e057b62783"
+    }
+  ],
+  "local_logs": {
+    "held-lock-before.tap": "ac658e6874912facddd8038617bed8ed0535c854a7f873f4ebd1ea8204d49686",
+    "held-lock-after.tap": "6c9fb731057924e9cb578c4480e67a5e04cf5c5901f410198c888d04250bd3b3",
+    "timer-before.tap": "a5809251e7d816b504b4571fbeb4c6b0b24046944f25963d0a7577037aba736d",
+    "timer-after.tap": "3478faf5b94a3f15e262f15fb6af88ca85d8a593033ff2e7574846b377b03d45",
+    "focused-first.tap": "88c470587312d65e6ff53badb7e792436ed86f9e13f9d66a7948462c0580ef67",
+    "focused-final.tap": "827cc170942d7b209f8925339e8549ff5504d1d3639adb79540d08ce8dab8a5f",
+    "full-node.tap": "af4502560ffe0509de71829ca1c8331c246841f007126aba9566d76b9b5cba4b",
+    "baseline-readiness.tap": "b1c4a4a0fd82d52538b8e54614fa5fa890ebabccc92dd9982e1bb7e160e4b5c3",
+    "contention25.json": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7",
+    "control25.json": "0e323ddd807ec0b3da8d0056115720888e48e9c8bb42e7529a69cfa99b0f3155"
+  }
+}

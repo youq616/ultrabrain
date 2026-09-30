@@ -24,14 +24,15 @@ export async function deliveryControlRound(){
   const snapshot=()=>readdirSync(q.directory).filter(n=>n.endsWith('.entry')).sort().map(n=>readFileSync(join(q.directory,n),'utf8'));
   const before=snapshot(),paused=(await q.status()).delivery;
   stage='resume';batch.resume(()=>({expectedHash:pause.control_sha256}));const outcomes=await batch.outcomes();
-  if(outcomes.some(r=>!r.valid))result={passed:false,stage,timed_out:batch?.timedOut??false,outcomes};
+  if(outcomes.some(r=>!r.valid||!r.result.lock_waits))result={passed:false,stage,timed_out:batch?.timedOut??false,outcomes};
   else{
    stage='integrity';const after=snapshot(),status=await q.status(),resumed=outcomes.filter(r=>r.result.outcome==='resumed').length,conflicts=outcomes.filter(r=>r.result.outcome==='conflict').length;
    const passed=resumed===1&&conflicts===7&&paused.control_sha256===pause.control_sha256&&
     status.delivery.state==='running'&&status.delivery.revision===2&&status.pending===8&&status.blocked===0&&
     JSON.stringify(before)===JSON.stringify(after)&&after.every(b=>JSON.parse(b).attempts===0)&&readdirSync(q.directory).length===10;
    result={passed,workers:8,consented_entries:after.length,resume_successes:resumed,stale_conflicts:conflicts,
-    payloads_unchanged:JSON.stringify(before)===JSON.stringify(after),attempts_spent:after.reduce((n,b)=>n+JSON.parse(b).attempts,0)};
+    payloads_unchanged:JSON.stringify(before)===JSON.stringify(after),attempts_spent:after.reduce((n,b)=>n+JSON.parse(b).attempts,0),
+    lock_waits:{enqueue:outcomes.reduce((n,r)=>n+r.result.lock_waits.enqueue,0),resume:outcomes.reduce((n,r)=>n+r.result.lock_waits.resume,0)}};
    if(!passed)Object.assign(result,{stage,timed_out:batch?.timedOut??false,outcomes});
   }
  }catch(error){result={passed:false,stage,timed_out:batch?.timedOut??false,error:captureProcessDiagnostic(error)};}

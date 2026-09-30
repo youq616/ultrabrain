@@ -1,0 +1,9 @@
+Exact relevant excerpt from GitHub workflow job109753764564, run36673626876, baseline fd9d6061. Full job log remains at GitHub; this file is not a complete log.
+
+2026-09-30T05:33:39.8275873Z not ok 41 - lock: persistent contention exhausts the bound with safe diagnostic
+2026-09-30T05:33:39.8276868Z   duration_ms: 36.3647
+2026-09-30T05:33:39.8277867Z   location: 'D:\\a\\ultrabrain\\ultrabrain\\test\\capture-lock.test.mjs:20:1'
+2026-09-30T05:33:39.8278932Z   failureType: 'testCodeFailure'
+2026-09-30T05:33:39.8279387Z   error: |-
+2026-09-30T05:33:39.8279795Z     The expression evaluated to a falsy value:
+2026-09-30T05:33:39.8280661Z       assert.ok(calls>=2&&calls<=3)
