@@ -17,9 +17,10 @@ const main=()=>{
   phase='identity';assert.equal(before.ino,handle.ino);assert.equal(observation.other_metadata_equal,true);
   // An unrecognized Win32 cross-domain number is not evidence of two files.
   // Qualify it through the actual reader below, which holds and compares two
-  // descriptors. Other platforms and unknown zero IDs must still refuse.
+  // descriptors. Other platforms and unavailable handle identities must still refuse.
+  // A zero path device can be anchored by two matching nonzero handles.
   if(relation==='unrecognized'){
-   assert.equal(process.platform,'win32');assert.notEqual(before.dev,0n);assert.notEqual(handle.dev,0n);
+   assert.equal(process.platform,'win32');assert.notEqual(handle.dev,0n);
   }
   const confirmation=relation==='unrecognized'?'dual-descriptor-required':'existing-stat-domain-comparison';
   phase='reads';for(let i=0;i<100;i++){assert.deepEqual(readLocalFileBytes(path,'profile'),bytes);assert.deepEqual(readLocalFileBytes(path,'outbox'),bytes);}

@@ -53,8 +53,8 @@ for(const platform of ['linux','darwin'])test('anchor: other platforms retain ex
  const f=setup(t,{platform});assert.throws(()=>readLocalFileBytes(f.path,'outbox'),e=>localFileReadDiagnostic(e).reason==='identity');
  assert.equal(f.state.opens,1);assert.equal(f.state.reads,0);assert.equal(f.state.closes.length,1);
 });
-for(const option of [{pathDev:0n},{handleDev:0n},{pathDev:2n**64n},{handleDev:-(2n**63n)-1n}])
- test('anchor: zero or invalid incomparable device identity fails closed',t=>{
+for(const option of [{handleDev:0n},{pathDev:2n**64n},{handleDev:-(2n**63n)-1n}])
+ test('anchor: zero handle or invalid incomparable device identity fails closed',t=>{
   const f=setup(t,option);assert.throws(()=>readLocalFileBytes(f.path,'outbox'));assert.ok(f.state.opens<=1);assert.equal(f.state.reads,0);
  });
 for(const field of ['dev','ino','mtimeNs','ctimeNs','birthtimeNs','mode','nlink','uid','gid','size'])

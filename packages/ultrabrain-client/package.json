@@ -12,7 +12,8 @@
     "ultrabrain-client": "dist/cli.cjs",
     "ultrabrain-snapshot": "dist/snapshot-cli.cjs",
     "ultrabrain-memory-review": "dist/memory-review-cli.cjs",
-    "ultrabrain-candidates": "dist/candidates-cli.cjs"
+    "ultrabrain-candidates": "dist/candidates-cli.cjs",
+    "ultrabrain-local-check": "dist/local-check-cli.cjs"
   },
   "files": [
     "dist",

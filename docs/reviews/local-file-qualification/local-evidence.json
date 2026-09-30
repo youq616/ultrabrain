@@ -1,0 +1,40 @@
+{
+  "base_commit": "262b2138bedc423b2a6886dcade9f998e421d66d",
+  "staging_commit": "d2367c8db075bece21be576780086cfca9267401",
+  "staging_windows_artifact": 11070587674,
+  "staging_windows_run": 36651409117,
+  "staging_windows_zip_sha256": "0e9440da3dfdbb8bde53e2a3133450e92e348839a063454293f63dc78c2aa725",
+  "local_tests": {
+    "node": "22.16.0",
+    "uid": 1000,
+    "tests": 4030,
+    "pass": 4030,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0
+  },
+  "new_tests": 69,
+  "net_additional_tests": 68,
+  "package_checks": 9,
+  "package_bundles": 13,
+  "package_sha256": "2f18e14f9570c22c26e188a3530fea6dfd6ef1f42cb5471375dbf1b3b6849d77",
+  "independent_agent_review": "PENDING",
+  "not_claimed": [
+    "all Windows filesystem failures resolved",
+    "EPERM resolved",
+    "user deployment",
+    "fresh network npm install",
+    "PostgreSQL/MCP integration"
+  ],
+  "log_sha256": {
+    "zero-volume-before.tap": "6e6d97a73f922826cfd3013e7d67a7c09ce98876b3d6ad0d4b859dd172ebebff",
+    "zero-volume-fixed.tap": "63eae7d86f645c024c9682e7a0f5f69bc5f0f90e7bae480e8ac72c5879305cb6",
+    "qualification-first.tap": "acfc903d27c734743bf8ab99b4728cd9943e60be9b534bfd06a62e4d10737691",
+    "qualification-fixed.tap": "a5c272cb6f3fe8c249a199844966cfdab74965bd3ac620084e2c6cc3c787fe33",
+    "qualification-audit-before.tap": "ea247bafb457da9aa874fc5c3ab388a1a0f40452c73356470995fe79f45bff83",
+    "module-final.tap": "5a65f865025f8d01166e7062ba3343a2989a5f3c058d85cda8e2a1dad4918643",
+    "full-node.tap": "f8293d3deabc105130082f1fe7e56c1d7025904e0571f078b9d25ec35bc341d2",
+    "qualification-package.json": "ea90957b85ad9563a187af29a88410631d46389569c5902c8e7565d3c4ae339e",
+    "build.log": "c2924abe222bb032b5260f7901974c1d823e1478257a73833dbd11fad62c845d"
+  }
+}
