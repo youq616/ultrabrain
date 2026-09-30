@@ -53,9 +53,10 @@ test('control audit: failed resume rename keeps old pause and all event bytes',a
 test('control audit: primary control-write failure is not replaced by lock-release failure',async t=>{
  const {q,path}=setup(t);const p=await q.pauseDelivery(),before=fs.readFileSync(path),failure=Object.assign(Error('PRIVATE_PRIMARY'),{code:'ENOSPC'});
  const restoreRename=patch('renameSync',(native,a,b,...rest)=>{if(b===path)throw failure;return native(a,b,...rest);});
- const restoreUnlink=patch('unlinkSync',(native,p,...rest)=>{if(p===join(q.directory,'.queue.lock'))throw Object.assign(Error('PRIVATE_CLEANUP'),{code:'EPERM'});return native(p,...rest);});
- try{await assert.rejects(q.resumeDelivery(p.control_sha256,{confirm:true}),e=>{const d=captureJournalDiagnostic(e);assert.equal(e.code,'outbox_journal_io');assert.equal(d.target,'control');assert.equal(d.system_code,'ENOSPC');assert.deepEqual(d.lock_release,[{kind:'queue',phase:'unlink',system_code:'EPERM'}]);assert.ok(!JSON.stringify(d).includes('PRIVATE'));return true;});}finally{restoreUnlink();restoreRename();}
- assert.deepEqual(fs.readFileSync(path),before);assert.ok(fs.existsSync(join(q.directory,'.queue.lock')));
+ const restoreUnlink=patch('unlinkSync',(native,p,...rest)=>{if(p===join(q.directory,'.queue.lock')||/\.retired-queue-[a-f0-9-]{36}\.lock$/.test(p))throw Object.assign(Error('PRIVATE_CLEANUP'),{code:'EPERM'});return native(p,...rest);});
+ try{await assert.rejects(q.resumeDelivery(p.control_sha256,{confirm:true}),e=>{const d=captureJournalDiagnostic(e);assert.equal(e.code,'outbox_journal_io');assert.equal(d.target,'control');assert.equal(d.system_code,'ENOSPC');assert.deepEqual(d.lock_release,[process.platform==='win32'?{kind:'queue',phase:'retire-unlink',system_code:'EPERM',retirement:{namespace_state:'released',close_failed:false}}:{kind:'queue',phase:'unlink',system_code:'EPERM'}]);assert.ok(!JSON.stringify(d).includes('PRIVATE'));return true;});}finally{restoreUnlink();restoreRename();}
+ assert.deepEqual(fs.readFileSync(path),before);assert.equal(fs.existsSync(join(q.directory,'.queue.lock')),process.platform!=='win32');
+ if(process.platform==='win32')assert.equal(fs.readdirSync(q.directory).filter(n=>/^\.retired-queue-/.test(n)).length,1);
 });
 test('control audit: pause between entries returns already confirmed delivery, not a misleading total failure',async t=>{
  const {q,input}=setup(t);await q.enqueue(item('one'));await q.enqueue(item('two'));let sent=0;

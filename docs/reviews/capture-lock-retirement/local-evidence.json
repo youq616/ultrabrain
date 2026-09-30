@@ -1,0 +1,62 @@
+{
+  "base_commit": "e8eadd1099cb71bab2c02a362f82f077f4a4b633",
+  "base_tree": "99a1219463c104fdf9895f6857d41b836be87b3d",
+  "environment": {
+    "platform": "linux",
+    "node": "22.16.0",
+    "uid": 1000
+  },
+  "final_full": {
+    "tests": 4067,
+    "pass": 4067,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "exit": 0
+  },
+  "new_tests": 37,
+  "separate_implementer_audit": {
+    "tests": 8,
+    "pass": 8
+  },
+  "baseline_synthetic_regression": {
+    "tests": 2,
+    "pass": 0,
+    "fail": 2
+  },
+  "package_sha256": "a90e980c2eda9a32da253ac18fe9e9fa9480424804d0995dfe7b30fb8308f13a",
+  "package_checks": 29,
+  "package_bundles": 13,
+  "local_native": {
+    "format": "ultrabrain-lock-retirement-probe-v1",
+    "passed": true,
+    "platform": "linux",
+    "node": "v22.16.0",
+    "uv": "1.49.2",
+    "legacy_name_reuse": "reused",
+    "retirement_rounds": 25,
+    "held_reader_preserved": true,
+    "exclusive_next_owner": true,
+    "network_calls": 0,
+    "model_calls": 0,
+    "user_queue_access": false
+  },
+  "stress": {
+    "contention_rounds": 25,
+    "control_rounds": 25,
+    "workers_per_round": 8
+  },
+  "independent_review": "PENDING at source finalization; self-audit is not independent-agent approval",
+  "log_sha256": {
+    "retirement-baseline-red.tap": "d9a94954bce13f6f317bef63d6f51e4bb3c08ce24d6cf5b7cd710f0bae030efc",
+    "retirement-regression-fixed.tap": "96348095d9fcd003103bc3583f564956a35b5fa2ab998679cacde735fb301e48",
+    "retirement-module-first.tap": "eebb292afbe4283a9ca0b69e143e14d99c73a7d2f6661945ea718df0af515492",
+    "retirement-audit-first.tap": "8326f60d82cd5d2daaf5231a6c39427875cacee6ee5305496453a148c5a66a1c",
+    "full-final.tap": "801284be257a7079264327de185fb36b1136edf58050ef34a4b15aa91e4f9ba0",
+    "native-linux.json": "f94df7a151f397ef742c9c42c4b9dbfb07f02c382361d1e237167c009fce93d9",
+    "contention25.json": "6818306d832113af5a190fd33c640f542101e843ce851b98ce99b10ba19655e7",
+    "control25.json": "acec0713045c4c71dc407e1f7416feda20d05ffd3fda0e454702b4fe3adb4c87",
+    "package-build.log": "dcaec4116bb06f2d50123ecf857be311bc4784ff812542161c2ee9c17240c639",
+    "package-regression.json": "1cb2a66c7607276dd9c6c33a491e5561f02a9235b7ae682173f9fea016e5ea12"
+  }
+}

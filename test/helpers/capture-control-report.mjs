@@ -13,9 +13,10 @@ function localRead(x){
 }
 function lock(x){
  if(!object(x))return null;
- const kind=one(x.kind,['queue','delivery']),phase=one(x.phase,['create','write','file-sync','close','directory-sync','verify-release','unlink','release-sync']);
+ const kind=one(x.kind,['queue','delivery']),phase=one(x.phase,['create','write','file-sync','close','directory-sync','verify-release','unlink','release-sync','retire-check','retire-create','retire-write','retire-sync','retire-close','retire-rename','retire-verify','retire-unlink','retire-flush']);
  const file_read=localRead(x.file_read);
- return kind&&phase?{kind,phase,system_code:errno(x.system_code),...(file_read?{file_read}:{})}:null;
+ const r=x.retirement,retirement=object(r)&&['not_released','unconfirmed','released'].includes(r.namespace_state)&&typeof r.close_failed==='boolean'?{namespace_state:r.namespace_state,close_failed:r.close_failed}:null;
+ return kind&&phase?{kind,phase,system_code:errno(x.system_code),...(file_read?{file_read}:{}),...(retirement?{retirement}:{})}:null;
 }
 function journal(x){
  if(!object(x))return null;

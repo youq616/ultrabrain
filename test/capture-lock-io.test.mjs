@@ -6,6 +6,8 @@ import {syncBuiltinESMExports} from 'node:module';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {CaptureOutbox} from '../src/capture-outbox.mjs';
+import {RETIRED_CAPTURE_LOCK} from '../src/capture-lock-retirement.mjs';
+import {basename} from 'node:path';
 import {captureLockDiagnostic} from '../src/capture-lock.mjs';
 function setup(t){
  const root=fs.mkdtempSync(join(tmpdir(),'ub-lock-io-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
@@ -53,8 +55,9 @@ test('lock IO: replaced lock is preserved on release; no foreign unlink',async t
 });
 test('lock IO: failed unlink is not retried and preserves complete lock',async t=>{
  const {q,lock}=setup(t);let n=0;const restore=patch('unlinkSync',(native,path,...args)=>{
-  if(path===lock){n++;throw Object.assign(Error('PRIVATE'),{code:'EPERM'});}return native(path,...args);
+  if(process.platform==='win32'?RETIRED_CAPTURE_LOCK.test(basename(path)):path===lock){n++;throw Object.assign(Error('PRIVATE'),{code:'EPERM'});}return native(path,...args);
  });
- try{await assert.rejects(q.status(),e=>e.code==='outbox_lock_io'&&captureLockDiagnostic(e).phase==='unlink');}finally{restore();}
- assert.equal(n,1);assert.ok(fs.existsSync(lock));assert.ok(fs.existsSync(join(q.directory,'binding.json')));
+ try{await assert.rejects(q.status(),e=>e.code==='outbox_lock_io'&&captureLockDiagnostic(e).phase===(process.platform==='win32'?'retire-unlink':'unlink'));}finally{restore();}
+ assert.equal(n,1);assert.equal(fs.existsSync(lock),process.platform!=='win32');
+ if(process.platform==='win32')assert.equal(fs.readdirSync(q.directory).filter(n=>RETIRED_CAPTURE_LOCK.test(n)).length,1);assert.ok(fs.existsSync(join(q.directory,'binding.json')));
 });
