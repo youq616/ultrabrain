@@ -19,6 +19,6 @@ if(process.argv[1]?.endsWith('capture-delivery-control-worker.mjs')){
    return rename(a,b,...args);
   };syncBuiltinESMExports();
  }
- if(mode==='early-exit')process.stdout.write('PRIVATE_INVALID_REPORT',()=>process.exit(73));
- if(mode==='overflow')process.stdout.write('PRIVATE'.repeat(2000),()=>process.exit(73));
+ if(mode==='early-exit')await new Promise(()=>process.stdout.write('PRIVATE_INVALID_REPORT',()=>process.exit(73)));
+ if(mode==='overflow')await new Promise(()=>process.stdout.write('PRIVATE'.repeat(2000),()=>process.exit(73)));
 }

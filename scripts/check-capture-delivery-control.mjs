@@ -8,58 +8,40 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import {CaptureOutbox} from '../src/capture-outbox.mjs';
 import {captureProcessDiagnostic} from '../test/helpers/capture-process-diagnostic.mjs';
 import {controlWorkerReport} from '../test/helpers/capture-control-report.mjs';
+import {captureWorkerBatch} from '../test/helpers/capture-worker-batch.mjs';
 const workerPath=fileURLToPath(new URL('../test/fixtures/capture-delivery-control-worker.mjs',import.meta.url));
 export async function deliveryControlRound(){
- const root=mkdtempSync(join(tmpdir(),'ub-control-process-')),workspace=join(root,'work');mkdirSync(workspace,{mode:0o700});
+ let root,batch,stage='setup',result;
+ try{
+  root=mkdtempSync(join(tmpdir(),'ub-control-process-'));const workspace=join(root,'work');mkdirSync(workspace,{mode:0o700});
  const input={format:1,source:'synthetic',workspace,outbox_directory:join(root,'queue'),allow_capture:true,expected_actor:'a'.repeat(64),
   expected_instance:'11111111-1111-4111-8111-111111111111',server:{transport:'stdio',command:'never-executed',args:[]}};
- const active=new Set(),tasks=[];let timer,stage='setup',timedOut=false,result;
- const stop=()=>{for(const child of active)child.kill('SIGKILL');};
- try{
   const q=new CaptureOutbox(input),pause=await q.pauseDelivery();
-  for(let worker=0;worker<8;worker++){
-   const child=spawn(process.execPath,[workerPath],{stdio:['ignore','pipe','pipe','ipc']});active.add(child);
-   let readyResolve,stagedResolve,rejectReady,rejectStaged,output='',bytes=0,stderr=false,overflow=false,spawnFailure;
-   const ready=new Promise((r,j)=>{readyResolve=r;rejectReady=j;}),staged=new Promise((r,j)=>{stagedResolve=r;rejectStaged=j;});
-   ready.catch(()=>{});staged.catch(()=>{});
-   child.on('message',m=>{if(m?.ready===true)readyResolve();if(m?.staged===true)stagedResolve();});
-   child.stdout.on('data',b=>{bytes+=b.length;if(bytes>4096){overflow=true;output='';child.kill('SIGKILL');}else output+=b;});
-   child.stderr.on('data',()=>stderr=true);
-   const done=new Promise(resolve=>{
-    const reject=()=>{rejectReady(Error('worker_unavailable'));rejectStaged(Error('worker_unavailable'));};
-    child.once('error',error=>{spawnFailure=captureProcessDiagnostic(error);reject();});
-    child.once('close',(exit,signal)=>{
-     active.delete(child);reject();
-     const report=spawnFailure?{ok:false,...spawnFailure}:controlWorkerReport(output,{overflow});
-     resolve({worker,exit:Number.isSafeInteger(exit)?exit:null,signal:['SIGKILL','SIGTERM','SIGINT','SIGABRT','SIGSEGV'].includes(signal)?signal:null,
-      valid:!stderr&&!overflow&&exit===0&&signal===null&&report.ok===true,result:report,
-      ...(report.ok?{outcome:report.outcome}:{}),stderr_seen:stderr,output_truncated:overflow});
-    });
-   });
-   tasks.push({ready,staged,done,start:()=>child.send({input,worker},()=>{}),resume:()=>child.send({expectedHash:pause.control_sha256},()=>{})});
-  }
-  timer=setTimeout(()=>{timedOut=true;stop();},15000);
-  stage='ready';await Promise.all(tasks.map(t=>t.ready));for(const task of tasks)task.start();
-  stage='enqueue';await Promise.all(tasks.map(t=>t.staged));
+  batch=captureWorkerBatch({staged:true,parseReport:controlWorkerReport,
+   spawnWorker:()=>spawn(process.execPath,[workerPath],{stdio:['ignore','pipe','pipe','ipc']})});
+  stage='ready';await batch.ready();batch.start(worker=>({input,worker}));
+  stage='enqueue';await batch.staged();
   const snapshot=()=>readdirSync(q.directory).filter(n=>n.endsWith('.entry')).sort().map(n=>readFileSync(join(q.directory,n),'utf8'));
   const before=snapshot(),paused=(await q.status()).delivery;
-  stage='resume';for(const task of tasks)task.resume();const outcomes=await Promise.all(tasks.map(t=>t.done));
-  if(outcomes.some(r=>!r.valid))result={passed:false,stage,timed_out:timedOut,outcomes};
+  stage='resume';batch.resume(()=>({expectedHash:pause.control_sha256}));const outcomes=await batch.outcomes();
+  if(outcomes.some(r=>!r.valid))result={passed:false,stage,timed_out:batch?.timedOut??false,outcomes};
   else{
-   stage='integrity';const after=snapshot(),status=await q.status(),resumed=outcomes.filter(r=>r.outcome==='resumed').length,conflicts=outcomes.filter(r=>r.outcome==='conflict').length;
+   stage='integrity';const after=snapshot(),status=await q.status(),resumed=outcomes.filter(r=>r.result.outcome==='resumed').length,conflicts=outcomes.filter(r=>r.result.outcome==='conflict').length;
    const passed=resumed===1&&conflicts===7&&paused.control_sha256===pause.control_sha256&&
     status.delivery.state==='running'&&status.delivery.revision===2&&status.pending===8&&status.blocked===0&&
     JSON.stringify(before)===JSON.stringify(after)&&after.every(b=>JSON.parse(b).attempts===0)&&readdirSync(q.directory).length===10;
    result={passed,workers:8,consented_entries:after.length,resume_successes:resumed,stale_conflicts:conflicts,
     payloads_unchanged:JSON.stringify(before)===JSON.stringify(after),attempts_spent:after.reduce((n,b)=>n+JSON.parse(b).attempts,0)};
-   if(!passed)Object.assign(result,{stage,timed_out:timedOut,outcomes});
+   if(!passed)Object.assign(result,{stage,timed_out:batch?.timedOut??false,outcomes});
   }
- }catch(error){result={passed:false,stage,timed_out:timedOut,error:captureProcessDiagnostic(error)};}
+ }catch(error){result={passed:false,stage,timed_out:batch?.timedOut??false,error:captureProcessDiagnostic(error)};}
  finally{
-  clearTimeout(timer);stop();const outcomes=await Promise.all(tasks.map(t=>t.done));
-  if(result?.passed===false&&!result.outcomes)result.outcomes=outcomes;
-  try{rmSync(root,{recursive:true,force:true,maxRetries:3,retryDelay:30});}
+  const closed=batch?await batch.shutdown():{outcomes:[],all_closed:true,timed_out:false};
+  if(result?.passed===false&&!result.outcomes)result.outcomes=closed.outcomes;
+  if(!closed.all_closed)result={...result,passed:false,workers_closed:false,cleanup_skipped:true};
+  else if(root!==undefined)try{rmSync(root,{recursive:true,force:true,maxRetries:3,retryDelay:30});}
   catch(error){result={...result,passed:false,cleanup:captureProcessDiagnostic(error)};}
+
  }
  return result;
 }
