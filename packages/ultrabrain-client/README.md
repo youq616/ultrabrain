@@ -168,3 +168,22 @@ identity checks before and after reading. It does not ignore device differences,
 retry permission errors, steal locks or change file formats. No new command or
 network capability is added. See `docs/LOCAL-FILE-DESCRIPTOR-ANCHOR.md` at the
 matching source commit; simulated stat tests do not certify native Windows.
+
+### Native local-file qualification
+
+`ultrabrain-local-check` is a separate offline executable. It creates one new
+synthetic temporary file and runs the actual profile/outbox readers, then removes
+only its scratch directory. It accepts no paths, profiles, stdin or server settings.
+`dist/local-check.cjs` exports `qualifyLocalFileRuntime({signal})`; importing the SDK
+performs no IO. Reports contain only metadata relationships, zero-identity flags
+and safe failures, never native IDs or file bodies. A pass qualifies only the
+filesystem selected by the operating system's temporary directory, not a different
+production queue, concurrency, ACLs or server connectivity. No runtime upgrade,
+permission repair, lock deletion or IO retry is performed.
+
+Windows path statistics may report device zero while handle statistics are valid.
+The reader now confirms that case through the existing second, held read-only
+handle: both handle devices must be nonzero and exactly equal, along with all
+other metadata. A missing handle identity still cannot anchor an unmatched path.
+See `docs/LOCAL-FILE-QUALIFICATION.md` at the exact build commit. Identify private
+packages by their source commit and digest, not the unchanged version string.

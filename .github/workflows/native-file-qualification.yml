@@ -1,0 +1,68 @@
+name: Native file qualification
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+        node: ['22.16.0', '22']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Exact qualification and zero-path-device regression contracts
+        shell: bash
+        run: node --test test/local-file-zero-volume.test.mjs test/local-file-qualification.test.mjs test/local-file-qualification-audit.test.mjs > "$RUNNER_TEMP/native-qualification-tests.tap"
+      - name: Synthetic native metadata and production-reader qualification
+        shell: bash
+        run: node scripts/check-native-file-qualification.mjs > "$RUNNER_TEMP/native-qualification.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-qualification-${{ matrix.os }}-${{ matrix.node }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/native-qualification.json
+            ${{ runner.temp }}/native-qualification-tests.tap
+          if-no-files-found: error
+          retention-days: 14
+  packaged-offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Build and unpack this exact private client package
+        shell: bash
+        run: |
+          bash scripts/package-client.sh "$RUNNER_TEMP/qualification-package"
+          mkdir -p "$RUNNER_TEMP/qualification-host"
+          tar -xzf "$RUNNER_TEMP/qualification-package/ultrabrain-client-0.14.0-alpha.1.tgz" -C "$RUNNER_TEMP/qualification-host"
+      - name: Actual offline entries without installing the MCP SDK
+        shell: bash
+        run: node test/local-file-qualification-package.mjs "$RUNNER_TEMP/qualification-host/package" > "$RUNNER_TEMP/qualification-package.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qualification-package-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/qualification-package.json
+            ${{ runner.temp }}/qualification-package/*.tgz
+          if-no-files-found: error
+          retention-days: 14

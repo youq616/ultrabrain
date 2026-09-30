@@ -64,7 +64,10 @@ export function readLocalFileBytes(path,kind,maxBytes=kind==='profile'?16384:220
   // The anchor is held throughout the bounded read and checked a second time.
   const anchored=!localDeviceCompatible(before.dev,first.dev);
   if(anchored){
-   check(process.platform==='win32'&&before.dev!==0n&&first.dev!==0n,'identity');
+   // Native Windows22.16 can omit the PATH device while handle stats still
+   // provide it. Only the two nonzero handle identities establish the device;
+   // zero never becomes a wildcard or an arithmetic match.
+   check(process.platform==='win32'&&first.dev!==0n,'identity');
    phase='anchor-open';anchor=openSync(path,constants.O_RDONLY|(constants.O_NOFOLLOW??0));
    phase='anchor-before';const witness=fstatSync(anchor,options);validate(witness);
    check(same(first,witness),'identity');
