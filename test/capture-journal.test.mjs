@@ -81,7 +81,7 @@ if(process.platform!=='win32')test('journal: failed directory fsync after public
 });
 test('journal: attempt-persistence failure prevents connection and preserves original event',async t=>{
  const {q}=setupJournal(t);await q.enqueue(payload);const file=fs.readdirSync(q.directory).find(n=>n.endsWith('.entry')),before=fs.readFileSync(join(q.directory,file));
- const restore=patchFS('renameSync',()=>{throw ioError('EBUSY');});let calls=0;
+ const restore=patchFS('renameSync',(native,a,b,...rest)=>{if(String(b).endsWith('.entry'))throw ioError('EBUSY');return native(a,b,...rest);});let calls=0;
  try{await assert.rejects(q.flush(async()=>{calls++;throw Error('MUST_NOT_CONNECT');}),e=>captureJournalDiagnostic(e)?.operation==='replace');}finally{restore();}
  assert.equal(calls,0);assert.deepEqual(fs.readFileSync(join(q.directory,file)),before);assert.equal((await q.status()).pending,1);
  assert.equal(fs.readdirSync(q.directory).filter(n=>n.endsWith('.lock')).length,0);

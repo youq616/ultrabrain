@@ -21,7 +21,7 @@ for (const script of ['check-capture-contention.mjs', 'check-capture-delivery-co
     });
     assert.ifError(child.error); assert.equal(child.status, 1); assert.equal(child.stderr, ''); assert.ok(!child.stdout.includes('PRIVATE'));
     const report = JSON.parse(child.stdout); assert.equal(report.passed, false);
-    assert.equal(report.rounds.length, mode === 'second-setup' ? 2 : 1);
+    assert.equal(report.rounds.length, mode === 'second-setup' ? 2 : 1, JSON.stringify(report));
     if (mode === 'second-setup') assert.equal(report.rounds[0].passed, true);
     const failed = report.rounds.at(-1); assert.equal(failed.passed, false); assert.equal(failed.stage, 'setup');
     assert.equal(failed.error.native_code, mode === 'second-setup' ? 'EACCES' : 'ENOSPC'); assert.deepEqual(failed.outcomes, []);

@@ -15,7 +15,7 @@ for(const method of ['openSync','writeFileSync','fsyncSync','closeSync','linkSyn
   if(temporary&&method==='writeFileSync')exitAt('write');
   if(temporary&&method==='fsyncSync')exitAt('file-sync');
   if(method==='closeSync'){fds.delete(first);if(temporary)exitAt('close');}
-  if(method==='linkSync'||method==='renameSync'){published=true;exitAt('publish');}
+  if((method==='linkSync'||method==='renameSync')&&String(rest[0]).endsWith('.entry')){published=true;exitAt('publish');}
   if(method==='unlinkSync'&&String(first).includes('.tmp-'))exitAt('temporary-unlink');
   if(method==='fsyncSync'&&path===q.directory&&published)exitAt('directory-sync');
   return value;

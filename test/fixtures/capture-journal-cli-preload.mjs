@@ -10,7 +10,7 @@ const nativeLink=fs.linkSync,nativeRename=fs.renameSync,nativeOpen=fs.openSync,n
 let publishFailed=false;
 fs.linkSync=(...args)=>{if(mode==='entry'&&String(args[1]).endsWith('.entry')||mode==='binding')
  throw Object.assign(Error('PRIVATE_NATIVE_ERROR'),{code:'EPERM'});return nativeLink(...args);};
-fs.renameSync=(...args)=>{if(['attempt','attempt-release'].includes(mode)){publishFailed=true;
+fs.renameSync=(...args)=>{if(['attempt','attempt-release'].includes(mode)&&String(args[1]).endsWith('.entry')){publishFailed=true;
  throw Object.assign(Error('PRIVATE_NATIVE_ERROR'),{code:'ENOSPC'});}return nativeRename(...args);};
 fs.openSync=(path,...args)=>{if(mode==='delivery-lock'&&String(path).endsWith('.delivery.lock'))
  throw Object.assign(Error('PRIVATE_NATIVE_ERROR'),{code:'EPERM'});return nativeOpen(path,...args);};
