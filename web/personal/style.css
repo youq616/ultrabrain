@@ -24,3 +24,9 @@
 #dupcmp-kind{max-width:26rem}
 @media(max-width:800px){.dupcmp-layout{grid-template-columns:1fr}}
 #dupcmp-groups article[data-selected="true"]{border-inline-start:3px solid #225b49;padding-inline-start:.7rem}
+
+/* Explicitly selected live observations, side by side on desktop. */
+#pair-results{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;align-items:start}
+#pair-results article{min-width:0;padding:1rem;border:1px solid #dce5df;border-radius:8px}
+#pair-results pre{max-height:24rem;overflow:auto}#pair-results h4{font-size:.9rem;margin:.8rem 0 .3rem}
+@media(max-width:800px){#pair-results{grid-template-columns:1fr}}
