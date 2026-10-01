@@ -60,7 +60,10 @@ function updatedTime(value,name) {
 /** Search-only current-row modification bounds; context/profile keep their existing contract. */
 export function searchQuery(input={}) {
   objectFields(input,['agent_id','project_id','task','query','types','status','limit','offset','budget_bytes','updated_from','updated_before']);
-  const {updated_from,updated_before,...query}=input;
+  const {updated_from,updated_before}=input;
+  // Read approved fields from the original object, just as contextQuery does;
+  // object spread would silently discard inherited/non-enumerable filters.
+  const query=Object.fromEntries(['agent_id','project_id','task','query','types','status','limit','offset','budget_bytes'].map(key=>[key,input[key]]));
   const from=updatedTime(updated_from,'updated_from'),before=updatedTime(updated_before,'updated_before');
   requireThat(from===null||before===null||from<before,'invalid_params','updated_from must precede updated_before');
   return Object.freeze({...contextQuery(query),updated_from:from,updated_before:before});

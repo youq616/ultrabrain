@@ -60,3 +60,18 @@ test('invalid time input and context/profile time fields fail before any SQL',as
   for(const method of ['context','profile'])for(const field of ['updated_from','updated_before'])
     await assert.rejects(store[method]({[field]:'2024-01-01T00:00:00Z'}),{code:'invalid_params'});
 });
+
+
+test('search keeps inherited and non-enumerable filters in bound SQL parameters',async()=>{
+  const calls=[],engine={kind:'postgres',executeRaw:async(q,p)=>{calls.push(p);return [];},transaction:()=>assert.fail('unexpected transaction')};
+  const store=new PersonalMemoryStore({...base,engine});
+  const fields={query:'hidden query',status:'archived',limit:7};
+  const inputs=[Object.create(fields),Object.defineProperties({},Object.fromEntries(Object.entries(fields).map(([key,value])=>[key,{value}])) )];
+  for(const input of inputs){
+    await store.search(input);const p=calls.at(-1);
+    assert.equal(p[2],'archived');assert.equal(p[6],'hidden query');assert.equal(p[7],7);
+    assert.deepEqual(p.slice(9),[null,null]);
+    input.unknown=true;await assert.rejects(store.search(input),{code:'invalid_params'});
+  }
+  assert.equal(calls.length,2);
+});

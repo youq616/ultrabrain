@@ -100,3 +100,16 @@ test('only memory search advertises optional updated-time fields',()=>{
     }
   }
 });
+
+
+test('search preserves inherited and non-enumerable existing query fields',async()=>{
+  const {searchQuery,contextQuery}=await import('../src/personal-memory.mjs');
+  const fields={query:'literal',task:'task',agent_id:'one',project_id:'two',types:['goal'],status:'archived',limit:3,offset:2,budget_bytes:2048};
+  const inputs=[Object.create(fields),Object.defineProperties({},Object.fromEntries(Object.entries(fields).map(([key,value])=>[key,{value}])) )];
+  for(const input of inputs){
+    assert.deepEqual(searchQuery(input),{...contextQuery(input),updated_from:null,updated_before:null});
+    Object.defineProperty(input,'updated_from',{value:'2024-01-01T00:00:00.000001Z'});
+    assert.deepEqual(searchQuery(input),{...contextQuery(input),updated_from:'2024-01-01T00:00:00.000001Z',updated_before:null});
+    input.unknown=true;assert.throws(()=>searchQuery(input),{code:'invalid_params'});
+  }
+});
