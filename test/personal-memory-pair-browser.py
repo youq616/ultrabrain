@@ -105,13 +105,18 @@ with sync_playwright() as p:
         const response = await original(...args);
         if(window.delayPairOnce && JSON.parse(args[1]?.body || '{}').operation === 'memory_read') {
           window.delayPairOnce = false;
-          await new Promise(resolve => window.releasePair = resolve);
+          await new Promise(resolve => {
+            window.releasePair = resolve;
+            // Fixture-only readiness marker on the existing cancel control.
+            // Locator polling respects production CSP; no string eval wait.
+            document.querySelector('#pair-clear').setAttribute('data-test-response-ready', 'true');
+          });
         }
         return response;
       };
     }''')
     page.locator('#pair-read').click()
-    page.wait_for_function('typeof window.releasePair === "function"')
+    expect(page.locator('#pair-clear')).to_have_attribute('data-test-response-ready', 'true')
     page.locator('#pair-clear').click()
     page.evaluate('window.releasePair()')
     expect(page.locator('#pair-read')).to_be_enabled()
