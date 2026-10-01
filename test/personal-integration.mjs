@@ -52,7 +52,7 @@ async function assertAbsentTimeInputs(search,route){
 async function assertInvalidTimeInputs(search,route){
   for(const field of ['updated_from','updated_before'])for(const value of [42,true,[],{},'invalid',' ','\t','\n','2023-02-29T00:00:00Z',
     '1900-02-29T00:00:00Z','2024-01-01T24:00:00Z','2024-01-01T00:00:00.0000001Z','2024-01-01T00:00:00+00:00'])
-    await assert.rejects(search({[field]:value}),`${route}: reject ${field} ${JSON.stringify(value)}`);
+    await assert.rejects(search({[field]:value}),{code:'invalid_params'},`${route}: reject ${field} ${JSON.stringify(value)}`);
   for(const bounds of [
     {updated_from:'2024-02-29T12:00:00.000003Z',updated_before:'2024-02-29T12:00:00.000001Z'},
     {updated_from:'2024-02-29T12:00:00.000001Z',updated_before:'2024-02-29T12:00:00.000001Z'},
@@ -80,10 +80,15 @@ async function wireTimeSearch(client,id,label,route){
   const search=bounds=>rpc(client,'ultra_memory_search',{query:label,...bounds});
   await assertAbsentTimeInputs(search,route);await assertInvalidTimeInputs(search,route);
   for(const name of ['ultra_personal_context','ultra_memory_profile'])for(const field of ['updated_from','updated_before'])
-    for(const value of [from,null,''])await assert.rejects(rpc(client,name,{[field]:value}),`${route}: ${name} rejects ${field} ${JSON.stringify(value)}`);
+    for(const value of [from,null,''])await assert.rejects(rpc(client,name,{[field]:value}),{code:'invalid_params'},`${route}: ${name} rejects ${field} ${JSON.stringify(value)}`);
   pass();
 }
 try {
+  // Prove this negative-test helper cannot mistake unrelated failures for validation.
+  for(const error of [Object.assign(new Error('synthetic storage failure'),{code:'personal_storage_error'}),
+    Object.assign(new Error('synthetic transport failure'),{code:'ECONNRESET'}),new TypeError('synthetic programming failure')])
+    await assert.rejects(assertInvalidTimeInputs(async()=>{throw error;},'validation-matcher-negative-proof'),{code:'ERR_ASSERTION'});
+  pass();
   for(const id of [source,otherSource])await engine.executeRaw('INSERT INTO public.sources(id,name) VALUES($1,$1)',[id]);
   const first=await reg();assert.match(first.actor_key,/^[a-f0-9]{64}$/);assert.equal(first.revision,1);pass();
   assert.equal((await reg()).replayed,true);pass();
@@ -187,7 +192,7 @@ try {
   const directSearch=bounds=>directStore.search({query:timeLabel,project_id:timeLabel,agent_id:'codex',types:['goal'],...bounds});
   await assertAbsentTimeInputs(directSearch,'direct-store');await assertInvalidTimeInputs(directSearch,'direct-store');
   for(const name of ['ultra_personal_context','ultra_memory_profile'])for(const field of ['updated_from','updated_before'])
-    for(const value of [from,null,''])await assert.rejects(call(name,{[field]:value}),`native-dispatch: ${name} rejects ${field} ${JSON.stringify(value)}`);
+    for(const value of [from,null,''])await assert.rejects(call(name,{[field]:value}),{code:'invalid_params'},`native-dispatch: ${name} rejects ${field} ${JSON.stringify(value)}`);
   pass();
   assert.deepEqual(await engine.executeRaw('SELECT id::text,revision,status,updated_at::text FROM ultrabrain.personal_memories WHERE source_id=$1 ORDER BY id',[source]),baseline);pass();
   // State and derivation visibility are independent of the selected modification interval.
