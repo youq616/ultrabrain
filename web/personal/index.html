@@ -6,7 +6,7 @@
 <main>
 <section id="login" class="panel narrow"><h2>连接你的个人记忆</h2><p>在服务器上读取启动命令提示的私有令牌文件，将令牌粘贴到此处。它只保存在当前页面内存中，不写入浏览器存储。</p><form id="login-form"><label>管理台令牌<input id="token" type="password" autocomplete="off" required spellcheck="false"></label><button type="submit">连接</button></form><p class="note">远程 Linux 服务请通过 SSH 隧道访问；不要把这个管理端口暴露到公网。此令牌不是模型 API Key，也不是 MCP 令牌。</p></section>
 <div id="workspace" hidden>
-<nav aria-label="视图"><button data-view="candidate">待确认记忆</button><button data-view="active">当前记忆</button><button data-view="archived">已归档</button><button data-view="profile">个人偏好</button><button data-view="recall">任务召回预览</button><button data-view="lookup">按 ID 核对</button><button data-view="documents">导入文档</button><button data-view="jobs">整理任务</button><button data-view="agents">已登记 Agent</button></nav>
+<nav aria-label="视图"><button data-view="candidate">待确认记忆</button><button data-view="active">当前记忆</button><button data-view="archived">已归档</button><button data-view="profile">个人偏好</button><button data-view="recall">任务召回预览</button><button data-view="lookup">按 ID 核对</button><button data-view="pair">人工双记录核对</button><button data-view="documents">导入文档</button><button data-view="jobs">整理任务</button><button data-view="agents">已登记 Agent</button></nav>
 <section class="panel"><button type="button" id="overview-open">记忆库运行概览</button><p class="note">仅当前身份的记忆、任务、文档和 Agent 标签数量，不读取正文。点击打开后再明确读取。</p></section>
 <section id="overview-panel" class="panel" hidden aria-label="记忆库运行概览">
 <h2>记忆库运行概览</h2>
@@ -30,7 +30,12 @@
 <label>记忆 ID<input id="lookup-id" maxlength="36" spellcheck="false" placeholder="完整小写 UUID"></label>
 <div class="row"><button id="lookup-submit" type="submit">读取当前记录</button><button id="lookup-cancel" type="button" disabled>取消／清除核对</button></div>
 <p class="note">从召回卡片点击“核对最新记录”会重新读取，不直接编辑旧预览。核对不会改动右侧未保存的内容；明确点击“编辑”才填入所读版本。</p>
-</form></div><div id="job-panel" hidden><form id="job-form" autocomplete="off">
+</form></div><div id="pair-panel" hidden><form id="pair-form" autocomplete="off">
+<p class="note">明确选择两条不同记忆，读取当前可见的正文与来源说明，由你人工核对。不自动查找相似记录、不判断矛盾、不调用模型、不保存两条记录之间的裁决。</p>
+<div class="row fields"><label>左侧记忆 ID<input id="pair-left" maxlength="36" spellcheck="false" placeholder="完整小写 UUID"></label><label>右侧记忆 ID<input id="pair-right" maxlength="36" spellcheck="false" placeholder="另一条完整小写 UUID"></label></div>
+<div class="row"><button id="pair-read" type="submit">读取／刷新这两条记录</button><button id="pair-clear" type="button" disabled>取消／清除双记录核对</button></div>
+<p class="note">保留两条可直接不作修改；需要修改或归档时，点击对应记录的按钮重新读取，再逐条明确操作。编辑后回到候选，启用仍需单独确认。这里不记录“可共存”“替代”或“待复核”关系，不改动未保存草稿。</p>
+</form><p id="pair-summary" class="note" role="status"></p><div id="pair-results" aria-live="polite"></div></div><div id="job-panel" hidden><form id="job-form" autocomplete="off">
 <p class="note">只读取当前本机所有者的任务元数据；不会自动读取原文、采集内容或运行模型。</p>
 <label>任务状态<select id="job-state"><option value="any">全部</option><option value="queued">等待整理</option><option value="processing">处理中</option><option value="failed">处理失败</option><option value="completed">已整理</option><option value="stale">已取消或来源失效</option></select></label>
 <label>按任务 ID 核对（留空按状态分页；填写后忽略状态筛选）<input id="job-id" maxlength="36" spellcheck="false" placeholder="完整小写 UUID"></label>

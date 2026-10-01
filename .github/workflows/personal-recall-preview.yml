@@ -117,6 +117,11 @@ jobs:
           ULTRABRAIN_OVERVIEW_REPORT: ${{ runner.temp }}/personal-overview-report.json
           ULTRABRAIN_OVERVIEW_SCREENSHOT: ${{ runner.temp }}/personal-overview.png
         run: bun test/personal-overview-integration.mjs
+      - name: Explicit manual pair review with authenticated HTTP and Chromium (synthetic SQL rows)
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/recall-browser-venv/bin/python
+          ULTRABRAIN_PAIR_SCREENSHOTS: ${{ runner.temp }}/personal-memory-pair
+        run: node test/personal-memory-pair-http-browser.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: personal-recall-preview-${{ github.sha }}
@@ -150,6 +155,7 @@ jobs:
             ${{ runner.temp }}/personal-lineage.png
             ${{ runner.temp }}/personal-overview-report.json
             ${{ runner.temp }}/personal-overview.png
+            ${{ runner.temp }}/personal-memory-pair/*.png
           if-no-files-found: error
           retention-days: 14
       - name: Stop only the disposable database

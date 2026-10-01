@@ -2,17 +2,19 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const labels={identity:'身份',preference:'偏好',environment:'环境',project:'项目',decision:'决策',skill:'技能',error:'错误经验',goal:'目标',experience:'经验'};
-const views={candidate:'待确认记忆',active:'当前记忆',archived:'已归档',profile:'个人偏好',recall:'任务召回预览',lookup:'按 ID 核对',documents:'导入文档',agents:'已登记 Agent',jobs:'整理任务'};
+const views={candidate:'待确认记忆',active:'当前记忆',archived:'已归档',profile:'个人偏好',recall:'任务召回预览',lookup:'按 ID 核对',pair:'人工双记录核对',documents:'导入文档',agents:'已登记 Agent',jobs:'整理任务'};
 let sourceId='',token='',view='candidate',offset=0,nextOffset=null,current=null,editing=null,pending=null,busy=false,loadVersion=0,documentEpoch=0;
 let documentReadEpoch=0,documentReadController=null;
 let recallEpoch=0,recallController=null;
 let lookupEpoch=0,lookupController=null;
 let draftConfidence=null,comparison=null,comparisonEpoch=0,comparisonController=null;
+let pairEpoch=0,pairController=null,pairData=null,pairContractPromise=null;
 let jobReadController=null;
 let jobRecovery=null,jobRecoveryController=null,jobRecoveryEpoch=0;
 function message(text,error=false){$('message').textContent=text;$('message').dataset.error=String(error);}
 function element(tag,text,cls){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;}
 function controls(){
+  if(busy||pending)invalidateMemoryPair();
   for(const b of document.querySelectorAll('[data-write],#save,#cancel-edit'))b.disabled=busy||!!pending;
   $('queue-personal').disabled=busy||!!pending||!!editing;$('retry').disabled=busy;$('pending-panel').hidden=!pending;$('logout').disabled=busy||!!pending;
   $('pending-id').textContent=pending?(pending.operation==='consolidate'?'原任务 ID：':'事件／任务编号：')+(pending.input.event_id??pending.input.job_id??''):'';
@@ -160,7 +162,7 @@ async function submitPending(modelRetry=false){
 }
 function mutate(operation,input,authorize,receiptContext){
   if(busy||pending){message('请先处理尚未确认的请求。',true);return;}
-  authorize?.();invalidateComparison();invalidateDocumentRead();
+  authorize?.();invalidateComparison();invalidateDocumentRead();invalidateMemoryPair();
   const session=token,source=sourceId,editorSnapshot=editorReceiptSelection();
   const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
   const snapshot=freeze(JSON.parse(JSON.stringify({...input,...(['commit','capture','update','review','document_import','document_queue','document_archive'].includes(operation)?{event_id:crypto.randomUUID()}:{})})));
@@ -611,6 +613,71 @@ async function openMemoryLookup(id){
   return lookupMemory();
 }
 
+// Explicit human selection of two different records. No matching, ranking, pair
+// decision storage or mutation. Each observation remains independently authorized.
+function loadPairLineageContract(){return pairContractPromise??=import('/lineage-contract.mjs').catch(e=>{pairContractPromise=null;throw e;});}
+function invalidateMemoryPair(clearInputs=false){
+  pairEpoch++;pairController?.abort();pairController=null;pairData=null;
+  $('pair-results').replaceChildren();$('pair-summary').textContent='';
+  $('pair-read').disabled=false;$('pair-clear').disabled=true;
+  if(clearInputs){$('pair-left').value='';$('pair-right').value='';}
+}
+async function readMemoryPair(){
+  if(busy||pending||view!=='pair'||!token||$('workspace').hidden)return;
+  invalidateMemoryPair();
+  const epoch=pairEpoch,session=token,source=sourceId,navigation=loadVersion;
+  const ids=[$('pair-left').value,$('pair-right').value],controller=new AbortController();pairController=controller;
+  const current=()=>epoch===pairEpoch&&session===token&&source===sourceId&&navigation===loadVersion&&view==='pair'&&!$('workspace').hidden;
+  const allowed=()=>{if(!current()||controller.signal.aborted||busy||pending||$('pair-left').value!==ids[0]||$('pair-right').value!==ids[1])
+    throw new Error('memory_pair_changed');};
+  $('pair-read').disabled=true;$('pair-clear').disabled=false;
+  try{
+    allowed();if(!ids.every(id=>/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(id)))throw new Error('full_memory_uuid_required');
+    if(ids[0]===ids[1])throw new Error('two_distinct_records_required');
+    const contract=await loadPairLineageContract();allowed();
+    const records=[];
+    for(const id of ids){
+      allowed();const result=await api('memory_read',{memory_id:id},controller.signal);allowed();
+      await verifyLookup(result,id,allowed);allowed();
+      // Reuse the published direct-reference grammar; a recorded quote is not a
+      // fresh source read, an inferred relationship or evidence of truth.
+      const reference=contract.lineageReference(result.memory);
+      records.push({memory:result.memory,reference});
+    }
+    allowed();const selection={records,allowed};pairData=selection;
+    const cards=records.map(({memory:row,reference},index)=>{
+      const card=element('article');card.append(element('h3',index===0?'左侧记录':'右侧记录'));
+      card.append(element('p','记忆 ID：'+row.id+' · r'+row.revision+' · '+row.status,'meta'));
+      card.append(element('p',(labels[row.type]??row.type)+' · '+(row.project_id??'全局')+' · '+row.visibility+' · '+(row.owned_by_caller?'自己拥有':'同源共享'),'meta'));
+      card.append(element('p','重要性：'+row.importance+' · 可信度估计：'+(row.confidence??'未知'),'meta'));
+      card.append(element('h4','本次读取正文'),element('pre',row.content,'memory-content'));
+      card.append(element('h4','来源说明'),element('p',row.provenance,'memory-content'));
+      card.append(element('p','内容 SHA-256：'+row.content_hash,'meta'));
+      card.append(element('h4','记录中的引文（未重新读取来源）'));
+      card.append(element('pre',reference?.quote??(row.owned_by_caller?'未记录结构化引文。':'当前身份未取得结构化引文，不推断没有来源。'),'memory-content'));
+      if(reference)card.append(element('p','来源 ID：'+reference.input_id+' · 生成时 r'+reference.input_revision+' · 引文 ['+reference.start+', '+reference.end+') UTF-16 code units','meta'));
+      if(reference)card.append(element('p',row.derivation_current?'返回的直接来源有效性标志为真；不证明内容真实。':'返回的直接来源已失效；此处不重新确认或修复。','note'));
+      const open=element('button','重新读取此条，再单独处理');open.type='button';
+      open.addEventListener('click',()=>{
+        // A detached button from an older pair cannot open a new or old selection.
+        if(pairData!==selection)return;
+        try{allowed();const id=row.id;invalidateMemoryPair();return openMemoryLookup(id);}
+        catch{invalidateMemoryPair();message('选择或授权已改变，请重新核对两条记录。',true);}
+      });card.append(open);return card;
+    });
+    allowed();$('pair-results').replaceChildren(...cards);
+    $('pair-summary').textContent='两条记录分别读取，不是同一时刻的数据库快照。需要更新时请再次点击读取；引文是记录自带的历史引用，核对实际来源请进入单条记录后的来源核对入口。';
+    message('两条记录已读取，供你人工核对；未判断相似或矛盾，也未修改记忆。');
+  }catch(error){
+    if(current()){
+      pairData=null;$('pair-results').replaceChildren();
+      const codes=new Set(['full_memory_uuid_required','two_distinct_records_required','not_found','memory_read_contract_changed','lineage_reference_invalid','memory_pair_changed','network_unconfirmed','response_unconfirmed']);
+      $('pair-summary').textContent='本次双记录核对未完成：'+(codes.has(error.message)?error.message:'memory_pair_read_unconfirmed')+'。不存在或不可见不等于已删除；不展示部分结果或旧缓存。';
+      message('未能完成双记录核对，请核对选择后明确重试；没有修改记忆。',true);
+    }
+  }finally{if(epoch===pairEpoch){pairController=null;$('pair-read').disabled=false;$('pair-clear').disabled=pairData===null;}}
+}
+
 // Task metadata never authorizes a memory read or certifies a model claim.
 // Follow a source/candidate only after an explicit click and the existing exact-ID read.
 const JOB_STATES=Object.freeze({queued:'等待整理',processing:'处理中',failed:'处理失败',completed:'已整理',stale:'已取消或来源失效'});
@@ -870,7 +937,7 @@ function render(result){
   controls();
 }
 async function load(){
-  invalidateJobRecovery();
+  invalidateMemoryPair();invalidateJobRecovery();
   const session=token,source=sourceId,selectedView=view,selectedOffset=offset,selectedStatus=$('document-status').value,selectedJobs=jobSelection();
   const activePage=()=>!!session&&token===session&&sourceId===source&&view===selectedView&&offset===selectedOffset&&
     (selectedView!=='documents'||$('document-status').value===selectedStatus)&&
@@ -879,11 +946,11 @@ async function load(){
   nextOffset=null;$('prev').disabled=true;$('next').disabled=true;
   const request=++loadVersion;invalidateRecall();invalidateLookup();invalidateComparison();controls();current=null;$('results').replaceChildren();$('export').disabled=true;for(const b of document.querySelectorAll('[data-view]'))b.setAttribute('aria-current',b.dataset.view===view?'page':'false');
   $('job-panel').hidden=view!=='jobs';
-  $('view-title').textContent=views[view];$('search-form').hidden=['profile','recall','lookup','agents','documents','jobs'].includes(view);
+  $('view-title').textContent=views[view];$('search-form').hidden=['profile','recall','lookup','pair','agents','documents','jobs'].includes(view);
   documentEpoch++;invalidateDocumentRead();$('document-panel').hidden=view!=='documents';
-  $('workspace').dataset.preview=String(view==='recall');
-  $('recall-panel').hidden=view!=='recall';$('lookup-panel').hidden=view!=='lookup';$('memory-panel').hidden=view==='recall';
-  if(['recall','lookup'].includes(view))return; // Navigation/refresh never starts these explicit reads.
+  $('workspace').dataset.preview=String(['recall','pair'].includes(view));
+  $('recall-panel').hidden=view!=='recall';$('lookup-panel').hidden=view!=='lookup';$('memory-panel').hidden=['recall','pair'].includes(view);$('pair-panel').hidden=view!=='pair';
+  if(['recall','lookup','pair'].includes(view))return; // Navigation/refresh never starts these explicit reads.
   try{
     if(view==='jobs'){
       const input=jobListQuery(),controller=new AbortController();jobReadController=controller;
@@ -909,7 +976,7 @@ async function load(){
   }}
 }
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('token').value.trim();$('token').value='';try{const info=await api('info');sourceId=info.source_id;$('scope').textContent='数据源：'+info.source_id+' · Linux 本机所有者（与同账号 stdio 共享）';$('login').hidden=true;$('workspace').hidden=false;$('logout').hidden=false;message('已连接。');await load();}catch(e){token='';message('连接失败：'+e.message,true);}});
-$('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateJobPage(true);invalidateRecall(true);invalidateLookup(true);invalidateComparison();draftConfidence=null;token='';sourceId='';documentEpoch++;invalidateDocumentRead();$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
+$('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateMemoryPair(true);invalidateJobPage(true);invalidateRecall(true);invalidateLookup(true);invalidateComparison();draftConfidence=null;token='';sourceId='';documentEpoch++;invalidateDocumentRead();$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
 for(const b of document.querySelectorAll('[data-view]'))b.addEventListener('click',()=>{view=b.dataset.view;offset=0;load();});
 $('refresh').addEventListener('click',()=>load());$('search-form').addEventListener('submit',e=>{e.preventDefault();offset=0;load();});
 $('prev').addEventListener('click',()=>{offset=Math.max(0,offset-20);load();});$('next').addEventListener('click',()=>{if(nextOffset!==null){offset=nextOffset;load();}});
@@ -954,3 +1021,8 @@ $('pending-job-clear').addEventListener('click',()=>{if(busy)return;invalidateJo
 $('retry').addEventListener('click',retryPendingRequest);
 $('save-pending').addEventListener('click',()=>{if(pending)download({format:1,warning:'Contains consented memory text; protect this local file. The request is not confirmed.',...pending},'ultrabrain-unconfirmed-request.json');});
 window.addEventListener('beforeunload',e=>{if(pending){e.preventDefault();e.returnValue='';}});
+
+$('pair-form').addEventListener('submit',e=>{e.preventDefault();return readMemoryPair();});
+for(const id of ['pair-left','pair-right'])$(id).addEventListener('input',()=>invalidateMemoryPair());
+$('pair-clear').addEventListener('click',()=>{invalidateMemoryPair();message('双记录核对已清除；未删除记录，已发送的只读查询无法撤回。');});
+for(const id of ['snapshot-open','inspector-open','lineage-open','overview-open'])$(id).addEventListener('click',()=>invalidateMemoryPair());
