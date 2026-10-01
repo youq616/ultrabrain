@@ -31,6 +31,14 @@ let checks=0;const pass=()=>checks++;
 const clients=[],transports=[],children=[],tokenNames=[];
 async function rpc(client,name,p={}){const r=await client.callTool({name,arguments:p});const v=JSON.parse(r.content[0].text);if(r.isError)throw Object.assign(new Error(v.error),{code:v.error});assert.ok(!r._meta?.brain_hot_memory);return v;}
 
+// Read database precision as text before relying on fixture order or returned JS dates.
+const timestampText=stamp=>stamp.includes('.')?stamp.replace(/\.(\d+)Z$/,(_,f)=>'.'+f.padEnd(6,'0')+'Z'):stamp.replace('Z','.000000Z');
+async function assertStoredTimestamp(id,stamp){
+  const [row]=await engine.executeRaw(`SELECT to_char(updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS stamp
+    FROM ultrabrain.personal_memories WHERE id=$1::uuid`,[id]);
+  assert.equal(row.stamp,timestampText(stamp));
+}
+
 async function wireTimeSearch(client,id,label){
   const tools=(await client.listTools()).tools;
   for(const name of ['ultra_memory_search','ultra_personal_context','ultra_memory_profile']){
@@ -42,7 +50,8 @@ async function wireTimeSearch(client,id,label){
     }
   }
   const from='2024-02-29T12:00:00.123456Z',before='2024-02-29T12:00:00.123457Z';
-  await engine.executeRaw('UPDATE ultrabrain.personal_memories SET updated_at=$2::timestamptz WHERE id=$1::uuid',[id,from]);
+  await engine.executeRaw('UPDATE ultrabrain.personal_memories SET updated_at=$2::text::timestamptz WHERE id=$1::uuid',[id,from]);
+  await assertStoredTimestamp(id,from);
   for(const bounds of [{},{updated_from:from},{updated_before:before},{updated_from:from,updated_before:before}])
     assert.ok((await rpc(client,'ultra_memory_search',{query:label,...bounds})).memories.some(x=>x.id===id));
   assert.ok(!(await rpc(client,'ultra_memory_search',{query:label,updated_before:from})).memories.some(x=>x.id===id));
@@ -119,7 +128,8 @@ try {
   const timed=await commit('timed-active',stamps.map((_,i)=>({type:'goal',content:timeLabel+' row '+i,project_id:timeLabel})));
   for(const [i,row] of timed.entries.entries()){
     await call('ultra_personal_review',{memory_id:row.id,event_id:'timed-review-'+i,expected_revision:1,status:'active'});
-    await engine.executeRaw('UPDATE ultrabrain.personal_memories SET updated_at=$2::timestamptz WHERE id=$1::uuid',[row.id,stamps[i]]);
+    await engine.executeRaw('UPDATE ultrabrain.personal_memories SET updated_at=$2::text::timestamptz WHERE id=$1::uuid',[row.id,stamps[i]]);
+    await assertStoredTimestamp(row.id,stamps[i]);
   }
   const ids=timed.entries.map(x=>x.id),ties=[ids[1],ids[5]].sort(),expected=[ids[2],...ties];
   const timedSearch=(bounds={},extra={})=>call('ultra_memory_search',{query:timeLabel,project_id:timeLabel,agent_id:'codex',types:['goal'],...bounds},extra);
@@ -143,12 +153,13 @@ try {
   assert.equal((await timedSearch({updated_from:from,updated_before:until},foreign)).memories.length,0);pass();
   // PostgreSQL itself must preserve accepted precision; never compare JS Date round trips.
   for(const stamp of ['0001-01-01T00:00:00Z','9999-12-31T23:59:59.999999Z','2000-02-29T00:00:00.1Z',from,until]){
-    const [roundtrip]=await engine.executeRaw(`SELECT to_char($1::timestamptz AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS stamp`,[stamp]);
-    const normalized=stamp.includes('.')?stamp.replace(/\.(\d+)Z$/,(_,f)=>'.'+f.padEnd(6,'0')+'Z'):stamp.replace('Z','.000000Z');
-    assert.equal(roundtrip.stamp,normalized);
+    const [roundtrip]=await engine.executeRaw(`SELECT to_char($1::text::timestamptz AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS stamp`,[stamp]);
+    assert.equal(roundtrip.stamp,timestampText(stamp));
     await timedSearch({updated_from:stamp});
   }
-  const [precision]=await engine.executeRaw('SELECT $1::timestamptz < $2::timestamptz AS distinct_microseconds',[from,'2024-02-29T12:00:00.000002Z']);
+  const [parameterType]=await engine.executeRaw('SELECT pg_typeof($1::text)::text AS bound_type',[from]);
+  assert.equal(parameterType.bound_type,'text');
+  const [precision]=await engine.executeRaw('SELECT $1::text::timestamptz < $2::text::timestamptz AS distinct_microseconds',[from,'2024-02-29T12:00:00.000002Z']);
   assert.equal(precision.distinct_microseconds,true);pass();
   for(const value of [null,42,'2023-02-29T00:00:00Z','1900-02-29T00:00:00Z','2024-01-01T24:00:00Z','2024-01-01T00:00:00.0000001Z','2024-01-01T00:00:00+00:00'])
     await assert.rejects(timedSearch({updated_from:value}));
@@ -167,7 +178,8 @@ try {
   const [origin]=await engine.executeRaw('SELECT revision,content_hash FROM ultrabrain.personal_memories WHERE id=$1::uuid',[candidateTime.id]);
   await engine.executeRaw('UPDATE ultrabrain.personal_memories SET derivation=$2::text::jsonb WHERE id=$1::uuid',
     [derivedTime.id,JSON.stringify({input_id:candidateTime.id,input_revision:origin.revision,input_hash:origin.content_hash})]);
-  await engine.executeRaw('UPDATE ultrabrain.personal_memories SET updated_at=$2::timestamptz WHERE id=ANY($1::uuid[])',[states.entries.map(x=>x.id),from]);
+  await engine.executeRaw('UPDATE ultrabrain.personal_memories SET updated_at=$2::text::timestamptz WHERE id=ANY($1::uuid[])',[states.entries.map(x=>x.id),from]);
+  for(const row of states.entries)await assertStoredTimestamp(row.id,from);
   const visibleSearch=(status='active',extra={})=>call('ultra_memory_search',{query:visibilityLabel,status,updated_from:from,updated_before:until},extra);
   assert.deepEqual(rowIds(await visibleSearch('active',second)).sort(),[activeTime.id,derivedTime.id].sort());
   assert.deepEqual(rowIds(await visibleSearch('candidate')),[candidateTime.id]);assert.deepEqual(rowIds(await visibleSearch('archived')),[archivedTime.id]);

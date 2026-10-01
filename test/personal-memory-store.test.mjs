@@ -45,8 +45,8 @@ test('search binds optional time predicates before unchanged pagination and auth
     assert.deepEqual(p.slice(9),[input.updated_from??null,input.updated_before?'2024-01-02T00:00:00.000000Z':null]);
     assert.match(q,/source_id=\$1 AND \(actor_key=\$2 OR \(visibility='source' AND status='active'\)\)/);
     assert.match(q,/status!='active' OR actor_key=\$2 OR/);
-    assert.match(q,/\$10::timestamptz IS NULL OR updated_at >= \$10::timestamptz/);
-    assert.match(q,/\$11::timestamptz IS NULL OR updated_at < \$11::timestamptz/);
+    assert.match(q,/\$10::text IS NULL OR updated_at >= \$10::text::timestamptz/);
+    assert.match(q,/\$11::text IS NULL OR updated_at < \$11::text::timestamptz/);
     assert.ok(q.indexOf('updated_at <')<q.indexOf('ORDER BY updated_at DESC,id LIMIT $8 OFFSET $9'));
     assert.ok(!q.includes('2024-'));assert.equal(result.coverage,'bounded live page, not a snapshot');assert.equal(result.next_offset,null);
   }

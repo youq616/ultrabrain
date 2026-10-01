@@ -174,13 +174,15 @@ export class PersonalMemoryStore {
   async #rows(p) {
     // All optional search filters are data, never identifiers or SQL fragments.
     // Search keeps time-ordered pagination; ranking belongs to the context path only.
+    // Bind timestamps as text first: postgres.js timestamp serialization uses Date
+    // and would silently discard microseconds before PostgreSQL sees the bound.
     return this.engine.executeRaw(`SELECT ${projection} FROM ultrabrain.personal_memories m
       WHERE source_id=$1 AND (actor_key=$2 OR (visibility='source' AND status='active')) AND status=$3 AND type=ANY($4::text[])
       AND (status!='active' OR actor_key=$2 OR ${PERSONAL_DERIVATION_CURRENT})
       AND ($5::text IS NULL OR project_id=$5)
       AND ($6::text IS NULL OR agent_id=$6) AND ($7='' OR strpos(lower(content),lower($7))>0)
-      AND ($10::timestamptz IS NULL OR updated_at >= $10::timestamptz)
-      AND ($11::timestamptz IS NULL OR updated_at < $11::timestamptz)
+      AND ($10::text IS NULL OR updated_at >= $10::text::timestamptz)
+      AND ($11::text IS NULL OR updated_at < $11::text::timestamptz)
       ORDER BY updated_at DESC,id LIMIT $8 OFFSET $9`,
       [this.source,this.actor,p.status,p.types,p.project_id,p.agent_id,p.query,p.limit,p.offset,p.updated_from,p.updated_before]);
   }
