@@ -46,7 +46,7 @@ export function contextQuery(input={}) {
 }
 /** UTC timestamps at PostgreSQL microsecond precision, never rounded through Date. */
 function updatedTime(value,name) {
-  if(value===undefined)return null;
+  if(value===undefined||value===null||value==='')return null;
   const match=typeof value==='string'&&/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?Z$/.exec(value);
   requireThat(match&&match[0]===value,'invalid_params',`${name} requires strict UTC YYYY-MM-DDTHH:mm:ss[.ffffff]Z`);
   const [,year,month,day,hour,minute,second,fraction='']=match;

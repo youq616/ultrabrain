@@ -39,7 +39,28 @@ async function assertStoredTimestamp(id,stamp){
   assert.equal(row.stamp,timestampText(stamp));
 }
 
-async function wireTimeSearch(client,id,label){
+// Deliberate host-compatible absence contract; malformed nonempty values still fail.
+async function assertAbsentTimeInputs(search,route){
+  const baseline=await search({}),stamp='2024-02-29T12:00:00.000002Z';
+  for(const field of ['updated_from','updated_before'])for(const absent of [null,'']){
+    assert.deepEqual(await search({[field]:absent}),baseline,`${route}: ${field} ${JSON.stringify(absent)} equals omitted`);
+    const other=field==='updated_from'?'updated_before':'updated_from';
+    assert.deepEqual(await search({[field]:absent,[other]:stamp}),await search({[other]:stamp}),`${route}: absent ${field} preserves ${other}`);
+  }
+  assert.deepEqual(await search({updated_from:null,updated_before:''}),baseline,`${route}: both bounds absent`);
+}
+async function assertInvalidTimeInputs(search,route){
+  for(const field of ['updated_from','updated_before'])for(const value of [42,true,[],{},'invalid',' ','\t','\n','2023-02-29T00:00:00Z',
+    '1900-02-29T00:00:00Z','2024-01-01T24:00:00Z','2024-01-01T00:00:00.0000001Z','2024-01-01T00:00:00+00:00'])
+    await assert.rejects(search({[field]:value}),`${route}: reject ${field} ${JSON.stringify(value)}`);
+  for(const bounds of [
+    {updated_from:'2024-02-29T12:00:00.000003Z',updated_before:'2024-02-29T12:00:00.000001Z'},
+    {updated_from:'2024-02-29T12:00:00.000001Z',updated_before:'2024-02-29T12:00:00.000001Z'},
+    {updated_from:'2024-01-01T00:00:00.1Z',updated_before:'2024-01-01T00:00:00.100000Z'}])
+    await assert.rejects(search(bounds),{code:'invalid_params'},`${route}: reject equal/reversed ${JSON.stringify(bounds)}`);
+}
+
+async function wireTimeSearch(client,id,label,route){
   const tools=(await client.listTools()).tools;
   for(const name of ['ultra_memory_search','ultra_personal_context','ultra_memory_profile']){
     const schema=tools.find(x=>x.name===name).inputSchema;
@@ -56,10 +77,10 @@ async function wireTimeSearch(client,id,label){
     assert.ok((await rpc(client,'ultra_memory_search',{query:label,...bounds})).memories.some(x=>x.id===id));
   assert.ok(!(await rpc(client,'ultra_memory_search',{query:label,updated_before:from})).memories.some(x=>x.id===id));
   assert.ok(!(await rpc(client,'ultra_memory_search',{query:label,updated_from:before})).memories.some(x=>x.id===id));
-  for(const bounds of [{updated_from:'invalid'},{updated_from:from,updated_before:from},{updated_from:before,updated_before:from},
-    {updated_from:'2024-02-29T12:00:00.1234567Z'}])await assert.rejects(rpc(client,'ultra_memory_search',bounds));
+  const search=bounds=>rpc(client,'ultra_memory_search',{query:label,...bounds});
+  await assertAbsentTimeInputs(search,route);await assertInvalidTimeInputs(search,route);
   for(const name of ['ultra_personal_context','ultra_memory_profile'])for(const field of ['updated_from','updated_before'])
-    await assert.rejects(rpc(client,name,{[field]:from}));
+    for(const value of [from,null,''])await assert.rejects(rpc(client,name,{[field]:value}),`${route}: ${name} rejects ${field} ${JSON.stringify(value)}`);
   pass();
 }
 try {
@@ -161,13 +182,13 @@ try {
   assert.equal(parameterType.bound_type,'text');
   const [precision]=await engine.executeRaw('SELECT $1::text::timestamptz < $2::text::timestamptz AS distinct_microseconds',[from,'2024-02-29T12:00:00.000002Z']);
   assert.equal(precision.distinct_microseconds,true);pass();
-  for(const value of [null,42,'2023-02-29T00:00:00Z','1900-02-29T00:00:00Z','2024-01-01T24:00:00Z','2024-01-01T00:00:00.0000001Z','2024-01-01T00:00:00+00:00'])
-    await assert.rejects(timedSearch({updated_from:value}));
-  for(const bounds of [{updated_from:until,updated_before:from},{updated_from:from,updated_before:from},
-    {updated_from:'2024-01-01T00:00:00.1Z',updated_before:'2024-01-01T00:00:00.100000Z'}])
-    await assert.rejects(timedSearch(bounds),{code:'invalid_params'});
+  await assertAbsentTimeInputs(timedSearch,'native-dispatch');await assertInvalidTimeInputs(timedSearch,'native-dispatch');
+  const directStore=new PersonalMemoryStore(options);
+  const directSearch=bounds=>directStore.search({query:timeLabel,project_id:timeLabel,agent_id:'codex',types:['goal'],...bounds});
+  await assertAbsentTimeInputs(directSearch,'direct-store');await assertInvalidTimeInputs(directSearch,'direct-store');
   for(const name of ['ultra_personal_context','ultra_memory_profile'])for(const field of ['updated_from','updated_before'])
-    await assert.rejects(call(name,{[field]:from}));pass();
+    for(const value of [from,null,''])await assert.rejects(call(name,{[field]:value}),`native-dispatch: ${name} rejects ${field} ${JSON.stringify(value)}`);
+  pass();
   assert.deepEqual(await engine.executeRaw('SELECT id::text,revision,status,updated_at::text FROM ultrabrain.personal_memories WHERE source_id=$1 ORDER BY id',[source]),baseline);pass();
   // State and derivation visibility are independent of the selected modification interval.
   const visibilityLabel='time-visibility-'+tag;
@@ -206,7 +227,7 @@ try {
   await rpc(stdio,'ultra_personal_review',{memory_id:wire.entries[0].id,expected_revision:1,event_id:'stdio-review',status:'active'});
   assert.ok((await rpc(stdio,'ultra_personal_context')).memories.some(x=>x.id===wire.entries[0].id));pass();
   assert.equal((await rpc(stdio,'ultra_memory_read',{memory_id:wire.entries[0].id})).memory.revision,2);pass();
-  await wireTimeSearch(stdio,wire.entries[0].id,'Synthetic local experience');
+  await wireTimeSearch(stdio,wire.entries[0].id,'Synthetic local experience','stdio');
   // Actual two HTTP token identities; sharing is explicit and private entries stay private.
   const socket=createServer();socket.listen(0,'127.0.0.1');await once(socket,'listening');const port=socket.address().port;await new Promise(r=>socket.close(r));
   const server=spawn(process.execPath,[ROOT+'/src/cli.mjs','mcp','--http','--bind','127.0.0.1','--port',String(port),'--suppress-bootstrap-token'],
@@ -234,7 +255,7 @@ try {
   await rpc(http[0],'ultra_personal_review',{memory_id:share.entries[0].id,event_id:'wire-activate',expected_revision:1,status:'active'});
   assert.ok((await rpc(http[1],'ultra_memory_profile')).memories.some(x=>x.id===share.entries[0].id));pass();
   assert.equal((await rpc(http[1],'ultra_memory_read',{memory_id:share.entries[0].id})).memory.owned_by_caller,false);pass();
-  await wireTimeSearch(http[0],share.entries[0].id,sample.content);
+  await wireTimeSearch(http[0],share.entries[0].id,sample.content,'http');
   assert.ok((await rpc(http[1],'ultra_memory_search',{updated_from:'2024-02-29T12:00:00.123456Z',updated_before:'2024-02-29T12:00:00.123457Z'})).memories.some(x=>x.id===share.entries[0].id));
   assert.ok(!(await rpc(http[1],'ultra_memory_search',{status:'candidate',updated_from:'0001-01-01T00:00:00Z'})).memories.some(x=>x.id===secret.entries[0].id));pass();
   await engine.executeRaw('UPDATE access_tokens SET revoked_at=now() WHERE name=$1',[tokenNames[0]]);

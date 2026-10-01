@@ -75,7 +75,7 @@ test('search time bounds preserve UTC microseconds and existing query defaults',
 });
 test('search time grammar, Gregorian dates, range and input shape are strict',async()=>{
   const {searchQuery,contextQuery}=await import('../src/personal-memory.mjs');
-  const invalid=[null,1,true,[],{},'', '2024-01-01','2024-01-01T00:00:00+00:00','2024-01-01t00:00:00z',
+  const invalid=[1,true,[],{}, '2024-01-01','2024-01-01T00:00:00+00:00','2024-01-01t00:00:00z',
     ' 2024-01-01T00:00:00Z','2024-01-01T00:00:00Z\n','2024-01-01T00:00:00.Z','2024-01-01T00:00:00.0000001Z',
     '2024-01-01T00:00:00.1234560Z','0000-01-01T00:00:00Z','10000-01-01T00:00:00Z','2024-00-01T00:00:00Z',
     '2024-13-01T00:00:00Z','2024-01-00T00:00:00Z','2024-01-32T00:00:00Z','2024-04-31T00:00:00Z',
@@ -83,7 +83,7 @@ test('search time grammar, Gregorian dates, range and input shape are strict',as
     '2024-01-01T00:60:00Z','2024-01-01T00:00:60Z','infinity',"2024-01-01T00:00:00Z' OR true --"];
   for(const field of ['updated_from','updated_before']){
     for(const value of invalid)assert.throws(()=>searchQuery({[field]:value}),{code:'invalid_params'},`${field}: ${JSON.stringify(value)}`);
-    assert.throws(()=>contextQuery({[field]:'2024-01-01T00:00:00Z'}),{code:'invalid_params'});
+    for(const value of ['2024-01-01T00:00:00Z',null,''])assert.throws(()=>contextQuery({[field]:value}),{code:'invalid_params'});
   }
   for(const input of [null,[],[{}],1,'query',true])assert.throws(()=>searchQuery(input),{code:'invalid_params'});
   for(const [from,before] of [['.1','.100000'],['.000002','.000001'],['','']])
@@ -112,4 +112,18 @@ test('search preserves inherited and non-enumerable existing query fields',async
     assert.deepEqual(searchQuery(input),{...contextQuery(input),updated_from:'2024-01-01T00:00:00.000001Z',updated_before:null});
     input.unknown=true;assert.throws(()=>searchQuery(input),{code:'invalid_params'});
   }
+});
+
+
+test('new search bounds consistently treat null and exact empty strings as absence',async()=>{
+  const {searchQuery}=await import('../src/personal-memory.mjs');
+  const stamp='2024-02-29T12:00:00.000001Z';
+  for(const field of ['updated_from','updated_before'])for(const absent of [undefined,null,'']){
+    assert.deepEqual(searchQuery({[field]:absent}),searchQuery(),`${field}: ${JSON.stringify(absent)} equals omitted`);
+    const other=field==='updated_from'?'updated_before':'updated_from';
+    assert.deepEqual(searchQuery({[field]:absent,[other]:stamp}),searchQuery({[other]:stamp}),`${field}: absence keeps ${other}`);
+  }
+  assert.deepEqual(searchQuery({updated_from:null,updated_before:''}),searchQuery());
+  for(const field of ['updated_from','updated_before'])for(const value of [' ','\t','\n',false,0,[],{}])
+    assert.throws(()=>searchQuery({[field]:value}),{code:'invalid_params'},`${field}: ${JSON.stringify(value)} is not absence`);
 });
