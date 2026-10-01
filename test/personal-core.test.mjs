@@ -56,3 +56,47 @@ test('personal tools have real handlers and consistent read/write scopes',()=>{
   assert.ok(operations.every(x=>typeof x.handler==='function'&&x.mutating===(x.scope==='write')));
   assert.throws(()=>registerPersonalPlugin(operations,{OperationError:E}),{code:'upstream_contract_changed'});
 });
+
+test('search time bounds preserve UTC microseconds and existing query defaults',async()=>{
+  const {searchQuery,contextQuery}=await import('../src/personal-memory.mjs');
+  assert.deepEqual(searchQuery(),{...contextQuery(),updated_from:null,updated_before:null});
+  for(const fraction of ['', '.1','.12','.123','.1234','.12345','.123456']){
+    const input='2024-02-29T23:59:59'+fraction+'Z';
+    const expected='2024-02-29T23:59:59.'+fraction.slice(1).padEnd(6,'0')+'Z';
+    assert.equal(searchQuery({updated_from:input}).updated_from,expected);
+    assert.equal(searchQuery({updated_before:input}).updated_before,expected);
+  }
+  for(const value of ['0001-01-01T00:00:00Z','9999-12-31T23:59:59.999999Z','2000-02-29T00:00:00Z'])
+    assert.ok(searchQuery({updated_from:value}).updated_from);
+  const input={query:'literal',task:'task',agent_id:'one',project_id:'two',types:['goal','goal'],status:'candidate',limit:3,offset:2,budget_bytes:2048};
+  const result=searchQuery({...input,updated_from:'2024-01-01T00:00:00.000001Z',updated_before:'2024-01-01T00:00:00.000002Z'});
+  const {updated_from,updated_before,...rest}=result;
+  assert.deepEqual(rest,contextQuery(input));assert.ok(Object.isFrozen(result));assert.ok(updated_from<updated_before);
+});
+test('search time grammar, Gregorian dates, range and input shape are strict',async()=>{
+  const {searchQuery,contextQuery}=await import('../src/personal-memory.mjs');
+  const invalid=[null,1,true,[],{},'', '2024-01-01','2024-01-01T00:00:00+00:00','2024-01-01t00:00:00z',
+    ' 2024-01-01T00:00:00Z','2024-01-01T00:00:00Z\n','2024-01-01T00:00:00.Z','2024-01-01T00:00:00.0000001Z',
+    '2024-01-01T00:00:00.1234560Z','0000-01-01T00:00:00Z','10000-01-01T00:00:00Z','2024-00-01T00:00:00Z',
+    '2024-13-01T00:00:00Z','2024-01-00T00:00:00Z','2024-01-32T00:00:00Z','2024-04-31T00:00:00Z',
+    '1900-02-29T00:00:00Z','2023-02-29T00:00:00Z','2024-02-30T00:00:00Z','2024-01-01T24:00:00Z',
+    '2024-01-01T00:60:00Z','2024-01-01T00:00:60Z','infinity',"2024-01-01T00:00:00Z' OR true --"];
+  for(const field of ['updated_from','updated_before']){
+    for(const value of invalid)assert.throws(()=>searchQuery({[field]:value}),{code:'invalid_params'},`${field}: ${JSON.stringify(value)}`);
+    assert.throws(()=>contextQuery({[field]:'2024-01-01T00:00:00Z'}),{code:'invalid_params'});
+  }
+  for(const input of [null,[],[{}],1,'query',true])assert.throws(()=>searchQuery(input),{code:'invalid_params'});
+  for(const [from,before] of [['.1','.100000'],['.000002','.000001'],['','']])
+    assert.throws(()=>searchQuery({updated_from:'2024-01-01T00:00:00'+from+'Z',updated_before:'2024-01-01T00:00:00'+before+'Z'}),{code:'invalid_params'});
+  assert.throws(()=>searchQuery({unknown:true}),{code:'invalid_params'});
+});
+test('only memory search advertises optional updated-time fields',()=>{
+  const operations=[];registerPersonalPlugin(operations,{OperationError:Error});
+  for(const operation of operations){
+    for(const field of ['updated_from','updated_before']){
+      if(operation.name==='ultra_memory_search'){
+        assert.equal(operation.params[field].type,'string');assert.equal(operation.params[field].required,false);
+      }else assert.ok(!Object.hasOwn(operation.params,field));
+    }
+  }
+});

@@ -31,3 +31,32 @@ test('write scope is required even when bypassing MCP dispatch in host tests',as
   await assert.rejects(store.register({agent_id:'codex'}),{code:'permission_denied'});
   await assert.rejects(store.commit({agent_id:'codex',event_id:'e',consent:true,summary:'record'}),{code:'permission_denied'});
 });
+
+test('search binds optional time predicates before unchanged pagination and authorization',async()=>{
+  const calls=[];
+  const engine={kind:'postgres',executeRaw:async(q,p)=>{calls.push({q,p});return [];},transaction:()=>assert.fail('unexpected write/transaction')};
+  const store=new PersonalMemoryStore({...base,engine});
+  for(const input of [{},{updated_from:'2024-01-01T00:00:00.000001Z'},{updated_before:'2024-01-02T00:00:00Z'},
+    {updated_from:'2024-01-01T00:00:00.000001Z',updated_before:'2024-01-02T00:00:00Z'}]){
+    const result=await store.search({...input,limit:2,offset:3,query:'literal',status:'candidate',types:['goal'],project_id:'proj',agent_id:'label'});
+    const {q,p}=calls.at(-1);
+    assert.equal(p[0],'personal');assert.equal(p[1],personalPrincipal(base));assert.equal(p[2],'candidate');assert.deepEqual(p[3],['goal']);
+    assert.deepEqual(p.slice(4,9),['proj','label','literal',2,3]);
+    assert.deepEqual(p.slice(9),[input.updated_from??null,input.updated_before?'2024-01-02T00:00:00.000000Z':null]);
+    assert.match(q,/source_id=\$1 AND \(actor_key=\$2 OR \(visibility='source' AND status='active'\)\)/);
+    assert.match(q,/status!='active' OR actor_key=\$2 OR/);
+    assert.match(q,/\$10::timestamptz IS NULL OR updated_at >= \$10::timestamptz/);
+    assert.match(q,/\$11::timestamptz IS NULL OR updated_at < \$11::timestamptz/);
+    assert.ok(q.indexOf('updated_at <')<q.indexOf('ORDER BY updated_at DESC,id LIMIT $8 OFFSET $9'));
+    assert.ok(!q.includes('2024-'));assert.equal(result.coverage,'bounded live page, not a snapshot');assert.equal(result.next_offset,null);
+  }
+  assert.equal(calls.length,4);assert.ok(calls.every(x=>x.q===calls[0].q));
+});
+test('invalid time input and context/profile time fields fail before any SQL',async()=>{
+  const store=new PersonalMemoryStore(base);
+  for(const input of [null,[],{updated_from:null},{updated_before:42},{updated_from:'2024-01-01T00:00:00.1234567Z'},
+    {updated_from:'2024-01-01T00:00:00Z',updated_before:'2024-01-01T00:00:00Z'}])
+    await assert.rejects(store.search(input),{code:'invalid_params'});
+  for(const method of ['context','profile'])for(const field of ['updated_from','updated_before'])
+    await assert.rejects(store[method]({[field]:'2024-01-01T00:00:00Z'}),{code:'invalid_params'});
+});

@@ -44,6 +44,27 @@ export function contextQuery(input={}) {
     limit:integer(input.limit,20,1,100),offset:integer(input.offset,0,0,1000000),
     budget_bytes:integer(input.budget_bytes,16000,512,131072)});
 }
+/** UTC timestamps at PostgreSQL microsecond precision, never rounded through Date. */
+function updatedTime(value,name) {
+  if(value===undefined)return null;
+  const match=typeof value==='string'&&/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?Z$/.exec(value);
+  requireThat(match&&match[0]===value,'invalid_params',`${name} requires strict UTC YYYY-MM-DDTHH:mm:ss[.ffffff]Z`);
+  const [,year,month,day,hour,minute,second,fraction='']=match;
+  const y=Number(year),m=Number(month),d=Number(day);
+  const leap=y%4===0&&(y%100!==0||y%400===0);
+  const days=[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];
+  requireThat(y>=1&&m>=1&&m<=12&&d>=1&&d<=days[m-1]&&Number(hour)<=23&&Number(minute)<=59&&Number(second)<=59,
+    'invalid_params',`${name} requires a valid Gregorian UTC date and time`);
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}.${fraction.padEnd(6,'0')}Z`;
+}
+/** Search-only current-row modification bounds; context/profile keep their existing contract. */
+export function searchQuery(input={}) {
+  objectFields(input,['agent_id','project_id','task','query','types','status','limit','offset','budget_bytes','updated_from','updated_before']);
+  const {updated_from,updated_before,...query}=input;
+  const from=updatedTime(updated_from,'updated_from'),before=updatedTime(updated_before,'updated_before');
+  requireThat(from===null||before===null||from<before,'invalid_params','updated_from must precede updated_before');
+  return Object.freeze({...contextQuery(query),updated_from:from,updated_before:before});
+}
 /** A routing hint only: never changes status, deletes content or invents confidence. */
 export function classifyMemory(value) {
   const s=text(value,'classification input',65536).toLowerCase();

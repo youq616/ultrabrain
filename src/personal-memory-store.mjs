@@ -1,7 +1,7 @@
 /** Real PostgreSQL service. Identity is server-derived; an agent_id is only an owned label. */
 import {sha256,requireThat,sourceId,integer} from './core.mjs';
 import {authorizeMemory} from './memory-policy.mjs';
-import {objectFields,personalId,memoryId,normalizePersonalMemory,contextQuery} from './personal-memory.mjs';
+import {objectFields,personalId,memoryId,normalizePersonalMemory,contextQuery,searchQuery} from './personal-memory.mjs';
 import {agentIdentity,memoryCommit} from './agent-memory-protocol.mjs';
 import {captureRequest,MAX_PERSONAL_JOBS} from './personal-consolidation-core.mjs';
 import {buildPersonalContext,taskTerms} from './personal-context-engine.mjs';
@@ -179,8 +179,10 @@ export class PersonalMemoryStore {
       AND (status!='active' OR actor_key=$2 OR ${PERSONAL_DERIVATION_CURRENT})
       AND ($5::text IS NULL OR project_id=$5)
       AND ($6::text IS NULL OR agent_id=$6) AND ($7='' OR strpos(lower(content),lower($7))>0)
+      AND ($10::timestamptz IS NULL OR updated_at >= $10::timestamptz)
+      AND ($11::timestamptz IS NULL OR updated_at < $11::timestamptz)
       ORDER BY updated_at DESC,id LIMIT $8 OFFSET $9`,
-      [this.source,this.actor,p.status,p.types,p.project_id,p.agent_id,p.query,p.limit,p.offset]);
+      [this.source,this.actor,p.status,p.types,p.project_id,p.agent_id,p.query,p.limit,p.offset,p.updated_from,p.updated_before]);
   }
   /** Context/profile candidates: rank first, then bound. Same authorization filters as
    * search's non-context branch plus context semantics (active, derivation-current, project
@@ -273,7 +275,7 @@ export class PersonalMemoryStore {
     return result;
   }
   async search(input={}) {
-    const p=contextQuery(input),rows=await this.#rows(p);
+    const p=searchQuery(input),rows=await this.#rows(p);
     return boundedRows(rows,p.budget_bytes,{source_id:this.source,status:p.status,
       next_offset:rows.length===p.limit?p.offset+rows.length:null,coverage:'bounded live page, not a snapshot'});
   }

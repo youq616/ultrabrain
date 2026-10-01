@@ -41,6 +41,20 @@ stdio 使用本机服务进程账号代表的主机所有者身份，多个从�
 
 同一源和主体的 event_id 表示不可变的整次操作。相同事件和内容重试返回原回执，不重复写入；不同内容、不同操作重用事件会报 conflict。回执记录的是当时结果，不代表记录后续未被修改。修改/审核需传最新 expected_revision，冲突后重新读取再协调，不能静默覆盖。
 
+## 按当前修改时间查询
+
+仅 `ultra_memory_search` 可选接受 `updated_from`（含下界）和 `updated_before`（不含上界），即 `[from, before)`。可只提供一个边界；全部省略时保持原有行为。边界筛选当前记录的 PostgreSQL `updated_at`，审核、归档或修改也会改变它；不是事件发生时间、原始采集时间、历史版本或某时刻快照。
+
+格式严格为 UTC `YYYY-MM-DDTHH:mm:ssZ` 或 `YYYY-MM-DDTHH:mm:ss.ffffffZ`，小数位可为 1 至 6 位，按 PostgreSQL 微秒精度保留，不经 JavaScript Date 舍入。年份限 0001–9999，必须是有效公历日期；仅接受大写 T/Z，不接受时区偏移、空白、仅日期、闰秒、24:00、超过六位小数、null 或非字符串。如果同时指定两个边界，下界必须严格早于上界；不同小数写法代表同一时刻也会被视为相等而拒绝。
+
+```json
+{"query":"CLI","updated_from":"2026-09-01T00:00:00Z","updated_before":"2026-10-01T00:00:00Z","limit":20,"offset":0}
+```
+
+筛选在数据库中绑定参数执行，并在原有 `updated_at DESC,id` 排序、limit/offset 分页之前应用，可与标签、项目、文字、类型及状态条件组合。边界不扩大权限：其他主体仍只能读取同源、明确共享且当前来源有效的 active 记录；自有 candidate/archived 及过期派生记录仍按原规则可检查。查询没有写入、迁移或模型调用。
+
+`ultra_personal_context` 和 `ultra_memory_profile` 不接受这两个字段，排序和预算合同不变。返回记录时间字段沿用现有序列化精度；不要假设返回的 JavaScript 时间表示能保留数据库全部微秒，筛选本身使用数据库精度。分页仍是实时有界列表，修改可能使记录移动、遗漏或重复，`next_offset` 也不是历史快照游标；预算仍可跳过放不下的完整条目。
+
 ## 迁移修复
 
 0010-personal-memory-core 已进入历史迁移链，保持原文件字节和 checksum 不变。原 0011-agent-registry 从未注册，并且重复 CREATE TABLE、字段与 0010 冲突，现移至 docs/legacy-drafts/0011-agent-registry.unregistered.json，仅保留为诊断材料，不执行它。
@@ -63,6 +77,8 @@ confidence 默认为 null（未知），只接收明确的数值估计；不凭�
 node --test test/personal-core.test.mjs test/personal-memory-store.test.mjs test/migrations.test.mjs
 ULTRABRAIN_TEST_ALLOW_WRITE=1 bun test/personal-integration.mjs
 ```
+
+单元测试覆盖严格 UTC/日历/微秒边界、搜索专属字段与 SQL 参数绑定。既有真实 PostgreSQL/MCP 验收入口还覆盖含下界/不含上界、微秒相邻记录、筛选先于分页、来源/主体/状态及过期来源隔离，并通过真实 stdio/HTTP tools/list 和 tools/call 验证；只有针对具体提交实际执行的结果才算验收。
 
 实际 PostgreSQL 测试检查 schema/Store 一致性、原子批量写入/回滚、事件重放、CAS、来源/主体隔离、显式共享和实时令牌撤销；同时启动真实 stdio/HTTP MCP 并核对 tools/list 和 tools/call。升级矩阵另外从旧 personal-core 提交 f8cc5b980c260cd61e66e032ebce94a5cdc065e3 建立旧结构与无归属数据，验证升级后保留且不暴露。
 

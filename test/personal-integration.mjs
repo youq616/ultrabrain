@@ -30,6 +30,29 @@ const sample={type:'preference',content:'Use complete CLI commands; do not use D
 let checks=0;const pass=()=>checks++;
 const clients=[],transports=[],children=[],tokenNames=[];
 async function rpc(client,name,p={}){const r=await client.callTool({name,arguments:p});const v=JSON.parse(r.content[0].text);if(r.isError)throw Object.assign(new Error(v.error),{code:v.error});assert.ok(!r._meta?.brain_hot_memory);return v;}
+
+async function wireTimeSearch(client,id,label){
+  const tools=(await client.listTools()).tools;
+  for(const name of ['ultra_memory_search','ultra_personal_context','ultra_memory_profile']){
+    const schema=tools.find(x=>x.name===name).inputSchema;
+    for(const field of ['updated_from','updated_before']){
+      if(name==='ultra_memory_search'){
+        assert.equal(schema.properties[field].type,'string');assert.ok(!schema.required?.includes(field));
+      }else assert.ok(!Object.hasOwn(schema.properties,field));
+    }
+  }
+  const from='2024-02-29T12:00:00.123456Z',before='2024-02-29T12:00:00.123457Z';
+  await engine.executeRaw('UPDATE ultrabrain.personal_memories SET updated_at=$2::timestamptz WHERE id=$1::uuid',[id,from]);
+  for(const bounds of [{},{updated_from:from},{updated_before:before},{updated_from:from,updated_before:before}])
+    assert.ok((await rpc(client,'ultra_memory_search',{query:label,...bounds})).memories.some(x=>x.id===id));
+  assert.ok(!(await rpc(client,'ultra_memory_search',{query:label,updated_before:from})).memories.some(x=>x.id===id));
+  assert.ok(!(await rpc(client,'ultra_memory_search',{query:label,updated_from:before})).memories.some(x=>x.id===id));
+  for(const bounds of [{updated_from:'invalid'},{updated_from:from,updated_before:from},{updated_from:before,updated_before:from},
+    {updated_from:'2024-02-29T12:00:00.1234567Z'}])await assert.rejects(rpc(client,'ultra_memory_search',bounds));
+  for(const name of ['ultra_personal_context','ultra_memory_profile'])for(const field of ['updated_from','updated_before'])
+    await assert.rejects(rpc(client,name,{[field]:from}));
+  pass();
+}
 try {
   for(const id of [source,otherSource])await engine.executeRaw('INSERT INTO public.sources(id,name) VALUES($1,$1)',[id]);
   const first=await reg();assert.match(first.actor_key,/^[a-f0-9]{64}$/);assert.equal(first.revision,1);pass();
@@ -90,6 +113,70 @@ try {
   assert.equal((await engine.executeRaw('SELECT count(*)::integer AS n FROM ultrabrain.personal_memories WHERE source_id=$1',[source]))[0].n,countBefore);
   assert.equal((await engine.executeRaw("SELECT count(*)::integer AS n FROM ultrabrain.personal_events WHERE source_id=$1 AND event_id='rollback'",[source]))[0].n,0);pass();
   assert.equal((await migrationStatus(engine)).pending.length,0);assert.deepEqual((await applyMigrations(engine)).applied,[]);pass();
+  // Deterministic current-row timestamps; synthetic fixtures only, no model or clock sleeps.
+  const timeLabel='updated-time-'+tag,from='2024-02-29T12:00:00.000001Z',until='2024-02-29T12:00:00.000003Z';
+  const stamps=['2024-02-29T12:00:00Z',from,'2024-02-29T12:00:00.000002Z',until,'2024-02-29T12:00:01Z',from];
+  const timed=await commit('timed-active',stamps.map((_,i)=>({type:'goal',content:timeLabel+' row '+i,project_id:timeLabel})));
+  for(const [i,row] of timed.entries.entries()){
+    await call('ultra_personal_review',{memory_id:row.id,event_id:'timed-review-'+i,expected_revision:1,status:'active'});
+    await engine.executeRaw('UPDATE ultrabrain.personal_memories SET updated_at=$2::timestamptz WHERE id=$1::uuid',[row.id,stamps[i]]);
+  }
+  const ids=timed.entries.map(x=>x.id),ties=[ids[1],ids[5]].sort(),expected=[ids[2],...ties];
+  const timedSearch=(bounds={},extra={})=>call('ultra_memory_search',{query:timeLabel,project_id:timeLabel,agent_id:'codex',types:['goal'],...bounds},extra);
+  const rowIds=result=>result.memories.map(x=>x.id);
+  const baseline=await engine.executeRaw('SELECT id::text,revision,status,updated_at::text FROM ultrabrain.personal_memories WHERE source_id=$1 ORDER BY id',[source]);
+  assert.deepEqual(rowIds(await timedSearch()),[ids[4],ids[3],ids[2],...ties,ids[0]]);pass();
+  assert.deepEqual(rowIds(await timedSearch({updated_from:from})),[ids[4],ids[3],...expected]);pass();
+  assert.deepEqual(rowIds(await timedSearch({updated_before:until})),[...expected,ids[0]]);pass();
+  assert.deepEqual(rowIds(await timedSearch({updated_from:from,updated_before:until})),expected);pass();
+  assert.deepEqual(rowIds(await timedSearch({updated_from:from,updated_before:until,limit:1})),[ids[2]]);
+  const page=await timedSearch({updated_from:from,updated_before:until,limit:1,offset:1});
+  assert.deepEqual(rowIds(page),[ties[0]]);assert.equal(page.next_offset,2);
+  assert.deepEqual(rowIds(await timedSearch({updated_from:from,updated_before:until,limit:1,offset:2})),[ties[1]]);
+  assert.deepEqual(rowIds(await timedSearch({updated_from:from,updated_before:until,offset:3})),[]);pass();
+  assert.deepEqual(rowIds(await timedSearch({updated_from:from,updated_before:'2024-02-29T12:00:00.000002Z'})),ties);pass();
+  assert.equal((await timedSearch({updated_from:from,updated_before:until,query:timeLabel+' row 2'})).memories[0].id,ids[2]);
+  assert.equal((await timedSearch({updated_from:from,updated_before:until,types:['identity']})).memories.length,0);
+  assert.equal((await timedSearch({updated_from:from,updated_before:until,agent_id:'different'})).memories.length,0);
+  assert.equal((await timedSearch({updated_from:from,updated_before:until,project_id:'different'})).memories.length,0);pass();
+  assert.equal((await timedSearch({updated_from:from,updated_before:until},second)).memories.length,0);
+  assert.equal((await timedSearch({updated_from:from,updated_before:until},foreign)).memories.length,0);pass();
+  // PostgreSQL itself must preserve accepted precision; never compare JS Date round trips.
+  for(const stamp of ['0001-01-01T00:00:00Z','9999-12-31T23:59:59.999999Z','2000-02-29T00:00:00.1Z',from,until]){
+    const [roundtrip]=await engine.executeRaw(`SELECT to_char($1::timestamptz AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS stamp`,[stamp]);
+    const normalized=stamp.includes('.')?stamp.replace(/\.(\d+)Z$/,(_,f)=>'.'+f.padEnd(6,'0')+'Z'):stamp.replace('Z','.000000Z');
+    assert.equal(roundtrip.stamp,normalized);
+    await timedSearch({updated_from:stamp});
+  }
+  const [precision]=await engine.executeRaw('SELECT $1::timestamptz < $2::timestamptz AS distinct_microseconds',[from,'2024-02-29T12:00:00.000002Z']);
+  assert.equal(precision.distinct_microseconds,true);pass();
+  for(const value of [null,42,'2023-02-29T00:00:00Z','1900-02-29T00:00:00Z','2024-01-01T24:00:00Z','2024-01-01T00:00:00.0000001Z','2024-01-01T00:00:00+00:00'])
+    await assert.rejects(timedSearch({updated_from:value}));
+  for(const bounds of [{updated_from:until,updated_before:from},{updated_from:from,updated_before:from},
+    {updated_from:'2024-01-01T00:00:00.1Z',updated_before:'2024-01-01T00:00:00.100000Z'}])
+    await assert.rejects(timedSearch(bounds),{code:'invalid_params'});
+  for(const name of ['ultra_personal_context','ultra_memory_profile'])for(const field of ['updated_from','updated_before'])
+    await assert.rejects(call(name,{[field]:from}));pass();
+  assert.deepEqual(await engine.executeRaw('SELECT id::text,revision,status,updated_at::text FROM ultrabrain.personal_memories WHERE source_id=$1 ORDER BY id',[source]),baseline);pass();
+  // State and derivation visibility are independent of the selected modification interval.
+  const visibilityLabel='time-visibility-'+tag;
+  const states=await commit('timed-states',Array.from({length:4},()=>({type:'goal',content:visibilityLabel,visibility:'source'})));
+  const [activeTime,candidateTime,archivedTime,derivedTime]=states.entries;
+  for(const row of [activeTime,derivedTime])await call('ultra_personal_review',{memory_id:row.id,event_id:'activate-time-'+row.id,expected_revision:1,status:'active'});
+  await call('ultra_personal_review',{memory_id:archivedTime.id,event_id:'archive-time',expected_revision:1,status:'archived'});
+  const [origin]=await engine.executeRaw('SELECT revision,content_hash FROM ultrabrain.personal_memories WHERE id=$1::uuid',[candidateTime.id]);
+  await engine.executeRaw('UPDATE ultrabrain.personal_memories SET derivation=$2::text::jsonb WHERE id=$1::uuid',
+    [derivedTime.id,JSON.stringify({input_id:candidateTime.id,input_revision:origin.revision,input_hash:origin.content_hash})]);
+  await engine.executeRaw('UPDATE ultrabrain.personal_memories SET updated_at=$2::timestamptz WHERE id=ANY($1::uuid[])',[states.entries.map(x=>x.id),from]);
+  const visibleSearch=(status='active',extra={})=>call('ultra_memory_search',{query:visibilityLabel,status,updated_from:from,updated_before:until},extra);
+  assert.deepEqual(rowIds(await visibleSearch('active',second)).sort(),[activeTime.id,derivedTime.id].sort());
+  assert.deepEqual(rowIds(await visibleSearch('candidate')),[candidateTime.id]);assert.deepEqual(rowIds(await visibleSearch('archived')),[archivedTime.id]);
+  assert.equal((await visibleSearch('candidate',second)).memories.length,0);assert.equal((await visibleSearch('archived',second)).memories.length,0);
+  assert.equal((await visibleSearch('active',foreign)).memories.length,0);pass();
+  await call('ultra_personal_update',{memory_id:candidateTime.id,event_id:'stale-time-source',expected_revision:1,memory:{type:'goal',content:visibilityLabel+' changed'}});
+  assert.deepEqual(rowIds(await visibleSearch('active',second)),[activeTime.id]);
+  const stale=(await visibleSearch()).memories.find(x=>x.id===derivedTime.id);assert.equal(stale.derivation_current,false);assert.equal(stale.owned_by_caller,true);
+  assert.ok((await call('ultra_memory_search',{query:visibilityLabel},second)).memories.every(x=>x.id!==derivedTime.id));pass();
   if(process.env.ULTRABRAIN_PERSONAL_LEGACY_FIXTURE){
     const legacy=JSON.parse(readFileSync(process.env.ULTRABRAIN_PERSONAL_LEGACY_FIXTURE,'utf8'));
     const [row]=await engine.executeRaw('SELECT source_id,actor_key,content FROM ultrabrain.personal_memories WHERE id=$1::uuid',[legacy.memory]);
@@ -107,6 +194,7 @@ try {
   await rpc(stdio,'ultra_personal_review',{memory_id:wire.entries[0].id,expected_revision:1,event_id:'stdio-review',status:'active'});
   assert.ok((await rpc(stdio,'ultra_personal_context')).memories.some(x=>x.id===wire.entries[0].id));pass();
   assert.equal((await rpc(stdio,'ultra_memory_read',{memory_id:wire.entries[0].id})).memory.revision,2);pass();
+  await wireTimeSearch(stdio,wire.entries[0].id,'Synthetic local experience');
   // Actual two HTTP token identities; sharing is explicit and private entries stay private.
   const socket=createServer();socket.listen(0,'127.0.0.1');await once(socket,'listening');const port=socket.address().port;await new Promise(r=>socket.close(r));
   const server=spawn(process.execPath,[ROOT+'/src/cli.mjs','mcp','--http','--bind','127.0.0.1','--port',String(port),'--suppress-bootstrap-token'],
@@ -134,6 +222,9 @@ try {
   await rpc(http[0],'ultra_personal_review',{memory_id:share.entries[0].id,event_id:'wire-activate',expected_revision:1,status:'active'});
   assert.ok((await rpc(http[1],'ultra_memory_profile')).memories.some(x=>x.id===share.entries[0].id));pass();
   assert.equal((await rpc(http[1],'ultra_memory_read',{memory_id:share.entries[0].id})).memory.owned_by_caller,false);pass();
+  await wireTimeSearch(http[0],share.entries[0].id,sample.content);
+  assert.ok((await rpc(http[1],'ultra_memory_search',{updated_from:'2024-02-29T12:00:00.123456Z',updated_before:'2024-02-29T12:00:00.123457Z'})).memories.some(x=>x.id===share.entries[0].id));
+  assert.ok(!(await rpc(http[1],'ultra_memory_search',{status:'candidate',updated_from:'0001-01-01T00:00:00Z'})).memories.some(x=>x.id===secret.entries[0].id));pass();
   await engine.executeRaw('UPDATE access_tokens SET revoked_at=now() WHERE name=$1',[tokenNames[0]]);
   await assert.rejects(rpc(http[0],'ultra_memory_commit',{agent_id:'same-label',event_id:'revoked',consent:true,summary:'must not be stored'}));pass();
   console.log(`PASS ${checks} personal core checks: PostgreSQL SQL/identity/CAS/replay/rollback, legacy preservation, real stdio and authenticated HTTP`);
