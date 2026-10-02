@@ -1,0 +1,50 @@
+{
+  "format": "ultrabrain-capture-contention-local-evidence-v1",
+  "public_base": "c379604af7c12a7154ce02b902933e81c2b5a816",
+  "public_base_tree": "965cdb95484d1adf896dd69b667bf7043867a1ef",
+  "platform": "linux",
+  "node": "v24.19.0",
+  "tests": 114,
+  "passed": 114,
+  "failed": 0,
+  "skipped": 0,
+  "command": "node --test --test-reporter=tap test/capture-contention-diagnostics.test.mjs test/capture-contention.test.mjs test/capture-worker-batch.test.mjs",
+  "tap_sha256": "881d865d38fdac071c937df99b3298f1107207eb312927cd4904fc670e983901",
+  "actual_round_evidence": {
+    "complete": true,
+    "passed": true,
+    "reported_workers": 8,
+    "shutdown_unavailable_workers": 0
+  },
+  "max_tested_stdout_bytes_including_newline": 1877,
+  "max_tested_diagnostic_bytes": 599,
+  "static_checks": [
+    "workflow YAML parsed",
+    "unchanged exact 16-file suite",
+    "all workflow Bash snippets passed bash -n",
+    "summary JavaScript passed node --check",
+    "git diff --check passed excluding byte-identical baseline TAP; original trailing whitespace at TAP lines 77 and 79 is intentionally preserved"
+  ],
+  "windows_comparison": "not_run",
+  "historical_failure": "unresolved",
+  "implementation_sha256": {
+    "test/fixtures/capture-contention-worker.mjs": "fa7be7bcec24ca1b370e876931417782b379b6d145a6dfd0df5eb9094fa6b2f1",
+    "test/helpers/capture-contention-report.mjs": "b6125c623f2432b00da5a4582d87aa12e89270d63333c5af58e6ccff91692c84",
+    "scripts/check-capture-contention.mjs": "69b3bd38919e0ab7114345ea153ed9aeba80b563e1b8401c15a3c15a81d0a897",
+    "test/capture-contention.test.mjs": "f47920ba6561891ef0910d871adecb78e7e1b11c1b8137aecd2d8dfcf7c19264",
+    "test/helpers/capture-contention-diagnostics.mjs": "fc2d4bafa780ffc72ff88ff4a8081e29f60bb1c9372d40bf0bc02c87125465c8",
+    "test/capture-contention-diagnostics.test.mjs": "fcbdfd3e47984e0e772f0b92eade97f35f0ac76d7ad4d9ccf6c99b2406aa99d2",
+    ".github/workflows/capture-contention-comparison.yml": "b9455e27709d0406a030a6bf70b4d139ebe4111e67252f3028004274a1132ce7"
+  },
+  "negative_classification_coverage": [
+    "partial-worker supervisor timeout",
+    "deadline-crossing close",
+    "mixed unrelated and contention failure",
+    "unrelated failure only",
+    "cancellation",
+    "bailout",
+    "truncated TAP",
+    "test/round mismatch",
+    "command/TAP exit mismatch"
+  ]
+}

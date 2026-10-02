@@ -1,0 +1,107 @@
+name: Capture contention finite comparison
+on:
+  push:
+    branches: [dev/capture-contention-diagnostics-20261002]
+permissions:
+  contents: read
+jobs:
+  paired-windows:
+    if: github.run_attempt == 1
+    runs-on: windows-2025
+    timeout-minutes: 8
+    env:
+      CAPTURE_TEST_FILES: >-
+        test/capture-lock.test.mjs test/capture-lock-cancellation.test.mjs test/capture-lock-io.test.mjs test/capture-lock-lifecycle.test.mjs test/capture-lock-cli.test.mjs test/capture-lock-audit.test.mjs test/capture-contention.test.mjs test/capture-outbox.test.mjs test/capture-hardening.test.mjs test/automatic-capture.test.mjs test/capture-profile-binding.test.mjs test/capture-journal.test.mjs test/capture-journal-regression.test.mjs test/capture-journal-crash.test.mjs test/capture-journal-cli.test.mjs test/capture-journal-audit.test.mjs
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.3'
+      - name: Pure diagnostic preflight
+        id: preflight
+        shell: bash
+        run: node --test test/capture-contention-diagnostics.test.mjs > "$RUNNER_TEMP/contention-diagnostics-preflight.tap"
+      - name: Original grouped suite, one attempt
+        id: grouped
+        shell: bash
+        run: |
+          set +e
+          node --test ${CAPTURE_TEST_FILES} > "$RUNNER_TEMP/contention-grouped.tap" 2>&1
+          status=$?
+          printf '%s\n' "$status" > "$RUNNER_TEMP/contention-grouped.exit"
+          printf 'exit_code=%s\n' "$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+      - name: File-serialized suite, one attempt even after grouped failure
+        id: serialized
+        if: always() && !cancelled() && steps.preflight.outcome == 'success'
+        shell: bash
+        run: |
+          set +e
+          node --test --test-concurrency=1 ${CAPTURE_TEST_FILES} > "$RUNNER_TEMP/contention-serialized.tap" 2>&1
+          status=$?
+          printf '%s\n' "$status" > "$RUNNER_TEMP/contention-serialized.exit"
+          printf 'exit_code=%s\n' "$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+      - name: Preserve genuine outcomes and bounded evidence summary
+        if: always()
+        shell: bash
+        env:
+          PREFLIGHT_OUTCOME: ${{ steps.preflight.outcome }}
+          GROUPED_OUTCOME: ${{ steps.grouped.outcome }}
+          SERIALIZED_OUTCOME: ${{ steps.serialized.outcome }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFileSync,statSync,writeFileSync} from 'node:fs';
+          import {join} from 'node:path';
+          import {availableParallelism} from 'node:os';
+          import {execFileSync} from 'node:child_process';
+          import {contentionTapEvidence,contentionComparisonEvidence} from './test/helpers/capture-contention-diagnostics.mjs';
+          const read=(name,max)=>{try{const p=join(process.env.RUNNER_TEMP,name);if(statSync(p).size>max)return null;return readFileSync(p,'utf8');}catch{return null;}};
+          const suite=process.env.CAPTURE_TEST_FILES;
+          const arms=['grouped','serialized'].map((name,index)=>{
+            const raw=read('contention-'+name+'.exit',16)?.trim();
+            const exit=/^(?:0|[1-9][0-9]{0,2})$/.test(raw??'')&&Number(raw)<=255?Number(raw):null;
+            const outcome=process.env[name.toUpperCase()+'_OUTCOME'];
+            const command_complete=exit!==null&&((outcome==='success'&&exit===0)||(outcome==='failure'&&exit!==0));
+            return {name,order:index+1,command:'node --test '+(index?'--test-concurrency=1 ':'')+suite,
+              outcome,exit,command_complete,evidence:contentionTapEvidence(read('contention-'+name+'.tap',1048576))};
+          });
+          let checkout=null,tree=null,parents=[];
+          try{
+            checkout=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+            const headers=execFileSync('git',['cat-file','-p','HEAD'],{encoding:'utf8'}).split('\n\n',1)[0].split('\n');
+            tree=headers.find(line=>line.startsWith('tree '))?.slice(5)??null;
+            parents=headers.filter(line=>line.startsWith('parent ')).map(line=>line.slice(7));
+          }catch{}
+          const identity_valid=process.version==='v22.23.3'&&process.platform==='win32'&&process.env.GITHUB_RUN_ATTEMPT==='1'&&
+            /^[a-f0-9]{40}$/.test(checkout??'')&&checkout===process.env.GITHUB_SHA&&/^[a-f0-9]{40}$/.test(tree??'')&&
+            parents.length===1&&parents[0]==='c379604af7c12a7154ce02b902933e81c2b5a816';
+          const {complete,passed,interpretation}=contentionComparisonEvidence(arms,{identityValid:identity_valid,preflightOutcome:process.env.PREFLIGHT_OUTCOME});
+          const report={format:'ultrabrain-capture-contention-comparison-v1',complete,passed,interpretation,
+            head:process.env.GITHUB_SHA,checkout,tree,parents,identity_valid,run_id:process.env.GITHUB_RUN_ID,run_attempt:process.env.GITHUB_RUN_ATTEMPT,
+            node:process.version,platform:process.platform,architecture:process.arch,available_parallelism:availableParallelism(),
+            runner_image:{os:process.env.ImageOS??null,version:process.env.ImageVersion??null},
+            preflight_outcome:process.env.PREFLIGHT_OUTCOME,arms,
+            limitations:['Fixed grouped-then-serialized order can confound comparison','Diagnostic observation adds scheduling overhead',
+              'Passing observations do not explain or waive the original failure']};
+          writeFileSync(join(process.env.RUNNER_TEMP,'contention-comparison.json'),JSON.stringify(report,null,2)+'\n');
+          console.log(JSON.stringify(report));
+          if(!passed)process.exitCode=1;
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capture-contention-comparison-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/contention-diagnostics-preflight.tap
+            ${{ runner.temp }}/contention-grouped.tap
+            ${{ runner.temp }}/contention-grouped.exit
+            ${{ runner.temp }}/contention-serialized.tap
+            ${{ runner.temp }}/contention-serialized.exit
+            ${{ runner.temp }}/contention-comparison.json
+          if-no-files-found: error
+          retention-days: 14
+# One approved candidate head only. No retry loop, reduced writer count, increased
+# acquisition budget, production change, PR trigger, or automatic follow-up run.

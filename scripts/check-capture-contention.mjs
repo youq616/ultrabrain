@@ -10,6 +10,7 @@ import {CaptureOutbox} from '../src/capture-outbox.mjs';
 import {captureWorkerBatch} from '../test/helpers/capture-worker-batch.mjs';
 import {contentionWorkerReport} from '../test/helpers/capture-contention-report.mjs';
 import {captureProcessDiagnostic} from '../test/helpers/capture-process-diagnostic.mjs';
+import {CONTENTION_ROUND_FORMAT} from '../test/helpers/capture-contention-diagnostics.mjs';
 const WORKERS=8;
 const workerPath=fileURLToPath(new URL('../test/fixtures/capture-contention-worker.mjs',import.meta.url));
 export async function captureContentionRound(){
@@ -35,7 +36,7 @@ export async function captureContentionRound(){
    names.length===expected.length+1&&records.every(r=>r.attempts===0&&r.payload.transcript==='SYNTHETIC_CONTENTION_PAYLOAD:'+r.payload.event_id)&&
    outcomes.reduce((n,v)=>n+v.result.replays,0)===WORKERS-1;
   result={passed:valid,stage:'integrity',writers:WORKERS,requests:WORKERS*3,records:records.length,
-   identical_replays:outcomes.reduce((n,v)=>n+v.result.replays,0),busy_retries:outcomes.reduce((n,v)=>n+v.result.busy_retries,0)};
+   identical_replays:outcomes.reduce((n,v)=>n+v.result.replays,0),busy_retries:outcomes.reduce((n,v)=>n+v.result.busy_retries,0),outcomes};
   }
  }catch(error){result={passed:false,stage,timed_out:batch?.timedOut??false,error:captureProcessDiagnostic(error)};}
  finally{
@@ -45,7 +46,7 @@ export async function captureContentionRound(){
   else if(root!==undefined)try{rmSync(root,{recursive:true,force:true,maxRetries:3,retryDelay:30});}
   catch(error){result={...result,passed:false,cleanup:captureProcessDiagnostic(error)};}
  }
- return result;
+ return {...result,diagnostic_format:CONTENTION_ROUND_FORMAT};
 }
 async function main(){
  const args=process.argv.slice(2);

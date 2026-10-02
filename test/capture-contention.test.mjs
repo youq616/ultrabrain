@@ -4,8 +4,10 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {captureProcessDiagnostic} from './helpers/capture-process-diagnostic.mjs';
 import {captureContentionRound} from '../scripts/check-capture-contention.mjs';
-test('contention: real 8-process start barrier preserves unique events and shared replay',async()=>{
- const r=await captureContentionRound();assert.equal(r.passed,true,JSON.stringify(r));assert.equal(r.records,17);assert.equal(r.identical_replays,7);
+import {contentionRoundEvidence} from './helpers/capture-contention-diagnostics.mjs';
+test('contention: real 8-process start barrier preserves unique events and shared replay',async t=>{
+ const r=await captureContentionRound();t.diagnostic(JSON.stringify(r));assert.equal(r.passed,true,JSON.stringify(r));assert.equal(r.records,17);assert.equal(r.identical_replays,7);
+ assert.deepEqual(contentionRoundEvidence(r),{complete:true,passed:true,reported_workers:8,shutdown_unavailable_workers:0,reason:null});
 });
 for(const args of [['--help'],['--rounds','0'],['--rounds','26'],['--rounds','3.5'],['--profile','PRIVATE_PATH']])test('contention: CLI parameter boundary '+args[0]+' '+args[1],()=>{
  const r=spawnSync(process.execPath,[fileURLToPath(new URL('../scripts/check-capture-contention.mjs',import.meta.url)),...args],{encoding:'utf8',timeout:5000});

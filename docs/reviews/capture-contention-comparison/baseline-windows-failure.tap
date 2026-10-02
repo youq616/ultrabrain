@@ -1,0 +1,1215 @@
+TAP version 13
+# Subtest: automatic capture remains off without separately selected modes
+ok 1 - automatic capture remains off without separately selected modes
+  ---
+  duration_ms: 23.3847
+  type: 'test'
+  ...
+# Subtest: Claude stable prompt ID preserves repeated identical prompts as distinct events
+ok 2 - Claude stable prompt ID preserves repeated identical prompts as distinct events
+  ---
+  duration_ms: 5.8764
+  type: 'test'
+  ...
+# Subtest: Claude ignores arbitrary transcript paths, tools and hidden reasoning
+ok 3 - Claude ignores arbitrary transcript paths, tools and hidden reasoning
+  ---
+  duration_ms: 3.3577
+  type: 'test'
+  ...
+# Subtest: subagents and stop-hook continuations are not automatically captured
+ok 4 - subagents and stop-hook continuations are not automatically captured
+  ---
+  duration_ms: 3.7455
+  type: 'test'
+  ...
+# Subtest: assistant output stays labelled an unverified assistant observation
+ok 5 - assistant output stays labelled an unverified assistant observation
+  ---
+  duration_ms: 7.7552
+  type: 'test'
+  ...
+# Subtest: wrong workspace and oversized or ill-formed text fail without truncation
+ok 6 - wrong workspace and oversized or ill-formed text fail without truncation
+  ---
+  duration_ms: 13.7642
+  type: 'test'
+  ...
+# Subtest: OpenCode captures only real plain user parts, preserving negative statements
+ok 7 - OpenCode captures only real plain user parts, preserving negative statements
+  ---
+  duration_ms: 5.6622
+  type: 'test'
+  ...
+# Subtest: OpenCode rejects identity mismatch and keeps assistant part IDs stable
+ok 8 - OpenCode rejects identity mismatch and keeps assistant part IDs stable
+  ---
+  duration_ms: 24.4894
+  type: 'test'
+  ...
+# Subtest: manager journals before failed connect and notices profile revocation
+ok 9 - manager journals before failed connect and notices profile revocation
+  ---
+  duration_ms: 785.211
+  type: 'test'
+  ...
+# Subtest: OpenCode real hook shape gates primary-session metadata and never mutates host output
+ok 10 - OpenCode real hook shape gates primary-session metadata and never mutates host output
+  ---
+  duration_ms: 8963.8509
+  type: 'test'
+  ...
+# Subtest: revoked scope is rechecked after waiting for the short writer lock
+ok 11 - revoked scope is rechecked after waiting for the short writer lock
+  ---
+  duration_ms: 870.8144
+  type: 'test'
+  ...
+# Subtest: contention: real 8-process start barrier preserves unique events and shared replay
+not ok 12 - contention: real 8-process start barrier preserves unique events and shared replay
+  ---
+  duration_ms: 9815.9658
+  type: 'test'
+  location: 'D:\\a\\ultrabrain\\ultrabrain\\test\\capture-contention.test.mjs:7:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"passed":false,"stage":"writers","timed_out":false,"error":{"code":"writer_failed","lock":null,"journal":null,"native_code":null,"syscall":null,"target":null},"outcomes":[{"worker":0,"exit":1,"signal":null,"valid":false,"result":{"ok":false,"code":"outbox_busy","lock":{"kind":"queue","phase":"create","system_code":"EEXIST"},"journal":null,"native_code":null,"syscall":null,"target":null,"busy_retries":7},"stderr_seen":false,"output_truncated":false,"lifecycle":{"ready":true,"staged":false,"closed":true,"issue":"stopped","termination_requested":false,"termination_unconfirmed":false,"send_callbacks_pending":0}},{"worker":1,"exit":0,"signal":null,"valid":true,"result":{"ok":true,"busy_retries":0,"replays":0},"stderr_seen":false,"output_truncated":false,"lifecycle":{"ready":true,"staged":false,"closed":true,"issue":null,"termination_requested":false,"termination_unconfirmed":false,"send_callbacks_pending":0}},{"worker":2,"exit":1,"signal":null,"valid":false,"result":{"ok":false,"code":"outbox_busy","lock":{"kind":"queue","phase":"create","system_code":"EEXIST"},"journal":null,"native_code":null,"syscall":null,"target":null,"busy_retries":7},"stderr_seen":false,"output_truncated":false,"lifecycle":{"ready":true,"staged":false,"closed":true,"issue":"worker_exit_failed","termination_requested":false,"termination_unconfirmed":false,"send_callbacks_pending":0}},{"worker":3,"exit":1,"signal":null,"valid":false,"result":{"ok":false,"code":"outbox_busy","lock":{"kind":"queue","phase":"create","system_code":"EEXIST"},"journal":null,"native_code":null,"syscall":null,"target":null,"busy_retries":7},"stderr_seen":false,"output_truncated":false,"lifecycle":{"ready":true,"staged":false,"closed":true,"issue":"stopped","termination_requested":false,"termination_unconfirmed":false,"send_callbacks_pending":0}},{"worker":4,"exit":0,"signal":null,"valid":true,"result":{"ok":true,"busy_retries":0,"replays":1},"stderr_seen":false,"output_truncated":false,"lifecycle":{"ready":true,"staged":false,"closed":true,"issue":null,"termination_requested":false,"termination_unconfirmed":false,"send_callbacks_pending":0}},{"worker":5,"exit":null,"signal":"SIGKILL","valid":false,"result":{"ok":false,"code":"invalid_worker_report"},"stderr_seen":false,"output_truncated":false,"lifecycle":{"ready":true,"staged":false,"closed":true,"issue":"stopped","termination_requested":true,"termination_unconfirmed":false,"send_callbacks_pending":0}},{"worker":6,"exit":null,"signal":"SIGKILL","valid":false,"result":{"ok":false,"code":"invalid_worker_report"},"stderr_seen":false,"output_truncated":false,"lifecycle":{"ready":true,"staged":false,"closed":true,"issue":"stopped","termination_requested":true,"termination_unconfirmed":false,"send_callbacks_pending":0}},{"worker":7,"exit":0,"signal":null,"valid":true,"result":{"ok":true,"busy_retries":5,"replays":1},"stderr_seen":false,"output_truncated":false,"lifecycle":{"ready":true,"staged":false,"closed":true,"issue":null,"termination_requested":false,"termination_unconfirmed":false,"send_callbacks_pending":0}}]}
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///D:/a/ultrabrain/ultrabrain/test/capture-contention.test.mjs:8:48)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: contention: CLI parameter boundary --help undefined
+ok 13 - contention: CLI parameter boundary --help undefined
+  ---
+  duration_ms: 89.1686
+  type: 'test'
+  ...
+# Subtest: contention: CLI parameter boundary --rounds 0
+ok 14 - contention: CLI parameter boundary --rounds 0
+  ---
+  duration_ms: 77.1019
+  type: 'test'
+  ...
+# Subtest: contention: CLI parameter boundary --rounds 26
+ok 15 - contention: CLI parameter boundary --rounds 26
+  ---
+  duration_ms: 91.5233
+  type: 'test'
+  ...
+# Subtest: contention: CLI parameter boundary --rounds 3.5
+ok 16 - contention: CLI parameter boundary --rounds 3.5
+  ---
+  duration_ms: 86.3053
+  type: 'test'
+  ...
+# Subtest: contention: CLI parameter boundary --profile PRIVATE_PATH
+ok 17 - contention: CLI parameter boundary --profile PRIVATE_PATH
+  ---
+  duration_ms: 80.6655
+  type: 'test'
+  ...
+# Subtest: contention: native failure diagnostic excludes real paths EPERM
+ok 18 - contention: native failure diagnostic excludes real paths EPERM
+  ---
+  duration_ms: 0.3083
+  type: 'test'
+  ...
+# Subtest: contention: native failure diagnostic excludes real paths EACCES
+ok 19 - contention: native failure diagnostic excludes real paths EACCES
+  ---
+  duration_ms: 0.145
+  type: 'test'
+  ...
+# Subtest: contention: native failure diagnostic excludes real paths EBUSY
+ok 20 - contention: native failure diagnostic excludes real paths EBUSY
+  ---
+  duration_ms: 0.4304
+  type: 'test'
+  ...
+# Subtest: contention: native failure diagnostic excludes real paths UNKNOWN_PRIVATE
+ok 21 - contention: native failure diagnostic excludes real paths UNKNOWN_PRIVATE
+  ---
+  duration_ms: 0.5082
+  type: 'test'
+  ...
+# Subtest: contention: diagnostic never invokes error properties
+ok 22 - contention: diagnostic never invokes error properties
+  ---
+  duration_ms: 1.6402
+  type: 'test'
+  ...
+# Subtest: enqueue snapshots consented bytes before waiting for another writer
+ok 23 - enqueue snapshots consented bytes before waiting for another writer
+  ---
+  duration_ms: 156.8405
+  type: 'test'
+  ...
+# Subtest: a cancellation during connection cannot submit queued plaintext
+ok 24 - a cancellation during connection cannot submit queued plaintext
+  ---
+  duration_ms: 579.5027
+  type: 'test'
+  ...
+# Subtest: inherited consent cannot authorize a journal record
+ok 25 - inherited consent cannot authorize a journal record
+  ---
+  duration_ms: 6.9069
+  type: 'test'
+  ...
+# Subtest: enqueue rejects false authorization before persisting raw input
+ok 26 - enqueue rejects false authorization before persisting raw input
+  ---
+  duration_ms: 8.0485
+  type: 'test'
+  ...
+# Subtest: flush rejects false authorization before consuming retries or connecting
+ok 27 - flush rejects false authorization before consuming retries or connecting
+  ---
+  duration_ms: 104.2696
+  type: 'test'
+  ...
+# Subtest: enqueue rejects async false authorization before persisting raw input
+ok 28 - enqueue rejects async false authorization before persisting raw input
+  ---
+  duration_ms: 4.6635
+  type: 'test'
+  ...
+# Subtest: flush rejects async false authorization before consuming retries or connecting
+ok 29 - flush rejects async false authorization before consuming retries or connecting
+  ---
+  duration_ms: 639.1784
+  type: 'test'
+  ...
+# Subtest: enqueue rejects async rejection authorization before persisting raw input
+ok 30 - enqueue rejects async rejection authorization before persisting raw input
+  ---
+  duration_ms: 364.1177
+  type: 'test'
+  ...
+# Subtest: flush rejects async rejection authorization before consuming retries or connecting
+ok 31 - flush rejects async rejection authorization before consuming retries or connecting
+  ---
+  duration_ms: 2805.8962
+  type: 'test'
+  ...
+# Subtest: enqueue rejects non-function authorization before persisting raw input
+ok 32 - enqueue rejects non-function authorization before persisting raw input
+  ---
+  duration_ms: 3.6305
+  type: 'test'
+  ...
+# Subtest: flush rejects non-function authorization before consuming retries or connecting
+ok 33 - flush rejects non-function authorization before consuming retries or connecting
+  ---
+  duration_ms: 2454.8399
+  type: 'test'
+  ...
+# Subtest: boolean revocation while waiting for the writer lock prevents plaintext persistence
+ok 34 - boolean revocation while waiting for the writer lock prevents plaintext persistence
+  ---
+  duration_ms: 1152.577
+  type: 'test'
+  ...
+# Subtest: boolean revocation during connect retains the unchanged event without sending it
+ok 35 - boolean revocation during connect retains the unchanged event without sending it
+  ---
+  duration_ms: 1970.1543
+  type: 'test'
+  ...
+# Subtest: queued last-mile registration rechecks boolean revocation before plaintext
+ok 36 - queued last-mile registration rechecks boolean revocation before plaintext
+  ---
+  duration_ms: 3897.0543
+  type: 'test'
+  ...
+# Subtest: queued last-mile registration rechecks asynchronous revocation before plaintext
+ok 37 - queued last-mile registration rechecks asynchronous revocation before plaintext
+  ---
+  duration_ms: 3196.9678
+  type: 'test'
+  ...
+# Subtest: confirmed receipt after transmission removes the event even when consent was subsequently revoked
+ok 38 - confirmed receipt after transmission removes the event even when consent was subsequently revoked
+  ---
+  duration_ms: 2199.0137
+  type: 'test'
+  ...
+# Subtest: audit: enqueue preserves journal cause across failed lock releases
+ok 39 - audit: enqueue preserves journal cause across failed lock releases
+  ---
+  duration_ms: 1961.9763
+  type: 'test'
+  ...
+# Subtest: audit: flush preserves journal cause across failed lock releases
+ok 40 - audit: flush preserves journal cause across failed lock releases
+  ---
+  duration_ms: 1973.2325
+  type: 'test'
+  ...
+# Subtest: audit: automatic capture retains authentic journal details after enqueue
+ok 41 - audit: automatic capture retains authentic journal details after enqueue
+  ---
+  duration_ms: 1963.4713
+  type: 'test'
+  ...
+# Subtest: audit: automatic capture retains authentic lock details after enqueue
+ok 42 - audit: automatic capture retains authentic lock details after enqueue
+  ---
+  duration_ms: 860.7789
+  type: 'test'
+  ...
+# Subtest: audit: automatic capture retains authentic forged details after enqueue
+ok 43 - audit: automatic capture retains authentic forged details after enqueue
+  ---
+  duration_ms: 1148.4405
+  type: 'test'
+  ...
+# Subtest: journal CLI: queue-capture emits safe publication facts, no plaintext or paths
+ok 44 - journal CLI: queue-capture emits safe publication facts, no plaintext or paths
+  ---
+  duration_ms: 9255.3924
+  type: 'test'
+  ...
+# Subtest: journal CLI: queue-status emits safe publication facts, no plaintext or paths
+ok 45 - journal CLI: queue-status emits safe publication facts, no plaintext or paths
+  ---
+  duration_ms: 295.6479
+  type: 'test'
+  ...
+# Subtest: journal CLI: post-enqueue attempt preserves queued receipt and diagnostic provenance
+ok 46 - journal CLI: post-enqueue attempt preserves queued receipt and diagnostic provenance
+  ---
+  duration_ms: 410.0099
+  type: 'test'
+  ...
+# Subtest: journal CLI: post-enqueue attempt-release preserves queued receipt and diagnostic provenance
+ok 47 - journal CLI: post-enqueue attempt-release preserves queued receipt and diagnostic provenance
+  ---
+  duration_ms: 689.2453
+  type: 'test'
+  ...
+# Subtest: journal CLI: post-enqueue delivery-lock preserves queued receipt and diagnostic provenance
+ok 48 - journal CLI: post-enqueue delivery-lock preserves queued receipt and diagnostic provenance
+  ---
+  duration_ms: 361.9048
+  type: 'test'
+  ...
+# Subtest: journal CLI: post-enqueue forged preserves queued receipt and diagnostic provenance
+ok 49 - journal CLI: post-enqueue forged preserves queued receipt and diagnostic provenance
+  ---
+  duration_ms: 347.7007
+  type: 'test'
+  ...
+# Subtest: journal crash: independent process exits after create; reopening never invents a confirmation
+ok 50 - journal crash: independent process exits after create; reopening never invents a confirmation
+  ---
+  duration_ms: 795.9276
+  type: 'test'
+  ...
+# Subtest: journal crash: independent process exits after write; reopening never invents a confirmation
+ok 51 - journal crash: independent process exits after write; reopening never invents a confirmation
+  ---
+  duration_ms: 429.3793
+  type: 'test'
+  ...
+# Subtest: journal crash: independent process exits after file-sync; reopening never invents a confirmation
+ok 52 - journal crash: independent process exits after file-sync; reopening never invents a confirmation
+  ---
+  duration_ms: 393.6812
+  type: 'test'
+  ...
+# Subtest: journal crash: independent process exits after close; reopening never invents a confirmation
+ok 53 - journal crash: independent process exits after close; reopening never invents a confirmation
+  ---
+  duration_ms: 285.486
+  type: 'test'
+  ...
+# Subtest: journal crash: independent process exits after publish; reopening never invents a confirmation
+ok 54 - journal crash: independent process exits after publish; reopening never invents a confirmation
+  ---
+  duration_ms: 496.7006
+  type: 'test'
+  ...
+# Subtest: journal crash: independent process exits after temporary-unlink; reopening never invents a confirmation
+ok 55 - journal crash: independent process exits after temporary-unlink; reopening never invents a confirmation
+  ---
+  duration_ms: 580.2143
+  type: 'test'
+  ...
+# Subtest: journal crash: interrupted replacement at file-sync preserves immutable event and attempt boundary
+ok 56 - journal crash: interrupted replacement at file-sync preserves immutable event and attempt boundary
+  ---
+  duration_ms: 333.4618
+  type: 'test'
+  ...
+# Subtest: journal crash: interrupted replacement at publish preserves immutable event and attempt boundary
+ok 57 - journal crash: interrupted replacement at publish preserves immutable event and attempt boundary
+  ---
+  duration_ms: 572.383
+  type: 'test'
+  ...
+# Subtest: journal regression: a write failure is not replaced by a close failure
+ok 58 - journal regression: a write failure is not replaced by a close failure
+  ---
+  duration_ms: 376.7395
+  type: 'test'
+  ...
+# Subtest: journal regression: failed temporary unlink after publication is not retried
+ok 59 - journal regression: failed temporary unlink after publication is not retried
+  ---
+  duration_ms: 99.2281
+  type: 'test'
+  ...
+# Subtest: journal regression: publish failure preserves its prepared bytes for explicit inspection
+ok 60 - journal regression: publish failure preserves its prepared bytes for explicit inspection
+  ---
+  duration_ms: 53.4665
+  type: 'test'
+  ...
+# Subtest: journal: successful exclusive create preserves complete bytes and file mode
+ok 61 - journal: successful exclusive create preserves complete bytes and file mode
+  ---
+  duration_ms: 151.5975
+  type: 'test'
+  ...
+# Subtest: journal: successful replacement preserves complete bytes and file mode
+ok 62 - journal: successful replacement preserves complete bytes and file mode
+  ---
+  duration_ms: 83.2403
+  type: 'test'
+  ...
+# Subtest: journal: create EPERM reports a bounded phase and never retries
+ok 63 - journal: create EPERM reports a bounded phase and never retries
+  ---
+  duration_ms: 8.3106
+  type: 'test'
+  ...
+# Subtest: journal: create ENOSPC reports a bounded phase and never retries
+ok 64 - journal: create ENOSPC reports a bounded phase and never retries
+  ---
+  duration_ms: 4.8681
+  type: 'test'
+  ...
+# Subtest: journal: create EIO reports a bounded phase and never retries
+ok 65 - journal: create EIO reports a bounded phase and never retries
+  ---
+  duration_ms: 5.0383
+  type: 'test'
+  ...
+# Subtest: journal: write EPERM reports a bounded phase and never retries
+ok 66 - journal: write EPERM reports a bounded phase and never retries
+  ---
+  duration_ms: 12.6009
+  type: 'test'
+  ...
+# Subtest: journal: write ENOSPC reports a bounded phase and never retries
+ok 67 - journal: write ENOSPC reports a bounded phase and never retries
+  ---
+  duration_ms: 5.8388
+  type: 'test'
+  ...
+# Subtest: journal: write EIO reports a bounded phase and never retries
+ok 68 - journal: write EIO reports a bounded phase and never retries
+  ---
+  duration_ms: 5.4426
+  type: 'test'
+  ...
+# Subtest: journal: file-sync EPERM reports a bounded phase and never retries
+ok 69 - journal: file-sync EPERM reports a bounded phase and never retries
+  ---
+  duration_ms: 8.7775
+  type: 'test'
+  ...
+# Subtest: journal: file-sync ENOSPC reports a bounded phase and never retries
+ok 70 - journal: file-sync ENOSPC reports a bounded phase and never retries
+  ---
+  duration_ms: 12.0621
+  type: 'test'
+  ...
+# Subtest: journal: file-sync EIO reports a bounded phase and never retries
+ok 71 - journal: file-sync EIO reports a bounded phase and never retries
+  ---
+  duration_ms: 6.4924
+  type: 'test'
+  ...
+# Subtest: journal: close EPERM reports a bounded phase and never retries
+ok 72 - journal: close EPERM reports a bounded phase and never retries
+  ---
+  duration_ms: 14.8778
+  type: 'test'
+  ...
+# Subtest: journal: close ENOSPC reports a bounded phase and never retries
+ok 73 - journal: close ENOSPC reports a bounded phase and never retries
+  ---
+  duration_ms: 19.2229
+  type: 'test'
+  ...
+# Subtest: journal: close EIO reports a bounded phase and never retries
+ok 74 - journal: close EIO reports a bounded phase and never retries
+  ---
+  duration_ms: 30.4689
+  type: 'test'
+  ...
+# Subtest: journal: publish EPERM reports a bounded phase and never retries
+ok 75 - journal: publish EPERM reports a bounded phase and never retries
+  ---
+  duration_ms: 18.7352
+  type: 'test'
+  ...
+# Subtest: journal: publish ENOSPC reports a bounded phase and never retries
+ok 76 - journal: publish ENOSPC reports a bounded phase and never retries
+  ---
+  duration_ms: 12.1942
+  type: 'test'
+  ...
+# Subtest: journal: publish EIO reports a bounded phase and never retries
+ok 77 - journal: publish EIO reports a bounded phase and never retries
+  ---
+  duration_ms: 14.4969
+  type: 'test'
+  ...
+# Subtest: journal: temporary-unlink EPERM reports a bounded phase and never retries
+ok 78 - journal: temporary-unlink EPERM reports a bounded phase and never retries
+  ---
+  duration_ms: 20.2826
+  type: 'test'
+  ...
+# Subtest: journal: temporary-unlink ENOSPC reports a bounded phase and never retries
+ok 79 - journal: temporary-unlink ENOSPC reports a bounded phase and never retries
+  ---
+  duration_ms: 25.7505
+  type: 'test'
+  ...
+# Subtest: journal: temporary-unlink EIO reports a bounded phase and never retries
+ok 80 - journal: temporary-unlink EIO reports a bounded phase and never retries
+  ---
+  duration_ms: 26.7155
+  type: 'test'
+  ...
+# Subtest: journal: simultaneous write and close failures retain primary and secondary without raw errors
+ok 81 - journal: simultaneous write and close failures retain primary and secondary without raw errors
+  ---
+  duration_ms: 5.2292
+  type: 'test'
+  ...
+# Subtest: journal: syscall outcome uncertainty never rolls back created data
+ok 82 - journal: syscall outcome uncertainty never rolls back created data
+  ---
+  duration_ms: 13.4675
+  type: 'test'
+  ...
+# Subtest: journal: syscall outcome uncertainty never rolls back replaced data
+ok 83 - journal: syscall outcome uncertainty never rolls back replaced data
+  ---
+  duration_ms: 12.8148
+  type: 'test'
+  ...
+# Subtest: journal: failed exclusive publication cannot overwrite an existing event
+ok 84 - journal: failed exclusive publication cannot overwrite an existing event
+  ---
+  duration_ms: 11.5143
+  type: 'test'
+  ...
+# Subtest: journal: failed exclusive temporary create never removes an existing temporary file
+ok 85 - journal: failed exclusive temporary create never removes an existing temporary file
+  ---
+  duration_ms: 4.7925
+  type: 'test'
+  ...
+# Subtest: journal: unusual native throw never leaks arbitrary properties object
+ok 86 - journal: unusual native throw never leaks arbitrary properties object
+  ---
+  duration_ms: 4.2233
+  type: 'test'
+  ...
+# Subtest: journal: unusual native throw never leaks arbitrary properties undefined
+ok 87 - journal: unusual native throw never leaks arbitrary properties undefined
+  ---
+  duration_ms: 3.2879
+  type: 'test'
+  ...
+# Subtest: journal: unusual native throw never leaks arbitrary properties number
+ok 88 - journal: unusual native throw never leaks arbitrary properties number
+  ---
+  duration_ms: 3.3682
+  type: 'test'
+  ...
+# Subtest: journal: unusual native throw never leaks arbitrary properties string
+ok 89 - journal: unusual native throw never leaks arbitrary properties string
+  ---
+  duration_ms: 3.543
+  type: 'test'
+  ...
+# Subtest: journal: unusual native throw never leaks arbitrary properties object
+ok 90 - journal: unusual native throw never leaks arbitrary properties object
+  ---
+  duration_ms: 3.5952
+  type: 'test'
+  ...
+# Subtest: journal: unusual native throw never leaks arbitrary properties object
+ok 91 - journal: unusual native throw never leaks arbitrary properties object
+  ---
+  duration_ms: 3.483
+  type: 'test'
+  ...
+# Subtest: journal: diagnostics cannot be forged or copied to a foreign error
+ok 92 - journal: diagnostics cannot be forged or copied to a foreign error
+  ---
+  duration_ms: 3.7212
+  type: 'test'
+  ...
+# Subtest: journal: input boundary rejects name
+ok 93 - journal: input boundary rejects name
+  ---
+  duration_ms: 3.9671
+  type: 'test'
+  ...
+# Subtest: journal: input boundary rejects name
+ok 94 - journal: input boundary rejects name
+  ---
+  duration_ms: 3.6145
+  type: 'test'
+  ...
+# Subtest: journal: input boundary rejects bytes
+ok 95 - journal: input boundary rejects bytes
+  ---
+  duration_ms: 3.6387
+  type: 'test'
+  ...
+# Subtest: journal: input boundary rejects bytes
+ok 96 - journal: input boundary rejects bytes
+  ---
+  duration_ms: 3.8567
+  type: 'test'
+  ...
+# Subtest: journal: input boundary rejects bytes
+ok 97 - journal: input boundary rejects bytes
+  ---
+  duration_ms: 3.6168
+  type: 'test'
+  ...
+# Subtest: journal: input boundary rejects replace
+ok 98 - journal: input boundary rejects replace
+  ---
+  duration_ms: 4.013
+  type: 'test'
+  ...
+# Subtest: journal: input boundary rejects directory
+ok 99 - journal: input boundary rejects directory
+  ---
+  duration_ms: 3.786
+  type: 'test'
+  ...
+# Subtest: journal: attempt-persistence failure prevents connection and preserves original event
+ok 100 - journal: attempt-persistence failure prevents connection and preserves original event
+  ---
+  duration_ms: 452.0594
+  type: 'test'
+  ...
+# Subtest: audit: event-loop delay past the deadline must not issue another exclusive-create attempt
+ok 101 - audit: event-loop delay past the deadline must not issue another exclusive-create attempt
+  ---
+  duration_ms: 59.3456
+  type: 'test'
+  ...
+# Subtest: audit: asynchronous authorization on owned handoff cannot leak the acquired lock
+ok 102 - audit: asynchronous authorization on owned handoff cannot leak the acquired lock
+  ---
+  duration_ms: 0.7085
+  type: 'test'
+  ...
+# Subtest: audit: cancelled handoff with failed release does not hide the cleanup failure
+ok 103 - audit: cancelled handoff with failed release does not hide the cleanup failure
+  ---
+  duration_ms: 1.0142
+  type: 'test'
+  ...
+# Subtest: cancel: pre-aborted enqueue creates no manifest, lock or record
+ok 104 - cancel: pre-aborted enqueue creates no manifest, lock or record
+  ---
+  duration_ms: 26.3089
+  type: 'test'
+  ...
+# Subtest: cancel: pre-aborted status creates no manifest, lock or record
+ok 105 - cancel: pre-aborted status creates no manifest, lock or record
+  ---
+  duration_ms: 9.0019
+  type: 'test'
+  ...
+# Subtest: cancel: pre-aborted flush creates no manifest, lock or record
+ok 106 - cancel: pre-aborted flush creates no manifest, lock or record
+  ---
+  duration_ms: 5.1176
+  type: 'test'
+  ...
+# Subtest: cancel: pending queue acquisition aborts rather than timing out or deleting the owner lock
+ok 107 - cancel: pending queue acquisition aborts rather than timing out or deleting the owner lock
+  ---
+  duration_ms: 53.3243
+  type: 'test'
+  ...
+# Subtest: cancel: revocation during delivery-lock handoff spends no capture attempts
+ok 108 - cancel: revocation during delivery-lock handoff spends no capture attempts
+  ---
+  duration_ms: 109.7481
+  type: 'test'
+  ...
+# Subtest: queue CLI: cancellation reaches queue-status lock wait
+ok 109 - queue CLI: cancellation reaches queue-status lock wait
+  ---
+  duration_ms: 404.9137
+  type: 'test'
+  ...
+# Subtest: queue CLI: cancellation reaches queue-capture lock wait
+ok 110 - queue CLI: cancellation reaches queue-capture lock wait
+  ---
+  duration_ms: 559.8452
+  type: 'test'
+  ...
+# Subtest: queue CLI: cancellation reaches queue-flush lock wait
+ok 111 - queue CLI: cancellation reaches queue-flush lock wait
+  ---
+  duration_ms: 333.5942
+  type: 'test'
+  ...
+# Subtest: queue CLI: native lock permission error gives safe phase diagnostics, no paths
+ok 112 - queue CLI: native lock permission error gives safe phase diagnostics, no paths
+  ---
+  duration_ms: 220.3886
+  type: 'test'
+  ...
+# Subtest: lock IO: exclusive-open EPERM remains a failure, not silent retry
+ok 113 - lock IO: exclusive-open EPERM remains a failure, not silent retry
+  ---
+  duration_ms: 26.1095
+  type: 'test'
+  ...
+# Subtest: lock IO: exclusive-open EACCES remains a failure, not silent retry
+ok 114 - lock IO: exclusive-open EACCES remains a failure, not silent retry
+  ---
+  duration_ms: 6.6266
+  type: 'test'
+  ...
+# Subtest: lock IO: exclusive-open EBUSY remains a failure, not silent retry
+ok 115 - lock IO: exclusive-open EBUSY remains a failure, not silent retry
+  ---
+  duration_ms: 9.25
+  type: 'test'
+  ...
+# Subtest: lock IO: failed initialization preserves incomplete lock write
+ok 116 - lock IO: failed initialization preserves incomplete lock write
+  ---
+  duration_ms: 30.2234
+  type: 'test'
+  ...
+# Subtest: lock IO: failed initialization preserves incomplete lock file-sync
+ok 117 - lock IO: failed initialization preserves incomplete lock file-sync
+  ---
+  duration_ms: 9.5466
+  type: 'test'
+  ...
+# Subtest: lock IO: failed initialization preserves incomplete lock close
+ok 118 - lock IO: failed initialization preserves incomplete lock close
+  ---
+  duration_ms: 127.2354
+  type: 'test'
+  ...
+# Subtest: lock IO: replaced lock is preserved on release; no foreign unlink
+ok 119 - lock IO: replaced lock is preserved on release; no foreign unlink
+  ---
+  duration_ms: 78.1667
+  type: 'test'
+  ...
+# Subtest: lock IO: failed unlink is not retried and preserves complete lock
+ok 120 - lock IO: failed unlink is not retried and preserves complete lock
+  ---
+  duration_ms: 56.1759
+  type: 'test'
+  ...
+# Subtest: lifecycle: automatic manager close aborts its enqueue, not just its network phase
+ok 121 - lifecycle: automatic manager close aborts its enqueue, not just its network phase
+  ---
+  duration_ms: 219.0415
+  type: 'test'
+  ...
+# Subtest: lifecycle: cancellation after local persistence preserves the enqueue receipt
+ok 122 - lifecycle: cancellation after local persistence preserves the enqueue receipt
+  ---
+  duration_ms: 275.1066
+  type: 'test'
+  ...
+# Subtest: lifecycle: cancellation during the first queue wait does not spend retries or delete locks
+ok 123 - lifecycle: cancellation during the first queue wait does not spend retries or delete locks
+  ---
+  duration_ms: 95.482
+  type: 'test'
+  ...
+# Subtest: lifecycle: confirmed server receipt still removes exactly its record after cancellation
+ok 124 - lifecycle: confirmed server receipt still removes exactly its record after cancellation
+  ---
+  duration_ms: 487.7529
+  type: 'test'
+  ...
+# Subtest: lifecycle: uncertain submission retains immutable payload and bounded attempt state after cancellation
+ok 125 - lifecycle: uncertain submission retains immutable payload and bounded attempt state after cancellation
+  ---
+  duration_ms: 689.367
+  type: 'test'
+  ...
+# Subtest: lock: exclusive handoff and explicit release queue
+ok 126 - lock: exclusive handoff and explicit release queue
+  ---
+  duration_ms: 2.8062
+  type: 'test'
+  ...
+# Subtest: lock: exclusive handoff and explicit release delivery
+ok 127 - lock: exclusive handoff and explicit release delivery
+  ---
+  duration_ms: 0.1791
+  type: 'test'
+  ...
+# Subtest: lock: only create collisions are retried, monotonic deadline ignores wall-clock changes
+ok 128 - lock: only create collisions are retried, monotonic deadline ignores wall-clock changes
+  ---
+  duration_ms: 40.9452
+  type: 'test'
+  ...
+# Subtest: lock: zero wait makes exactly one claim, never waits or steals
+ok 129 - lock: zero wait makes exactly one claim, never waits or steals
+  ---
+  duration_ms: 1.6318
+  type: 'test'
+  ...
+# Subtest: lock: persistent contention exhausts the bound with safe diagnostic
+ok 130 - lock: persistent contention exhausts the bound with safe diagnostic
+  ---
+  duration_ms: 14.4854
+  type: 'test'
+  ...
+# Subtest: lock: no permission or IO retries EPERM
+ok 131 - lock: no permission or IO retries EPERM
+  ---
+  duration_ms: 0.3129
+  type: 'test'
+  ...
+# Subtest: lock: no permission or IO retries EACCES
+ok 132 - lock: no permission or IO retries EACCES
+  ---
+  duration_ms: 0.3091
+  type: 'test'
+  ...
+# Subtest: lock: no permission or IO retries EBUSY
+ok 133 - lock: no permission or IO retries EBUSY
+  ---
+  duration_ms: 0.1856
+  type: 'test'
+  ...
+# Subtest: lock: no permission or IO retries ENOSPC
+ok 134 - lock: no permission or IO retries ENOSPC
+  ---
+  duration_ms: 0.4785
+  type: 'test'
+  ...
+# Subtest: lock: no permission or IO retries EIO
+ok 135 - lock: no permission or IO retries EIO
+  ---
+  duration_ms: 0.5146
+  type: 'test'
+  ...
+# Subtest: lock: no permission or IO retries ENOENT
+ok 136 - lock: no permission or IO retries ENOENT
+  ---
+  duration_ms: 0.2412
+  type: 'test'
+  ...
+# Subtest: lock: no permission or IO retries EMFILE
+ok 137 - lock: no permission or IO retries EMFILE
+  ---
+  duration_ms: 0.1453
+  type: 'test'
+  ...
+# Subtest: lock: no permission or IO retries EROFS
+ok 138 - lock: no permission or IO retries EROFS
+  ---
+  duration_ms: 0.2121
+  type: 'test'
+  ...
+# Subtest: lock: EEXIST after exclusive open is not another-owner contention write
+ok 139 - lock: EEXIST after exclusive open is not another-owner contention write
+  ---
+  duration_ms: 0.2485
+  type: 'test'
+  ...
+# Subtest: lock: EEXIST after exclusive open is not another-owner contention file-sync
+ok 140 - lock: EEXIST after exclusive open is not another-owner contention file-sync
+  ---
+  duration_ms: 0.2349
+  type: 'test'
+  ...
+# Subtest: lock: EEXIST after exclusive open is not another-owner contention close
+ok 141 - lock: EEXIST after exclusive open is not another-owner contention close
+  ---
+  duration_ms: 0.125
+  type: 'test'
+  ...
+# Subtest: lock: EEXIST after exclusive open is not another-owner contention directory-sync
+ok 142 - lock: EEXIST after exclusive open is not another-owner contention directory-sync
+  ---
+  duration_ms: 0.1126
+  type: 'test'
+  ...
+# Subtest: lock: EEXIST after exclusive open is not another-owner contention verify-release
+ok 143 - lock: EEXIST after exclusive open is not another-owner contention verify-release
+  ---
+  duration_ms: 0.1127
+  type: 'test'
+  ...
+# Subtest: lock: EEXIST after exclusive open is not another-owner contention unlink
+ok 144 - lock: EEXIST after exclusive open is not another-owner contention unlink
+  ---
+  duration_ms: 0.1102
+  type: 'test'
+  ...
+# Subtest: lock: EEXIST after exclusive open is not another-owner contention release-sync
+ok 145 - lock: EEXIST after exclusive open is not another-owner contention release-sync
+  ---
+  duration_ms: 0.1074
+  type: 'test'
+  ...
+# Subtest: lock: raw error cannot impersonate trusted create contention
+ok 146 - lock: raw error cannot impersonate trusted create contention
+  ---
+  duration_ms: 0.2545
+  type: 'test'
+  ...
+# Subtest: lock: another lock kind cannot be mistaken for this one
+ok 147 - lock: another lock kind cannot be mistaken for this one
+  ---
+  duration_ms: 0.1994
+  type: 'test'
+  ...
+# Subtest: lock: declined or asynchronous authority never claims
+ok 148 - lock: declined or asynchronous authority never claims
+  ---
+  duration_ms: 14.8368
+  type: 'test'
+  ...
+# Subtest: lock: declined or asynchronous authority never claims
+ok 149 - lock: declined or asynchronous authority never claims
+  ---
+  duration_ms: 3.2256
+  type: 'test'
+  ...
+# Subtest: lock: declined or asynchronous authority never claims
+ok 150 - lock: declined or asynchronous authority never claims
+  ---
+  duration_ms: 0.9508
+  type: 'test'
+  ...
+# Subtest: lock: authorization rechecked after each collision
+ok 151 - lock: authorization rechecked after each collision
+  ---
+  duration_ms: 22.9776
+  type: 'test'
+  ...
+# Subtest: lock: pre-cancel checks before directory inspection or creation
+ok 152 - lock: pre-cancel checks before directory inspection or creation
+  ---
+  duration_ms: 0.328
+  type: 'test'
+  ...
+# Subtest: lock: mid-wait cancellation preserves other owner and performs no more claims
+ok 153 - lock: mid-wait cancellation preserves other owner and performs no more claims
+  ---
+  duration_ms: 1.2565
+  type: 'test'
+  ...
+# Subtest: lock: cancellation at owned handoff releases the acquired lock, not the caller data
+ok 154 - lock: cancellation at owned handoff releases the acquired lock, not the caller data
+  ---
+  duration_ms: 0.3127
+  type: 'test'
+  ...
+# Subtest: lock: authority changes after successful claim still releases once
+ok 155 - lock: authority changes after successful claim still releases once
+  ---
+  duration_ms: 0.201
+  type: 'test'
+  ...
+# Subtest: lock: invalid internal configuration never calls claim
+ok 156 - lock: invalid internal configuration never calls claim
+  ---
+  duration_ms: 0.1488
+  type: 'test'
+  ...
+# Subtest: lock: invalid internal configuration never calls claim
+ok 157 - lock: invalid internal configuration never calls claim
+  ---
+  duration_ms: 0.105
+  type: 'test'
+  ...
+# Subtest: lock: invalid internal configuration never calls claim
+ok 158 - lock: invalid internal configuration never calls claim
+  ---
+  duration_ms: 0.0896
+  type: 'test'
+  ...
+# Subtest: lock: invalid internal configuration never calls claim
+ok 159 - lock: invalid internal configuration never calls claim
+  ---
+  duration_ms: 0.0865
+  type: 'test'
+  ...
+# Subtest: lock: invalid internal configuration never calls claim
+ok 160 - lock: invalid internal configuration never calls claim
+  ---
+  duration_ms: 0.2157
+  type: 'test'
+  ...
+# Subtest: lock: invalid internal configuration never calls claim
+ok 161 - lock: invalid internal configuration never calls claim
+  ---
+  duration_ms: 0.1516
+  type: 'test'
+  ...
+# Subtest: lock: invalid internal configuration never calls claim
+ok 162 - lock: invalid internal configuration never calls claim
+  ---
+  duration_ms: 0.1615
+  type: 'test'
+  ...
+# Subtest: lock: ownership/security failure code preserved outbox_lock_changed
+ok 163 - lock: ownership/security failure code preserved outbox_lock_changed
+  ---
+  duration_ms: 0.2702
+  type: 'test'
+  ...
+# Subtest: lock: ownership/security failure code preserved outbox_corrupt
+ok 164 - lock: ownership/security failure code preserved outbox_corrupt
+  ---
+  duration_ms: 0.1497
+  type: 'test'
+  ...
+# Subtest: lock: ownership/security failure code preserved insecure_outbox
+ok 165 - lock: ownership/security failure code preserved insecure_outbox
+  ---
+  duration_ms: 0.1339
+  type: 'test'
+  ...
+# Subtest: lock: diagnostics avoid untrusted messages and getters getter
+ok 166 - lock: diagnostics avoid untrusted messages and getters getter
+  ---
+  duration_ms: 0.3076
+  type: 'test'
+  ...
+# Subtest: lock: diagnostics avoid untrusted messages and getters proxy
+ok 167 - lock: diagnostics avoid untrusted messages and getters proxy
+  ---
+  duration_ms: 0.1657
+  type: 'test'
+  ...
+# Subtest: lock: diagnostics avoid untrusted messages and getters primitive
+ok 168 - lock: diagnostics avoid untrusted messages and getters primitive
+  ---
+  duration_ms: 0.0854
+  type: 'test'
+  ...
+# Subtest: lock: diagnostics avoid untrusted messages and getters foreign-code
+ok 169 - lock: diagnostics avoid untrusted messages and getters foreign-code
+  ---
+  duration_ms: 0.0807
+  type: 'test'
+  ...
+# Subtest: queue persists before network, survives reopening and exposes no plaintext in status
+ok 170 - queue persists before network, survives reopening and exposes no plaintext in status
+  ---
+  duration_ms: 238.3573
+  type: 'test'
+  ...
+# Subtest: local event replay is idempotent and changed text is rejected
+ok 171 - local event replay is idempotent and changed text is rejected
+  ---
+  duration_ms: 406.6976
+  type: 'test'
+  ...
+# Subtest: consent must be granted before any raw-text write
+ok 172 - consent must be granted before any raw-text write
+  ---
+  duration_ms: 3.6404
+  type: 'test'
+  ...
+# Subtest: different destination/actor/source/project cannot take over a nonempty journal
+ok 173 - different destination/actor/source/project cannot take over a nonempty journal
+  ---
+  duration_ms: 472.4244
+  type: 'test'
+  ...
+# Subtest: disable capture preserves inspectability but denies sending
+ok 174 - disable capture preserves inspectability but denies sending
+  ---
+  duration_ms: 89.5545
+  type: 'test'
+  ...
+# Subtest: queue missing pins or inside a workspace is refused
+ok 175 - queue missing pins or inside a workspace is refused
+  ---
+  duration_ms: 4.1679
+  type: 'test'
+  ...
+# Subtest: one validated journal receipt removes the local payload
+ok 176 - one validated journal receipt removes the local payload
+  ---
+  duration_ms: 595.1154
+  type: 'test'
+  ...
+# Subtest: lost acknowledgement retains immutable event and can safely replay
+ok 177 - lost acknowledgement retains immutable event and can safely replay
+  ---
+  duration_ms: 689.1372
+  type: 'test'
+  ...
+# Subtest: invalid server receipt cannot remove an event {"source_id":"foreign"}
+ok 178 - invalid server receipt cannot remove an event {"source_id":"foreign"}
+  ---
+  duration_ms: 363.4705
+  type: 'test'
+  ...
+# Subtest: invalid server receipt cannot remove an event {"event_id":"other"}
+ok 179 - invalid server receipt cannot remove an event {"event_id":"other"}
+  ---
+  duration_ms: 626.9445
+  type: 'test'
+  ...
+# Subtest: invalid server receipt cannot remove an event {"storage":"queued"}
+ok 180 - invalid server receipt cannot remove an event {"storage":"queued"}
+  ---
+  duration_ms: 1086.1619
+  type: 'test'
+  ...
+# Subtest: invalid server receipt cannot remove an event {"job_id":"not-a-uuid"}
+ok 181 - invalid server receipt cannot remove an event {"job_id":"not-a-uuid"}
+  ---
+  duration_ms: 1411.833
+  type: 'test'
+  ...
+# Subtest: identity pin is checked before sending private payload
+ok 182 - identity pin is checked before sending private payload
+  ---
+  duration_ms: 1252.4975
+  type: 'test'
+  ...
+# Subtest: revocation after connect prevents payload submission
+ok 183 - revocation after connect prevents payload submission
+  ---
+  duration_ms: 1315.541
+  type: 'test'
+  ...
+# Subtest: enqueue stays available while another drainer awaits the network
+ok 184 - enqueue stays available while another drainer awaits the network
+  ---
+  duration_ms: 1464.3779
+  type: 'test'
+  ...
+# Subtest: corrupt stored payload is never delivered or silently deleted
+ok 185 - corrupt stored payload is never delivered or silently deleted
+  ---
+  duration_ms: 717.9591
+  type: 'test'
+  ...
+# Subtest: full journal refuses new events rather than evicting old ones
+ok 186 - full journal refuses new events rather than evicting old ones
+  ---
+  duration_ms: 14450.9089
+  type: 'test'
+  ...
+# Subtest: bounded automatic attempts eventually block; explicit replay retains the same ID
+ok 187 - bounded automatic attempts eventually block; explicit replay retains the same ID
+  ---
+  duration_ms: 780.6704
+  type: 'test'
+  ...
+# Subtest: unknown nonempty directory is never implicitly bound to this profile
+ok 188 - unknown nonempty directory is never implicitly bound to this profile
+  ---
+  duration_ms: 19.2671
+  type: 'test'
+  ...
+# Subtest: foreign active lock is never stolen based on its age
+ok 189 - foreign active lock is never stolen based on its age
+  ---
+  duration_ms: 38.3777
+  type: 'test'
+  ...
+# Subtest: operator-confirmed dead-process lock recovery is hash guarded
+ok 190 - operator-confirmed dead-process lock recovery is hash guarded
+  ---
+  duration_ms: 54.8606
+  type: 'test'
+  ...
+# Subtest: directory symlink/junction is refused
+ok 191 - directory symlink/junction is refused
+  ---
+  duration_ms: 3.8975
+  type: 'test'
+  ...
+# Subtest: multiple independent processes enqueue without lost updates
+ok 192 - multiple independent processes enqueue without lost updates
+  ---
+  duration_ms: 533.6011
+  type: 'test'
+  ...
+# Subtest: writer rejects profile project replacement after event authorization
+ok 193 - writer rejects profile project replacement after event authorization
+  ---
+  duration_ms: 11.6936
+  type: 'test'
+  ...
+# Subtest: writer rejects profile destination replacement after event authorization
+ok 194 - writer rejects profile destination replacement after event authorization
+  ---
+  duration_ms: 4.5897
+  type: 'test'
+  ...
+# Subtest: writer rejects profile outbox replacement after event authorization
+ok 195 - writer rejects profile outbox replacement after event authorization
+  ---
+  duration_ms: 4.0968
+  type: 'test'
+  ...
+# Subtest: writer rejects profile consent replacement after event authorization
+ok 196 - writer rejects profile consent replacement after event authorization
+  ---
+  duration_ms: 3.1567
+  type: 'test'
+  ...
+# Subtest: automatic writer requires the original authorized profile snapshot
+ok 197 - automatic writer requires the original authorized profile snapshot
+  ---
+  duration_ms: 2.8247
+  type: 'test'
+  ...
+# Subtest: matching authorized profile can be bound without network or raw writes
+ok 198 - matching authorized profile can be bound without network or raw writes
+  ---
+  duration_ms: 3.6433
+  type: 'test'
+  ...
+1..198
+# tests 198
+# suites 0
+# pass 197
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 50007.3944
