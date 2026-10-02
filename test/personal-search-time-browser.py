@@ -29,9 +29,10 @@ def canonical(value):
     return whole + '.' + fraction.ljust(6, '0') + 'Z'
 
 
-def expected_rows(status, query='', lower='', upper='', offset=0):
+def expected_rows(status, query='', lower='', upper='', offset=0, project=''):
     # Independent oracle: declarative seed metadata and Python sorting, never server output.
     rows = [row for row in ROWS if row['visible'] and row['status'] == status
+            and (not project or row['project_id'] == project)
             and query.lower() in row['content'].lower()
             and (not lower or row['updated_at'] >= canonical(lower))
             and (not upper or row['updated_at'] < canonical(upper))]
@@ -77,8 +78,8 @@ def run_context(browser, timezone, width):
             ids.append(match.group(0))
         return ids
 
-    def assert_results(status, query='', lower='', upper='', offset=0):
-        wanted = expected_rows(status, query, lower, upper, offset)
+    def assert_results(status, query='', lower='', upper='', offset=0, project=''):
+        wanted = expected_rows(status, query, lower, upper, offset, project)
         expect(page.locator('#export')).to_be_enabled()
         expect(page.locator('#results article')).to_have_count(len(wanted))
         assert read_ids() == [row['id'] for row in wanted], 'Result IDs/order differ from independent fixture oracle'
@@ -91,17 +92,19 @@ def run_context(browser, timezone, width):
             expect(page.locator('#prev')).to_be_enabled()
         return wanted
 
-    def expected_input(status, query='', lower='', upper='', offset=0):
+    def expected_input(status, query='', lower='', upper='', offset=0, project=''):
         value = {'query': query, 'status': status, 'offset': offset, 'limit': 20, 'budget_bytes': 131072}
+        if project:
+            value['project_id'] = project
         if lower:
             value['updated_from'] = canonical(lower)
         if upper:
             value['updated_before'] = canonical(upper)
         return value
 
-    def submit(status='candidate', query='', lower='', upper='', keyboard=False):
+    def submit(status='candidate', query='', lower='', upper='', keyboard=False, project=''):
         # Make criteria dirty before status navigation so drafts cannot auto-apply.
-        for selector, value in [('#query', query), ('#updated-from', lower), ('#updated-before', upper)]:
+        for selector, value in [('#query', query), ('#updated-from', lower), ('#updated-before', upper), ('#search-project', project)]:
             page.locator(selector).fill(value)
         current_status = page.locator('[data-view][aria-current="page"]').get_attribute('data-view')
         if current_status != status:
@@ -116,24 +119,30 @@ def run_context(browser, timezone, width):
         assert response.value.ok and response.value.json()['ok']
         expect(page.locator('#search-applied')).to_contain_text('已应用：')
         assert len(requests()) == before + 1
-        assert requests()[-1] == expected_input(status, query, lower, upper)
-        assert_results(status, query, lower, upper)
+        assert requests()[-1] == expected_input(status, query, lower, upper, project=project)
+        assert_results(status, query, lower, upper, project=project)
+        expect(page.locator('#search-project')).to_have_value(project)
+        expect(page.locator('#search-applied')).to_contain_text(project + '（仅该项目，不含全局）' if project else '全部可见（含全局）')
         expect(page.locator('#updated-from')).to_have_value(lower)
         expect(page.locator('#updated-before')).to_have_value(upper)
         return requests()[-1]
 
-    def export_page(expected, status, query='', lower='', upper='', offset=0):
+    def export_page(expected, status, query='', lower='', upper='', offset=0, project=''):
         with page.expect_download() as download:
             page.locator('#export').click()
         data = json.loads(Path(download.value.path()).read_text(encoding='utf8'))
         assert data['search'] == expected
         assert data['complete'] is False and data['view'] == status
-        assert [row['id'] for row in data['result']['memories']] == [row['id'] for row in expected_rows(status, query, lower, upper, offset)]
+        assert [row['id'] for row in data['result']['memories']] == [row['id'] for row in expected_rows(status, query, lower, upper, offset, project)]
         assert TOKEN not in json.dumps(data), 'Console token must never enter page exports'
         assert 'history' not in data and 'events' not in data
         for row in data['result']['memories']:
             assert row['status'] == status and row['revision'] == (1 if status == 'candidate' else 2)
             assert 'updated_at' in row and 'created_at' in row
+            spec = next(spec for spec in ROWS if spec['id'] == row['id'])
+            assert row['project_id'] == spec['project_id']
+            if project:
+                assert row['project_id'] == project
         return data
 
     try:
@@ -154,6 +163,11 @@ def run_context(browser, timezone, width):
         for selector, label in [('#updated-from', '修改时间起点 UTC（包含）'), ('#updated-before', '修改时间终点 UTC（不包含）')]:
             expect(page.get_by_label(label, exact=True)).to_be_visible()
             assert page.locator(selector).get_attribute('type') == 'text'
+        expect(page.get_by_label('搜索项目（精确标识，可留空）', exact=True)).to_be_visible()
+        assert page.locator('#search-project').get_attribute('type') == 'text'
+        page.locator('#search-project').focus()
+        page.keyboard.press('Tab')
+        expect(page.locator('#updated-from')).to_be_focused()
         page.locator('#updated-from').focus()
         page.keyboard.press('Tab')
         expect(page.locator('#updated-before')).to_be_focused()
@@ -170,8 +184,18 @@ def run_context(browser, timezone, width):
         for status in ['candidate', 'active', 'archived']:
             for query in ['', 'time_needle']:
                 for lower, upper in [('', ''), (LOWER, ''), ('', UPPER), (LOWER, UPPER)]:
-                    submit(status, query, lower, upper)
-        passed('three statuses, literal query, two-sided bounds and each unbounded side, source/identity/shared visibility')
+                    for project in ['', 'Project_A', 'project_a']:
+                        submit(status, query, lower, upper, project=project)
+        passed('all/exact case-distinct projects x three statuses x literal query x time bounds, global exclusion and source/identity/shared visibility')
+        for project in ['No_such_Project', 'null', 'undefined']:
+            submit(project=project, keyboard=True)
+            assert read_ids() == []
+        submit('active', 'TIME_NEEDLE', LOWER, UPPER, project='Project_A')
+        export_page(requests()[-1], 'active', 'TIME_NEEDLE', LOWER, UPPER, project='Project_A')
+        submit('active', 'TIME_NEEDLE', LOWER, UPPER)
+        all_projects = {row['project_id'] for row in expected_rows('active', 'TIME_NEEDLE', LOWER, UPPER)}
+        assert all_projects == {None, 'Project_A', 'project_a'}
+        passed('valid empty exact-project result, literal IDs, filtered export and clearing to all including global')
 
         for lower, upper in [
             ('2024-11-03T06:30:00.123456Z', '2024-11-03T06:30:00.123457Z'),
@@ -183,22 +207,51 @@ def run_context(browser, timezone, width):
         passed('adjacent microseconds, spring DST date, fall DST date, six-digit canonical payloads')
 
         page_lower, page_upper = '2024-11-03T06:30:00.1Z', '2024-11-03T06:30:01Z'
-        submit('candidate', 'TIME_NEEDLE', page_lower, page_upper)
-        first_ids = read_ids()
-        assert len(first_ids) == 20
-        expect(page.locator('#next')).to_be_enabled()
+        for page_project in ['', 'Project_A']:
+            submit('candidate', 'TIME_NEEDLE', page_lower, page_upper, project=page_project)
+            first_ids = read_ids()
+            assert len(first_ids) == 20
+            expect(page.locator('#next')).to_be_enabled()
+            with page.expect_response(lambda response: response.url.endswith('/api/call') and response.request.post_data_json.get('operation') == 'search'):
+                page.locator('#next').click()
+            expect(page.locator('#search-applied')).to_contain_text('实时第 2 页')
+            assert requests()[-1] == expected_input('candidate', 'TIME_NEEDLE', page_lower, page_upper, offset=20, project=page_project)
+            assert_results('candidate', 'TIME_NEEDLE', page_lower, page_upper, offset=20, project=page_project)
+            assert not set(first_ids) & set(read_ids())
+            export_page(requests()[-1], 'candidate', 'TIME_NEEDLE', page_lower, page_upper, offset=20, project=page_project)
+            with page.expect_response(lambda response: response.url.endswith('/api/call') and response.request.post_data_json.get('operation') == 'search'):
+                page.locator('#prev').click()
+            expect(page.locator('#search-applied')).to_contain_text('实时第 1 页')
+            assert_results('candidate', 'TIME_NEEDLE', page_lower, page_upper, project=page_project)
+        passed('more than twenty exact-project rows, global/other-project distractors, tie-break order, next/previous and page-two export')
+
+        for value in [' Project_A', 'Project_A ', 'a.b', 'a/b', '项目', 'a' * 97]:
+            submit(project='Project_A')
+            # A DOM replacement covers overlength values beyond maxlength as well.
+            page.evaluate("value => {const input=document.getElementById('search-project');input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));}", value)
+            count = len(requests())
+            page.locator('#search-form button[type="submit"]').click()
+            expect(page.locator('#search-applied')).to_contain_text('条件无效')
+            cleared()
+            no_request_since(count)
+        submit(project='Project_A')
+        count = len(requests())
+        page.locator('#search-project').fill('project_a')
+        page.locator('#search-project').fill('Project_A')
+        page.locator('#refresh').click()
+        cleared()
+        no_request_since(count)
+        submit(project='Project_A', keyboard=True)
+        for status in ['active', 'archived', 'candidate']:
+            with page.expect_response(lambda response: response.url.endswith('/api/call') and response.request.post_data_json.get('operation') == 'search'):
+                page.locator('[data-view="' + status + '"]').click()
+            assert requests()[-1] == expected_input(status, project='Project_A')
+            assert_results(status, project='Project_A')
         with page.expect_response(lambda response: response.url.endswith('/api/call') and response.request.post_data_json.get('operation') == 'search'):
-            page.locator('#next').click()
-        expect(page.locator('#search-applied')).to_contain_text('实时第 2 页')
-        assert requests()[-1] == expected_input('candidate', 'TIME_NEEDLE', page_lower, page_upper, offset=20)
-        assert_results('candidate', 'TIME_NEEDLE', page_lower, page_upper, offset=20)
-        assert not set(first_ids) & set(read_ids())
-        export_page(requests()[-1], 'candidate', 'TIME_NEEDLE', page_lower, page_upper, offset=20)
-        with page.expect_response(lambda response: response.url.endswith('/api/call') and response.request.post_data_json.get('operation') == 'search'):
-            page.locator('#prev').click()
-        expect(page.locator('#search-applied')).to_contain_text('实时第 1 页')
-        assert_results('candidate', 'TIME_NEEDLE', page_lower, page_upper)
-        passed('more than twenty rows, exact tie-break order, next/previous binding and page-two export')
+            page.locator('#refresh').click()
+        assert requests()[-1] == expected_input('candidate', project='Project_A')
+        assert_results('candidate', project='Project_A')
+        passed('invalid project no-request, eventful revert stays dirty, keyboard apply, immutable status-navigation project')
 
         # Invalid forms cannot send requests or leave the previous valid results usable.
         invalid = ['2024-11-03', '2024-11-03T06:30:00+00:00', '2024-11-03T06:30:00.1234567Z',
@@ -228,9 +281,10 @@ def run_context(browser, timezone, width):
         page.locator('#content').fill('UNSAVED_SEARCH_TIME_DRAFT')
         page.locator('#provenance').fill('UNSAVED_PROVENANCE')
         page.locator('#importance').select_option('high')
+        page.locator('#project').fill('Independent_Editor')
         page.locator('#consent').check()
         editor = page.evaluate("JSON.stringify({editing,draftConfidence,pending,fields:['content','provenance','importance','visibility','project'].map(id=>document.getElementById(id).value),consent:document.getElementById('consent').checked})")
-        for selector, value in [('#query', 'OTHER'), ('#updated-from', '2024-01-01T00:00:00Z'), ('#updated-before', '')]:
+        for selector, value in [('#query', 'OTHER'), ('#updated-from', '2024-01-01T00:00:00Z'), ('#updated-before', ''), ('#search-project', 'project_a')]:
             count = len(requests())
             page.locator(selector).fill(value)
             cleared()
@@ -245,21 +299,22 @@ def run_context(browser, timezone, width):
         passed('all draft edits invalidate results/paging/export; refresh/navigation never apply drafts; editor/revision/confidence/consent preserved')
 
         # Unsignalled DOM replacements must be rechecked before page or export use.
-        for action in ['#next', '#export']:
-            submit('candidate', 'TIME_NEEDLE')
-            count, download_count = len(requests()), len(downloads)
-            page.evaluate("document.getElementById('updated-from').value='2024-01-01T00:00:00Z'")
-            page.locator(action).click()
-            cleared()
-            no_request_since(count)
-            assert len(downloads) == download_count
+        for field, value in [('updated-from', '2024-01-01T00:00:00Z'), ('search-project', 'Project_A')]:
+            for action in ['#next', '#export']:
+                submit('candidate', 'TIME_NEEDLE')
+                count, download_count = len(requests()), len(downloads)
+                page.evaluate("([id,value]) => {document.getElementById(id).value=value}", [field, value])
+                page.locator(action).click()
+                cleared()
+                no_request_since(count)
+                assert len(downloads) == download_count
         passed('unsignalled form replacement cannot reuse page/export authority')
 
         # Hold actual read responses at transport delivery. Abort is deliberately part
         # of browser evidence; VM barriers separately exercise cancellation-loses-race.
         # After cancellation, fulfill/abort below do not deliver a stale body to the UI.
         for outcome in ['success', 'error']:
-            for action in ['edit', 'navigate', 'refresh', 'lock']:
+            for action in ['edit', 'project', 'project-revert', 'navigate', 'refresh', 'lock']:
                 submit('candidate', 'TIME_NEEDLE', LOWER, UPPER)
                 held, fired = [], []
 
@@ -276,6 +331,10 @@ def run_context(browser, timezone, width):
                     # terminal operation; the held guard passes refresh reads through.
                     if action == 'edit':
                         page.locator('#query').fill('UNAPPLIED_DELAYED_EDIT')
+                    elif action in ['project', 'project-revert']:
+                        page.locator('#search-project').fill('Project_A')
+                        if action == 'project-revert':
+                            page.locator('#search-project').fill('')
                     elif action == 'navigate':
                         page.locator('[data-view="lookup"]').click()
                     elif action == 'refresh':
@@ -320,12 +379,12 @@ def run_context(browser, timezone, width):
                     expect(page.locator('#search-applied')).to_contain_text('已应用：')
         passed('exact held fetch cancelled after edit/navigation/refresh/lock; later fulfill/abort leaves newer UI intact; VM covers delivered stale results')
 
-        submit('active', 'TIME_NEEDLE', LOWER, UPPER)
+        submit('active', 'TIME_NEEDLE', LOWER, UPPER, project='Project_A')
         for screenshot_width, label in [(1320, 'desktop'), (390, 'narrow')]:
             page.set_viewport_size({'width': screenshot_width, 'height': 1000})
             page.locator('#search-form').scroll_into_view_if_needed()
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), 'Horizontal overflow at ' + label
-            for selector in ['#updated-from', '#updated-before']:
+            for selector in ['#search-project', '#updated-from', '#updated-before']:
                 box = page.locator(selector).bounding_box()
                 assert box['x'] >= 0 and box['x'] + box['width'] <= screenshot_width + 1
             page.screenshot(path=str(ARTIFACTS / (tag + '-' + label + '-success.png')), full_page=True)
