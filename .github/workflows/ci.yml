@@ -221,6 +221,18 @@ jobs:
             ${{ runner.temp }}/n8n-engine-report.json
           retention-days: 14
           if-no-files-found: error
+      - name: Real Chromium UTC search-time filters (synthetic data, real PostgreSQL)
+        env:
+          ULTRABRAIN_BROWSER_PYTHON: ${{ runner.temp }}/personal-browser-venv/bin/python
+          ULTRABRAIN_SEARCH_TIME_ARTIFACT_DIR: ${{ runner.temp }}/personal-search-time-browser
+        run: bun test/personal-search-time-browser-fixture.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: personal-search-time-browser-${{ github.sha }}
+          path: ${{ runner.temp }}/personal-search-time-browser/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Stop isolated server
         if: always()
         run: bun src/cli.mjs db stop || true
