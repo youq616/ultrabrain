@@ -17,7 +17,11 @@
 <div class="row"><button type="button" id="overview-candidates" disabled>进入待确认记忆</button><button type="button" id="overview-active" disabled>进入当前记忆</button><button type="button" id="overview-jobs" disabled>进入整理任务</button><button type="button" id="overview-documents" disabled>进入文档列表</button><button type="button" id="overview-agents" disabled>进入 Agent 列表</button></div>
 <p class="note">进入列表会重新查询，保留该列表原有筛选和未保存草稿；共享范围和筛选可能使列表数量与此概览不同。概览不自动轮询、不运行模型、不修改记录，也不是数据库备份或磁盘健康检查。</p>
 </section>
-<div class="columns"><section class="panel"><div class="section-head"><h2 id="view-title">待确认记忆</h2><button id="refresh">刷新</button></div><form id="search-form"><label class="sr-only" for="query">搜索文字</label><input id="query" placeholder="文字搜索（不是语义搜索）" maxlength="4096"><button type="submit">搜索</button></form><div id="recall-panel" hidden><form id="recall-form" autocomplete="off">
+<div class="columns"><section class="panel"><div class="section-head"><h2 id="view-title">待确认记忆</h2><button id="refresh">刷新</button></div><form id="search-form" autocomplete="off">
+<label for="query">搜索文字<input id="query" placeholder="文字搜索（不是语义搜索）" maxlength="4096"></label>
+<div class="search-times"><label for="updated-from">修改时间起点 UTC（包含）<input id="updated-from" type="text" spellcheck="false" placeholder="2024-03-10T07:00:00.000001Z" aria-describedby="search-time-help"></label><label for="updated-before">修改时间终点 UTC（不包含）<input id="updated-before" type="text" spellcheck="false" placeholder="2024-03-10T07:00:00.000002Z" aria-describedby="search-time-help"></label></div>
+<p class="note" id="search-time-help">任一端留空表示该端不限。格式 YYYY-MM-DDTHH:mm:ss[.ffffff]Z，可含 1–6 位小数，须为 UTC；不转换本地时区，也不忽略空白。按当前记录的修改时间筛选，不是事件发生时间、历史状态或时间点快照。</p>
+<button type="submit">搜索</button><p class="note" id="search-applied" role="status">尚未读取；空时间条件表示不限。</p></form><div id="recall-panel" hidden><form id="recall-form" autocomplete="off">
 <p class="note">只查询本机所有者可见且已启用的记忆，不调用模型、不保存任务为记忆。其他 MCP 身份的结果可能不同。字面匹配不是语义搜索；可用空格分隔关键词。</p>
 <label>本次任务或关键词<textarea id="recall-task" rows="3" maxlength="4096" placeholder="例如：Docker 配置 备份" spellcheck="false"></textarea></label>
 <label>召回项目（留空只查全局；填写后包含全局与该项目）<input id="recall-project" maxlength="96" pattern="[A-Za-z0-9_-]+" placeholder="ultrabrain" autocomplete="off"></label>

@@ -11,6 +11,61 @@ let draftConfidence=null,comparison=null,comparisonEpoch=0,comparisonController=
 let pairEpoch=0,pairController=null,pairData=null,pairContractPromise=null;
 let jobReadController=null;
 let jobRecovery=null,jobRecoveryController=null,jobRecoveryEpoch=0;
+// Search-only UTC strings: never round through Date or reinterpret in local time.
+function searchTime(value,name){
+  if(typeof value!=='string')throw Error(name+' 必须是 UTC 时间文字');
+  if(value==='')return null;
+  const match=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?Z$/.exec(value);
+  if(!match||match[0]!==value)throw Error(name+' 格式须为 YYYY-MM-DDTHH:mm:ss[.ffffff]Z，不可含空白或时区偏移');
+  const [,year,month,day,hour,minute,second,fraction='']=match,y=Number(year),m=Number(month),d=Number(day);
+  const days=[31,y%4===0&&(y%100!==0||y%400===0)?29:28,31,30,31,30,31,31,30,31,30,31];
+  if(y<1||m<1||m>12||d<1||d>days[m-1]||Number(hour)>23||Number(minute)>59||Number(second)>59)
+    throw Error(name+' 必须是有效的公历 UTC 日期和时间');
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}.${fraction.padEnd(6,'0')}Z`;
+}
+function searchCriteria(query,from,before){
+  if(typeof query!=='string')throw Error('搜索文字无效');
+  const updated_from=searchTime(from,'起点'),updated_before=searchTime(before,'终点');
+  if(updated_from!==null&&updated_before!==null&&updated_from>=updated_before)throw Error('起点须早于终点；起点包含、终点不包含');
+  return Object.freeze({query,updated_from,updated_before,selection:JSON.stringify([query,from,before])});
+}
+const searchView=()=>['candidate','active','archived'].includes(view);
+const searchSelection=()=>JSON.stringify(['query','updated-from','updated-before'].map(id=>$(id).value));
+let searchApplied=searchCriteria('','',''),searchNeedsSubmit=false,searchController=null,searchPage=null;
+function invalidateSearch(clear=false){
+  searchController?.abort();searchController=null;searchPage=null;
+  if(clear&&searchView()){
+    current=null;nextOffset=null;$('results').replaceChildren();$('coverage').textContent='';
+    $('prev').disabled=true;$('next').disabled=true;$('export').disabled=true;
+    $('search-applied').textContent='当前没有已确认的搜索结果。';
+  }
+}
+function editSearch(){
+  searchNeedsSubmit=true;invalidateSearch(true);
+  if(searchView())$('search-applied').textContent='条件已修改；请点击“搜索”应用。未发送查询。';
+}
+function appliedSearchCurrent(){
+  return !searchNeedsSubmit&&searchApplied.selection===searchSelection();
+}
+function searchPageCurrent(){
+  return searchPage&&appliedSearchCurrent()&&searchPage.applied===searchApplied&&
+    searchPage.session===token&&searchPage.source===sourceId&&searchPage.view===view&&searchPage.input.offset===offset&&
+    searchPage.generation===loadVersion&&!pending;
+}
+function describeSearch(input){
+  return '已应用：起点 '+(input.updated_from??'不限')+'（包含），终点 '+(input.updated_before??'不限')+'（不包含）。'+
+    '当前记录修改时间；实时第 '+(input.offset/20+1)+' 页，每页最多 20 条，不是历史快照。';
+}
+async function applySearch(){
+  if(!searchView()||!token)return;
+  if(pending){message('请先处理尚未确认的写入请求，再搜索。',true);return;}
+  invalidateSearch(true);searchNeedsSubmit=true;
+  try{
+    searchApplied=searchCriteria($('query').value,$('updated-from').value,$('updated-before').value);
+    searchNeedsSubmit=false;offset=0;await load();
+  }catch(error){$('search-applied').textContent='条件无效，未发送查询：'+error.message;}
+}
+
 function message(text,error=false){$('message').textContent=text;$('message').dataset.error=String(error);}
 function element(tag,text,cls){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;}
 function controls(){
@@ -114,7 +169,7 @@ async function submitPending(modelRetry=false){
     message('先只读核对原任务状态；未重新调用模型。',true);return;
   }
   const priorUnconfirmed=request.delivery_unconfirmed===true;
-  invalidateJobRecovery();let submitted=false,acknowledged=false;busy=true;controls();
+  invalidateSearch(true);invalidateJobRecovery();let submitted=false,acknowledged=false;busy=true;controls();
   const contextCurrent=()=>{
     if(pending!==request||!request.sessionCurrent())throw Object.assign(new Error('console_session_changed'),{unknown:true});
   };
@@ -162,7 +217,7 @@ async function submitPending(modelRetry=false){
 }
 function mutate(operation,input,authorize,receiptContext){
   if(busy||pending){message('请先处理尚未确认的请求。',true);return;}
-  authorize?.();invalidateComparison();invalidateDocumentRead();invalidateMemoryPair();
+  authorize?.();invalidateSearch(true);invalidateComparison();invalidateDocumentRead();invalidateMemoryPair();
   const session=token,source=sourceId,editorSnapshot=editorReceiptSelection();
   const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
   const snapshot=freeze(JSON.parse(JSON.stringify({...input,...(['commit','capture','update','review','document_import','document_queue','document_archive'].includes(operation)?{event_id:crypto.randomUUID()}:{})})));
@@ -807,7 +862,7 @@ async function inspectPendingJob(finish=false){
   const consent=finish&&$('pending-job-consent').checked;
   invalidateJobRecovery();if(consent)$('pending-job-consent').checked=true;
   const epoch=jobRecoveryEpoch,navigation=loadVersion,selectedView=view,controller=new AbortController();
-  jobRecoveryController=controller;if(finish)busy=true;controls();
+  jobRecoveryController=controller;if(finish){invalidateSearch(true);busy=true;}controls();
   const current=()=>pending===request&&request.sessionCurrent()&&epoch===jobRecoveryEpoch&&
     navigation===loadVersion&&selectedView===view&&!controller.signal.aborted;
   let settled=false;
@@ -924,6 +979,7 @@ function render(result){
       card.append(element('p','记忆 ID：'+row.id+(['recall','lookup'].includes(view)?' · 内容 SHA-256：'+row.content_hash:''),'meta'));
       card.append(element('span',labels[row.type]??row.type,'badge'),element('span',row.owned_by_caller?'自己拥有':'同源共享','badge'),element('p',row.content,'memory-content'));
       card.append(element('p','r'+row.revision+' · '+(row.project_id??'全局')+' · '+row.visibility+' · 可信度估计：'+(row.confidence??'未知'),'meta'),element('p','来源：'+row.provenance,'meta'));
+      if(searchView()&&typeof row.updated_at==='string')card.append(element('p','当前记录修改时间：'+row.updated_at+'（精度以服务返回为准）','meta'));
       if(row.derivation)card.append(element('p','原文引用：'+row.derivation.quote,'memory-content'),element('p',row.derivation_current?'来源版本仍匹配；引用不代表真实性证明。':'来源已修改或归档；重新核对前不能激活。','note'));
       if(view!=='recall'&&row.owned_by_caller&&row.origin_kind!=='document_fragment'){
         const actions=element('div',undefined,'row card-actions');
@@ -937,7 +993,7 @@ function render(result){
   controls();
 }
 async function load(){
-  invalidateMemoryPair();invalidateJobRecovery();
+  invalidateSearch();invalidateMemoryPair();invalidateJobRecovery();
   const session=token,source=sourceId,selectedView=view,selectedOffset=offset,selectedStatus=$('document-status').value,selectedJobs=jobSelection();
   const activePage=()=>!!session&&token===session&&sourceId===source&&view===selectedView&&offset===selectedOffset&&
     (selectedView!=='documents'||$('document-status').value===selectedStatus)&&
@@ -964,8 +1020,27 @@ async function load(){
       $('coverage').textContent='正在核对文档列表；未读取任何原文。';
       const data=await api('document_list',input);
       if(request===loadVersion&&activePage())renderDocuments(validateDocumentPage(data,input,source));
+    }else if(searchView()){
+      if(pending){$('search-applied').textContent='请先处理尚未确认的写入请求，再搜索。';return;}
+      if(!appliedSearchCurrent()){editSearch();return;}
+      const applied=searchApplied,selection=searchSelection(),controller=new AbortController();searchController=controller;
+      const input=Object.freeze({status:selectedView,query:applied.query,limit:20,offset:selectedOffset,budget_bytes:131072,
+        ...(applied.updated_from===null?{}:{updated_from:applied.updated_from}),
+        ...(applied.updated_before===null?{}:{updated_before:applied.updated_before})});
+      const allowed=()=>request===loadVersion&&activePage()&&searchController===controller&&!controller.signal.aborted&&
+        !pending&&applied===searchApplied&&!searchNeedsSubmit&&selection===searchSelection();
+      $('search-applied').textContent='正在读取已应用条件；结果尚未确认。';
+      try{
+        const data=await api('search',input,controller.signal);
+        if(!allowed())return;
+        render(data);
+        searchPage=Object.freeze({applied,session,source,view:selectedView,input,generation:request});
+        $('search-applied').textContent=describeSearch(input);
+      }catch(error){if(allowed()){
+        invalidateSearch(true);$('search-applied').textContent='本次搜索未确认；没有可用结果，请重新搜索。';message('读取失败：'+error.message,true);
+      }}finally{if(searchController===controller)searchController=null;}
     }else{
-      const data=await api(view==='jobs'?'jobs':view==='agents'?'agents':view==='profile'?'profile':'search',['agents','jobs'].includes(view)?{limit:20,offset}:view==='profile'?{limit:50,budget_bytes:131072}:{status:view,query:$('query').value,limit:20,offset,budget_bytes:131072});
+      const data=await api(view==='agents'?'agents':'profile',view==='agents'?{limit:20,offset}:{limit:50,budget_bytes:131072});
       if(request===loadVersion&&activePage())render(data);
     }
   }
@@ -976,11 +1051,12 @@ async function load(){
   }}
 }
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('token').value.trim();$('token').value='';try{const info=await api('info');sourceId=info.source_id;$('scope').textContent='数据源：'+info.source_id+' · Linux 本机所有者（与同账号 stdio 共享）';$('login').hidden=true;$('workspace').hidden=false;$('logout').hidden=false;message('已连接。');await load();}catch(e){token='';message('连接失败：'+e.message,true);}});
-$('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateMemoryPair(true);invalidateJobPage(true);invalidateRecall(true);invalidateLookup(true);invalidateComparison();draftConfidence=null;token='';sourceId='';documentEpoch++;invalidateDocumentRead();$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
+$('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateSearch(true);invalidateMemoryPair(true);invalidateJobPage(true);invalidateRecall(true);invalidateLookup(true);invalidateComparison();draftConfidence=null;token='';sourceId='';documentEpoch++;invalidateDocumentRead();$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
 for(const b of document.querySelectorAll('[data-view]'))b.addEventListener('click',()=>{view=b.dataset.view;offset=0;load();});
-$('refresh').addEventListener('click',()=>load());$('search-form').addEventListener('submit',e=>{e.preventDefault();offset=0;load();});
-$('prev').addEventListener('click',()=>{offset=Math.max(0,offset-20);load();});$('next').addEventListener('click',()=>{if(nextOffset!==null){offset=nextOffset;load();}});
-$('export').addEventListener('click',()=>{if(current)download({format:1,exported_at:new Date().toISOString(),scope:view==='recall'?'local-owner recall preview only; task text omitted; not a full backup':'visible page only, not a full backup',complete:false,view,result:current},'ultrabrain-personal-page.json');});
+$('refresh').addEventListener('click',()=>load());$('search-form').addEventListener('submit',e=>{e.preventDefault();return applySearch();});
+for(const id of ['query','updated-from','updated-before'])for(const event of ['input','change'])$(id).addEventListener(event,editSearch);
+$('prev').addEventListener('click',()=>{if(searchView()&&!searchPageCurrent()){editSearch();return;}offset=Math.max(0,offset-20);return load();});$('next').addEventListener('click',()=>{if(searchView()&&!searchPageCurrent()){editSearch();return;}if(nextOffset!==null){offset=nextOffset;return load();}});
+$('export').addEventListener('click',()=>{if(searchView()&&!searchPageCurrent()){editSearch();return;}if(current)download({format:1,exported_at:new Date().toISOString(),scope:view==='recall'?'local-owner recall preview only; task text omitted; not a full backup':'visible page only, not a full backup',complete:false,view,...(searchView()?{search:searchPage.input}:{}),result:current},'ultrabrain-personal-page.json');});
 $('cancel-edit').addEventListener('click',()=>{resetEditor();controls();});
 $('queue-personal').addEventListener('click',()=>{if(editing||busy||pending)return;if(!$('consent').checked){message('排队前必须明确同意保存原文。',true);return;}if(!$('content').value.trim()){message('请填写要整理的原文。',true);return;}mutate('capture',{agent_id:'personal-console',transcript:$('content').value,project_id:$('project').value||null,consent:true},memoryAuthorization());});
 $('document-file').addEventListener('change',()=>{

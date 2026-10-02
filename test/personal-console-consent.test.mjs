@@ -13,7 +13,7 @@ function fixture(route=async()=>{}) {
     addEventListener(name,handler){this.handlers.set(name,handler);},reset(){},replaceChildren(){},setAttribute(){},append(){},focus(){}};}
   const get=id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id);};
   const ctx=vm.createContext({document:{getElementById:get,querySelectorAll:()=>[],createElement:element},
-    window:{addEventListener(){}},crypto:{randomUUID},AbortSignal,confirm:()=>true,
+    window:{addEventListener(){}},crypto:{randomUUID},AbortController,AbortSignal,confirm:()=>true,
     fetch:async(_url,options)=>{const body=JSON.parse(options.body);calls.push(body);await route(body);
       const p=body.input;
       const result=body.operation==='register'?{source_id:'default',agent_id:p.agent_id,actor_key:'a'.repeat(64),revision:1,replayed:true}

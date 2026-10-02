@@ -30,3 +30,10 @@
 #pair-results article{min-width:0;padding:1rem;border:1px solid #dce5df;border-radius:8px}
 #pair-results pre{max-height:24rem;overflow:auto}#pair-results h4{font-size:.9rem;margin:.8rem 0 .3rem}
 @media(max-width:800px){#pair-results{grid-template-columns:1fr}}
+
+/* UTC text bounds wrap without imposing local-time date controls. */
+#search-form>label,#search-form>.note,.search-times{flex-basis:100%;min-width:0}
+.search-times{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+.search-times label{min-width:0}.search-times input{min-width:0!important;font-size:.85rem}
+#search-applied{overflow-wrap:anywhere;margin:.25rem 0}
+@media(max-width:1100px){.search-times{grid-template-columns:1fr}}
