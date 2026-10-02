@@ -23,15 +23,17 @@ function searchTime(value,name){
     throw Error(name+' 必须是有效的公历 UTC 日期和时间');
   return `${year}-${month}-${day}T${hour}:${minute}:${second}.${fraction.padEnd(6,'0')}Z`;
 }
-function searchCriteria(query,from,before){
+function searchCriteria(query,from,before,project){
+  if(typeof project!=='string'||project!==''&&!/^[A-Za-z0-9_-]{1,96}$/.test(project))
+    throw Error('搜索项目须为 1–96 位 ASCII 字母、数字、下划线或连字符；不忽略空白');
   if(typeof query!=='string')throw Error('搜索文字无效');
   const updated_from=searchTime(from,'起点'),updated_before=searchTime(before,'终点');
   if(updated_from!==null&&updated_before!==null&&updated_from>=updated_before)throw Error('起点须早于终点；起点包含、终点不包含');
-  return Object.freeze({query,updated_from,updated_before,selection:JSON.stringify([query,from,before])});
+  return Object.freeze({query,updated_from,updated_before,project_id:project||null,selection:JSON.stringify([query,from,before,project])});
 }
 const searchView=()=>['candidate','active','archived'].includes(view);
-const searchSelection=()=>JSON.stringify(['query','updated-from','updated-before'].map(id=>$(id).value));
-let searchApplied=searchCriteria('','',''),searchNeedsSubmit=false,searchController=null,searchPage=null;
+const searchSelection=()=>JSON.stringify(['query','updated-from','updated-before','search-project'].map(id=>$(id).value));
+let searchApplied=searchCriteria('','','',''),searchNeedsSubmit=false,searchController=null,searchPage=null;
 function invalidateSearch(clear=false){
   searchController?.abort();searchController=null;searchPage=null;
   if(clear&&searchView()){
@@ -53,7 +55,7 @@ function searchPageCurrent(){
     searchPage.generation===loadVersion&&!pending;
 }
 function describeSearch(input){
-  return '已应用：起点 '+(input.updated_from??'不限')+'（包含），终点 '+(input.updated_before??'不限')+'（不包含）。'+
+  return '已应用：项目 '+(input.project_id===undefined?'全部可见（含全局）':input.project_id+'（仅该项目，不含全局）')+'；起点 '+(input.updated_from??'不限')+'（包含），终点 '+(input.updated_before??'不限')+'（不包含）。'+
     '当前记录修改时间；实时第 '+(input.offset/20+1)+' 页，每页最多 20 条，不是历史快照。';
 }
 async function applySearch(){
@@ -61,7 +63,7 @@ async function applySearch(){
   if(pending){message('请先处理尚未确认的写入请求，再搜索。',true);return;}
   invalidateSearch(true);searchNeedsSubmit=true;
   try{
-    searchApplied=searchCriteria($('query').value,$('updated-from').value,$('updated-before').value);
+    searchApplied=searchCriteria($('query').value,$('updated-from').value,$('updated-before').value,$('search-project').value);
     searchNeedsSubmit=false;offset=0;await load();
   }catch(error){$('search-applied').textContent='条件无效，未发送查询：'+error.message;}
 }
@@ -1025,6 +1027,7 @@ async function load(){
       if(!appliedSearchCurrent()){editSearch();return;}
       const applied=searchApplied,selection=searchSelection(),controller=new AbortController();searchController=controller;
       const input=Object.freeze({status:selectedView,query:applied.query,limit:20,offset:selectedOffset,budget_bytes:131072,
+        ...(applied.project_id===null?{}:{project_id:applied.project_id}),
         ...(applied.updated_from===null?{}:{updated_from:applied.updated_from}),
         ...(applied.updated_before===null?{}:{updated_before:applied.updated_before})});
       const allowed=()=>request===loadVersion&&activePage()&&searchController===controller&&!controller.signal.aborted&&
@@ -1054,7 +1057,7 @@ $('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('
 $('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateSearch(true);invalidateMemoryPair(true);invalidateJobPage(true);invalidateRecall(true);invalidateLookup(true);invalidateComparison();draftConfidence=null;token='';sourceId='';documentEpoch++;invalidateDocumentRead();$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
 for(const b of document.querySelectorAll('[data-view]'))b.addEventListener('click',()=>{view=b.dataset.view;offset=0;load();});
 $('refresh').addEventListener('click',()=>load());$('search-form').addEventListener('submit',e=>{e.preventDefault();return applySearch();});
-for(const id of ['query','updated-from','updated-before'])for(const event of ['input','change'])$(id).addEventListener(event,editSearch);
+for(const id of ['query','updated-from','updated-before','search-project'])for(const event of ['input','change'])$(id).addEventListener(event,editSearch);
 $('prev').addEventListener('click',()=>{if(searchView()&&!searchPageCurrent()){editSearch();return;}offset=Math.max(0,offset-20);return load();});$('next').addEventListener('click',()=>{if(searchView()&&!searchPageCurrent()){editSearch();return;}if(nextOffset!==null){offset=nextOffset;return load();}});
 $('export').addEventListener('click',()=>{if(searchView()&&!searchPageCurrent()){editSearch();return;}if(current)download({format:1,exported_at:new Date().toISOString(),scope:view==='recall'?'local-owner recall preview only; task text omitted; not a full backup':'visible page only, not a full backup',complete:false,view,...(searchView()?{search:searchPage.input}:{}),result:current},'ultrabrain-personal-page.json');});
 $('cancel-edit').addEventListener('click',()=>{resetEditor();controls();});

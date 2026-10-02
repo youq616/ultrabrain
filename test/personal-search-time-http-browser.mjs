@@ -31,7 +31,10 @@ export function specifications(){
     add('foreign-source-'+status,status,lower,{owner:'foreign-source',visibility:'source'});
   }
   add('peer-shared-upper','active',upper,{owner:'peer',visibility:'source'});
-  return rows;
+  for(const status of ['candidate','active','archived'])add('owner-shared-'+status,status,lower,{visibility:'source'});
+  // Identical content and times across global/case-distinct projects are deliberate distractors.
+  return [null,'Project_A','project_a'].flatMap(project_id=>rows.map(row=>({...row,
+    key:(project_id??'global')+'-'+row.key,project_id})));
 }
 export function artifactDirectory(){
   const directory=resolve(process.env.ULTRABRAIN_SEARCH_TIME_ARTIFACT_DIR??'/tmp/ultrabrain-search-time-browser');
@@ -59,13 +62,14 @@ export function syntheticFixture(){
     assert.ok(sql.includes('updated_at >= $10::text::timestamptz')&&sql.includes('updated_at < $11::text::timestamptz'));
     assert.equal(args[0],source);assert.equal(args[1],actor);assert.equal(args.length,11);
     const [, ,status,types,project,agent,query,limit,offset,from,before]=args;
-    assert.equal(project,null);assert.equal(agent,null);assert.equal(limit,20);
-    return rows.filter(row=>row.visible&&row.status===status&&types.includes('preference')&&
+    assert.ok(project===null||typeof project==='string'&&/^[A-Za-z0-9_-]{1,96}$/.test(project));
+    assert.ok(sql.includes('($5::text IS NULL OR project_id=$5)'));assert.equal(agent,null);assert.equal(limit,20);
+    return rows.filter(row=>row.visible&&row.status===status&&types.includes('preference')&&(project===null||row.project_id===project)&&
       row.content.toLowerCase().includes(query.toLowerCase())&&(!from||row.updated_at>=from)&&(!before||row.updated_at<before))
       .sort((a,b)=>a.updated_at>b.updated_at?-1:a.updated_at<b.updated_at?1:a.id<b.id?-1:1)
       .slice(offset,offset+limit).map(row=>({id:row.id,type:'preference',origin_kind:'agent',content:row.content,
         content_hash:createHash('sha256').update(row.content).digest('hex'),confidence:0.625,importance:'normal',
-        provenance:'Synthetic browser fixture only',agent_id:'search-time-fixture',project_id:null,status:row.status,
+        provenance:'Synthetic browser fixture only',agent_id:'search-time-fixture',project_id:row.project_id,status:row.status,
         visibility:row.visibility,revision:row.status==='candidate'?1:2,created_at:'2026-01-01T00:00:00.000Z',
         updated_at:row.updated_at,last_confirmed:null,owned_by_caller:row.owner==='owner',derivation:null,derivation_current:true}));
   }};

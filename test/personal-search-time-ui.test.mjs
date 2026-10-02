@@ -11,7 +11,7 @@ const from='2024-03-10T07:00:00.000001Z',before='2024-03-10T07:00:00.000002Z';
 const id='11111111-1111-4111-8111-111111111111';
 const row=(content='SYNTHETIC')=>({id,content,type:'preference',origin_kind:'agent',revision:3,status:'candidate',owned_by_caller:true,
   visibility:'private',confidence:0.4,provenance:'Synthetic fixture',project_id:null,updated_at:from});
-const result=(body,content='SYNTHETIC',next=null)=>({source_id:'selected',status:body.input.status,memories:[row(content)],next_offset:next});
+const result=(body,content='SYNTHETIC',next=null)=>({source_id:'selected',status:body.input.status,memories:[{...row(content),project_id:body.input.project_id??null}],next_offset:next});
 function fixture(route=async body=>result(body)){
  const nodes=new Map(),calls=[],exports=[],signals=[];
  function element(){return {value:'',checked:false,dataset:{},hidden:false,disabled:false,textContent:'',children:[],handlers:new Map(),
@@ -28,7 +28,7 @@ function fixture(route=async body=>result(body)){
  const event=(id,name='click')=>get(id).handlers.get(name)({preventDefault(){}});
  return {get,run,calls,exports,signals,event,load:()=>run('load()'),search:()=>event('search-form','submit'),
   set(id,value,notify=true){get(id).value=value;if(notify)event(id,'input');},
-  criteria(query,lo,hi){ctx.args=[query,lo,hi];return run('searchCriteria(...args)');},
+  criteria(query,lo,hi,project=''){ctx.args=[query,lo,hi,project];return run('searchCriteria(...args)');},
   async settled(){for(let i=0;i<100&&run('busy');i++)await tick();assert.equal(run('busy'),false);}};
 }
 function plain(value){return JSON.parse(JSON.stringify(value));}
@@ -73,8 +73,8 @@ test('canonical summary and transmission never rewrite raw inputs',async()=>{
  assert.equal(f.exports[0].search.updated_from,f.calls[0].input.updated_from);assert.equal(f.exports[0].complete,false);
  assert.ok(!JSON.stringify(f.exports).includes('SYNTHETIC_SESSION'));
 });
-for(const field of ['query','updated-from','updated-before'])test('editing '+field+' clears results/paging/export without request and requires explicit search',async()=>{
- const f=fixture(async b=>result(b,'OLD',20));await f.load();f.set(field,field==='query'?'new':'2024-01-01T00:00:00Z');
+for(const field of ['query','updated-from','updated-before','search-project'])test('editing '+field+' clears results/paging/export without request and requires explicit search',async()=>{
+ const f=fixture(async b=>result(b,'OLD',20));await f.load();f.set(field,field==='query'?'new':field==='search-project'?'Project_A':'2024-01-01T00:00:00Z');
  assert.equal(f.calls.length,1);assert.equal(f.run('current'),null);assert.equal(f.get('results').children.length,0);
  for(const control of ['prev','next','export'])assert.equal(f.get(control).disabled,true);
  await f.event('refresh');f.run("view='active';offset=0");await f.load();assert.equal(f.calls.length,1);
@@ -89,14 +89,14 @@ test('invalid input clears prior export and never transmits',async()=>{
  f.event('export');assert.equal(f.exports.length,0);
 });
 test('paging uses immutable applied criteria, search resets page zero, status navigation retains bounds',async()=>{
- const f=fixture(async b=>result(b,'PAGE',b.input.offset===0?20:null));f.set('query','literal');f.set('updated-from',from);f.set('updated-before',before);await f.search();
+ const f=fixture(async b=>result(b,'PAGE',b.input.offset===0?20:null));f.set('search-project','Project_A');f.set('query','literal');f.set('updated-from',from);f.set('updated-before',before);await f.search();
  const first=plain(f.calls[0].input);await f.event('next');assert.deepEqual(f.calls[1].input,{...first,offset:20});
  f.event('export');assert.equal(f.exports[0].search.offset,20);await f.event('prev');assert.deepEqual(f.calls[2].input,first);
  await f.event('next');await f.search();assert.equal(f.calls.at(-1).input.offset,0);
  f.run("view='archived';offset=0");await f.load();assert.deepEqual(f.calls.at(-1).input,{...first,status:'archived'});
 });
-for(const action of ['next','prev','export'])test('unsignalled draft edit cannot reuse old '+action,async()=>{
- const f=fixture(async b=>result(b,'PAGE',20));await f.load();f.set('query','UNAPPLIED',false);await f.event(action);
+for(const action of ['next','prev','export'])for(const field of ['query','search-project'])test('unsignalled '+field+' draft edit cannot reuse old '+action,async()=>{
+ const f=fixture(async b=>result(b,'PAGE',20));await f.load();f.set(field,'UNAPPLIED',false);await f.event(action);
  assert.equal(f.calls.length,1);assert.equal(f.exports.length,0);assert.equal(f.run('current'),null);assert.equal(f.get('export').disabled,true);
 });
 test('hidden search edit preserves unrelated current data, export and pagination',async()=>{
@@ -105,12 +105,15 @@ test('hidden search edit preserves unrelated current data, export and pagination
  f.event('export');assert.equal(f.exports.length,1);assert.equal(Object.hasOwn(f.exports[0],'search'),false);
  f.run("view='candidate'");await f.load();assert.equal(f.calls.length,0);
 });
-for(const outcome of ['success','error'])for(const change of ['query','time','reverted','unsignalled','navigation','refresh','replacement','logout','token','source','offset','write','pending'])
+for(const outcome of ['success','error'])for(const change of ['query','time','project','project-reverted','project-unsignalled','reverted','unsignalled','navigation','refresh','replacement','logout','token','source','offset','write','pending'])
  test('late '+outcome+' ignored after '+change,async()=>{
   let release,first=true;const f=fixture(async body=>{if(body.operation==='search'&&first){first=false;await new Promise(resolve=>release=resolve);if(outcome==='error')throw Error('OLD_FAILURE');return result(body,'OLD');}return result(body,'NEW');});
   const waiting=f.load();await tick();assert.ok(release);
   if(change==='query')f.set('query','new');
   if(change==='time')f.set('updated-from',from);
+  if(change==='project')f.set('search-project','Project_A');
+  if(change==='project-reverted'){f.set('search-project','Project_A');f.set('search-project','');}
+  if(change==='project-unsignalled')f.set('search-project','Project_A',false);
   if(change==='reverted'){f.set('query','new');f.set('query','');}
   if(change==='unsignalled')f.set('query','new',false);
   if(change==='navigation'){f.run("view='lookup'");await f.load();}
@@ -124,15 +127,16 @@ for(const outcome of ['success','error'])for(const change of ['query','time','re
   if(change==='pending')f.run("pending={operation:'update',input:{event_id:'existing'}}");
   f.get('message').textContent='NEW MESSAGE';release();await waiting;await tick();
   assert.doesNotMatch(JSON.stringify(f.run('current')),/OLD/);assert.equal(f.get('message').textContent,'NEW MESSAGE');
-  if(['query','time','reverted','navigation','refresh','replacement','logout','write'].includes(change))assert.equal(f.signals[0].aborted,true);
+  if(['query','time','project','project-reverted','reverted','navigation','refresh','replacement','logout','write'].includes(change))assert.equal(f.signals[0].aborted,true);
  });
 test('ordinary criteria edits preserve draft, confidence, expected revision and consent',async()=>{
  const f=fixture();f.run("editing={id:'"+id+"',revision:9};draftConfidence=.41");const draft=f.run('editorReceiptSelection()');
- await f.load();f.set('query','new');f.set('updated-from',from);await f.search();assert.equal(f.run('editorReceiptSelection()'),draft);
+ await f.load();f.set('query','new');f.set('search-project','Project_A');f.set('updated-from',from);await f.search();assert.equal(f.run('editorReceiptSelection()'),draft);
+ assert.equal(f.run('memoryDraft().project_id'),'unsaved-project');assert.equal(f.calls.at(-1).input.project_id,'Project_A');
 });
 test('pending immutable write blocks search and survives criteria edits',async()=>{
  const f=fixture();f.run("pending=Object.freeze({operation:'update',input:Object.freeze({event_id:'ORIGINAL',expected_revision:9}),delivery_unconfirmed:true})");
- const original=f.run('pending');f.set('updated-from',from);await f.search();await f.load();
+ const original=f.run('pending');f.set('updated-from',from);f.set('search-project','Project_A');await f.search();await f.load();
  assert.equal(f.calls.length,0);assert.equal(f.run('pending'),original);assert.equal(f.run('pending.input.event_id'),'ORIGINAL');assert.equal(f.get('content').value,'UNSAVED');
 });
 test('post-ack busy=true with pending=null reload remains allowed',async()=>{
@@ -146,4 +150,41 @@ test('explicit retry aborts outstanding ordinary search but keeps the original e
  const waiting=f.load();await tick();f.run("pending={operation:'review',input:{event_id:'ORIGINAL',memory_id:'"+id+"',expected_revision:9,status:'archived'},source_id:'selected',sessionCurrent:()=>true,editorUnchanged:()=>false}");
  await f.run('submitPending()');assert.equal(f.signals[0].aborted,true);assert.equal(f.run('pending.input.event_id'),'ORIGINAL');release();await waiting;
  assert.equal(f.run('current'),null);assert.equal(f.run('pending.delivery_unconfirmed'),true);
+});
+
+for(const value of ['', 'A', 'Project_A', 'project_a', '0-x_Y', 'a'.repeat(96), 'null', 'undefined'])test('search project preserves canonical identifier '+JSON.stringify(value),async()=>{
+ const f=fixture();const actual=f.criteria('literal',from,before,value);
+ assert.ok(Object.isFrozen(actual));assert.equal(actual.project_id,value||null);
+ assert.equal(actual.project_id,searchQuery({...value?{project_id:value}:{},query:'literal'}).project_id);
+ f.set('search-project',value);await f.search();assert.equal(f.get('search-project').value,value);
+ if(value){assert.equal(f.calls[0].input.project_id,value);assert.match(f.get('search-applied').textContent,/仅该项目，不含全局/);}
+ else{assert.equal(Object.hasOwn(f.calls[0].input,'project_id'),false);assert.match(f.get('search-applied').textContent,/全部可见（含全局）/);}
+ f.event('export');assert.deepEqual(plain(f.exports[0].search),f.calls[0].input);assert.equal(f.exports[0].complete,false);
+});
+for(const value of [' ', '\t', '\n', 'Project_A\n', 'Project_A\r', 'Project_A\r\n', ' Project_A', 'Project_A ', 'a.b', 'a/b', '项目', 'é', 'a'.repeat(97), 0, false, [], {}, new String('Project_A')])test('invalid project never sends or retains old export '+JSON.stringify(value),async()=>{
+ const f=fixture();await f.load();f.set('search-project',value);await f.search();
+ assert.equal(f.calls.length,1);assert.equal(f.run('current'),null);assert.match(f.get('search-applied').textContent,/条件无效/);
+ assert.throws(()=>searchQuery({project_id:value}),{code:'invalid_params'});f.event('export');assert.equal(f.exports.length,0);
+});
+for(const value of [undefined,null])test('project UI rejects nonstring absence '+String(value)+' while backend absence stays unchanged',async()=>{
+ const f=fixture();await f.load();f.set('search-project',value);await f.search();assert.equal(f.calls.length,1);
+ assert.match(f.get('search-applied').textContent,/条件无效/);assert.equal(searchQuery({project_id:value}).project_id,null);
+});
+for(const event of ['input','change'])test('project '+event+' invalidates immediately and revert still needs explicit search',async()=>{
+ const f=fixture(async b=>result(b,'PAGE',20));await f.load();f.get('search-project').value='Project_A';f.event('search-project',event);
+ assert.equal(f.run('current'),null);for(const id of ['prev','next','export'])assert.equal(f.get(id).disabled,true);
+ f.get('search-project').value='';f.event('search-project',event);await f.load();assert.equal(f.calls.length,1);
+ await f.search();assert.equal(f.calls.length,2);assert.equal(Object.hasOwn(f.calls.at(-1).input,'project_id'),false);
+});
+test('project status/refresh/export and clearing never borrow independent editor project',async()=>{
+ const f=fixture();f.set('search-project','Project_A');await f.search();const input=plain(f.calls[0].input);
+ for(const status of ['active','archived','candidate']){f.run("view='"+status+"';offset=0");await f.load();assert.deepEqual(f.calls.at(-1).input,{...input,status});}
+ f.get('project').value='editor-only';f.event('memory-form','input');assert.equal(f.run('current.memories.length'),1);assert.equal(f.get('export').disabled,false);
+ await f.event('refresh');assert.equal(f.calls.at(-1).input.project_id,'Project_A');assert.equal(f.run('memoryDraft().project_id'),'editor-only');
+ f.set('search-project','');await f.search();assert.equal(Object.hasOwn(f.calls.at(-1).input,'project_id'),false);assert.equal(f.get('project').value,'editor-only');
+});
+test('hidden project draft preserves unrelated current page authority and post-ack cannot apply it',async()=>{
+ const f=fixture();f.run("view='agents';current={agents:[{agent_id:'synthetic'}]};nextOffset=20");f.get('export').disabled=false;f.get('next').disabled=false;
+ f.set('search-project','Project_A');assert.equal(f.run('current.agents[0].agent_id'),'synthetic');assert.equal(f.get('export').disabled,false);assert.equal(f.get('next').disabled,false);
+ f.event('export');assert.equal(Object.hasOwn(f.exports[0],'search'),false);f.run("view='candidate';busy=true;pending=null");await f.load();assert.equal(f.calls.length,0);
 });
