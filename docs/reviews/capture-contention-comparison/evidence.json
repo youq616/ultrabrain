@@ -25,7 +25,7 @@
     "summary JavaScript passed node --check",
     "git diff --check passed excluding byte-identical baseline TAP; original trailing whitespace at TAP lines 77 and 79 is intentionally preserved"
   ],
-  "windows_comparison": "not_run",
+  "windows_comparison": "failed_preflight_both_arms_skipped",
   "historical_failure": "unresolved",
   "implementation_sha256": {
     "test/fixtures/capture-contention-worker.mjs": "fa7be7bcec24ca1b370e876931417782b379b6d145a6dfd0df5eb9094fa6b2f1",
@@ -46,5 +46,88 @@
     "truncated TAP",
     "test/round mismatch",
     "command/TAP exit mismatch"
-  ]
+  ],
+  "initial_windows_comparison": "not_run",
+  "failed_comparison_attempt": {
+    "head": "d1c4da2e932a36ce2d019c09ac9004fc80246aa6",
+    "tree": "5a9441e7041fad00de6bcec423fa7960f2eeb614",
+    "sole_parent": "c379604af7c12a7154ce02b902933e81c2b5a816",
+    "run_id": 37011687612,
+    "job_id": 110852675733,
+    "run_attempt": 1,
+    "platform": "win32",
+    "node": "v22.23.3",
+    "preflight": {
+      "tests": 57,
+      "passed": 56,
+      "failed": 1
+    },
+    "failed_assertion": "candidate.includes('        ' + files + '\\n')",
+    "grouped": "skipped",
+    "serialized": "skipped",
+    "complete": false,
+    "passed": false,
+    "interpretation": "inconclusive",
+    "artifact_id": 11227698472,
+    "artifact_sha256": "cf5bc892658f4667704595cc59d8a8e66a88f2ed5f58ef0e7fdb7661b3acfec0",
+    "qualification": "Newline-sensitive assertion observed; CRLF checkout is consistent with the failure, but raw runner YAML bytes were not retained."
+  },
+  "portability_correction": {
+    "scope": "Pure source-text assertion only; CRLF pairs normalize to LF in memory; exact existing assertions preserved. Lone CR rejected.",
+    "actual_parent": "d1c4da2e932a36ce2d019c09ac9004fc80246aa6",
+    "platform": "linux",
+    "node": "v24.19.0",
+    "command": "node --test --test-reporter=tap test/capture-contention-diagnostics.test.mjs",
+    "tests": 79,
+    "passed": 79,
+    "failed": 0,
+    "skipped": 0,
+    "tap_sha256": "0b932b23a2c6157fcdbd9be68634b658116636397ec42768dbffeda8cd9aa8ac",
+    "positive_line_ending_combinations": 4,
+    "rejecting_mutations_per_line_ending": 8,
+    "rejecting_line_endings": [
+      "LF",
+      "CRLF"
+    ],
+    "lone_cr_rejections": 2,
+    "syntax_check": "passed",
+    "whitespace_check": "passed",
+    "new_windows_comparison": "not_run",
+    "forward_ancestry_amendment": "implemented_in_separately_approved_combined_phase",
+    "initial_test_source_sha256": "8d830c3df645185adc17bf9ddc32deb4cc874104b80c9700c556ed2151f2cd80"
+  },
+  "combined_forward_correction": {
+    "actual_parent": "d1c4da2e932a36ce2d019c09ac9004fc80246aa6",
+    "prior_tree": "5a9441e7041fad00de6bcec423fa7960f2eeb614",
+    "prior_sole_parent": "c379604af7c12a7154ce02b902933e81c2b5a816",
+    "platform": "linux",
+    "node": "v24.19.0",
+    "command": "node --test --test-reporter=tap test/capture-contention-diagnostics.test.mjs",
+    "tests": 102,
+    "passed": 102,
+    "failed": 0,
+    "skipped": 0,
+    "tap_sha256": "59ed4e7d5899d136179d21be55b4237a13c438145bf9286ac3d0eb078ff8f4e5",
+    "ancestry_positive_controls": 1,
+    "ancestry_negative_controls": 22,
+    "controls_execute": "Extracted actual summary JavaScript with restricted synthetic ports and real pure evidence classifiers, not a Git process or contention workload.",
+    "static_checks": {
+      "workflow_yaml": "passed",
+      "bash_run_snippets": 4,
+      "bash_syntax": "passed",
+      "summary_javascript_syntax": "passed",
+      "test_javascript_syntax": "passed",
+      "git_diff_check": "passed",
+      "node": "v24.19.0"
+    },
+    "source_sha256": {
+      "test/capture-contention-diagnostics.test.mjs": "e97d8eb6dfac4dff1899b9922caef4518b6eab25d5ff3f9c7f3ef21f3ae3edf3",
+      ".github/workflows/capture-contention-comparison.yml": "daee16f54b3e4808c15d16f7aa39361f7efe463a37723ff8e7d7a55d07e1b07f"
+    },
+    "new_windows_comparison": "not_run",
+    "historical_failure": "unresolved",
+    "source_review": "pending",
+    "public_binding": "pending",
+    "activation": "not_authorized"
+  }
 }

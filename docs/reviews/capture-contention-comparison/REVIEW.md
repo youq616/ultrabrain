@@ -17,7 +17,8 @@ Independent exact-source review and public-parent binding are publication gates.
 - The Windows experiment is one pinned, finite grouped/serialized pair
 - Both exit codes and TAP outputs survive a grouped failure
 - A failed arm keeps the workflow red; missing evidence is inconclusive
-- Public comparison metadata checks actual checkout, tree and sole baseline parent
+- Public comparison metadata checks actual checkout/tree, sole prior-attempt parent,
+  and the prior attempt's exact tree and sole original-baseline parent
 - No automatic retry, new production probe, public PR, merge or deployment is added
 
 Local Linux Node 24.19.0 validation passed 114 focused tests, including the actual
@@ -34,5 +35,53 @@ truncation, mismatched test/round status and contradictory command exit metadata
 These are deterministic report-classification tests, not new process-failure
 injections or another Windows experiment.
 
-The paired Windows experiment has not run at this source checkpoint. These local
-checks do not resolve the retained Windows failure or qualify repository-wide CI.
+At the initial source checkpoint, the paired Windows experiment had not run.
+Those local checks did not resolve the retained Windows failure or qualify
+repository-wide CI.
+
+
+## Retained first diagnostic attempt and source portability correction
+
+The first diagnostic attempt at `d1c4da2e932a36ce2d019c09ac9004fc80246aa6`
+([run 37011687612](https://github.com/youq616/ultrabrain/actions/runs/37011687612))
+failed its pure preflight: 57 tests, 56 passed, one failed. The exact suite-line
+assertion required an LF suffix. Both grouped and serialized arms were skipped;
+the saved result is failed and inconclusive. CRLF checkout is consistent with
+this newline-sensitive failure, but the runner's raw YAML bytes were not saved.
+The artifact identity and original failure remain preserved in `evidence.json`.
+This does not replace or resolve the older contention failure in
+[run 36957869555](https://github.com/youq616/ultrabrain/actions/runs/36957869555).
+
+The correction normalizes CRLF pairs only in the two in-memory workflow source
+strings and then runs all existing exact contract assertions. It neither rewrites
+workflow files nor normalizes whitespace, command arguments or lone CR. The same
+function checks the actual files and all four LF/CRLF source combinations.
+Sixteen rejecting controls cover omitted, added and reordered suite files,
+grouped/serialized command changes, Node pin, indentation and command whitespace
+under LF and CRLF; two more reject lone CR. Pure Linux Node 24.19.0 validation
+passed 79/79 tests. Syntax and whitespace checks passed. No new contention workload
+or Windows pair ran for this correction.
+
+## Fixed forward ancestry
+
+The comparison workflow now requires an ordinary direct child of actual
+`d1c4da2e932a36ce2d019c09ac9004fc80246aa6`. Checkout depth 2 exposes the immediate
+parent; a literal `git cat-file -p` read checks that parent's exact tree
+`5a9441e7041fad00de6bcec423fa7960f2eeb614` and sole original parent
+`c379604af7c12a7154ce02b902933e81c2b5a816`. It does not traverse or fetch the
+grandparent. Missing or malformed identity remains inconclusive. The bounded
+`prior_attempt` projection reports observed hashes or unavailable values; the
+candidate's actual tree is still reported separately. Node/platform, attempt-one,
+checkout/head equality and all existing workflow command/permission checks remain.
+
+Combined pure Linux Node 24.19.0 validation passed 102/102 tests, including one
+positive and 22 negative identity controls executing the actual extracted summary
+JavaScript. Its Git, filesystem and environment ports are synthetic and restricted;
+the existing pure evidence classifiers remain real. These controls are neither a
+Windows checkout result nor a new contention workload. YAML, all four Bash run
+snippets, extracted JavaScript, test syntax and whitespace checks passed.
+
+The trigger and finite pair are unchanged. Exact-source review, fresh public
+tree/parent binding and a separate one-child activation decision remain required.
+No corrected Windows comparison has run. Earlier failed attempts are never
+overwritten, rerun or treated as passing.

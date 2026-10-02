@@ -16,6 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: '22.23.3'
@@ -69,18 +70,29 @@ jobs:
               outcome,exit,command_complete,evidence:contentionTapEvidence(read('contention-'+name+'.tap',1048576))};
           });
           let checkout=null,tree=null,parents=[];
+          const prior_attempt={head:null,tree:null,parents:[]};
           try{
             checkout=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
             const headers=execFileSync('git',['cat-file','-p','HEAD'],{encoding:'utf8'}).split('\n\n',1)[0].split('\n');
             tree=headers.find(line=>line.startsWith('tree '))?.slice(5)??null;
             parents=headers.filter(line=>line.startsWith('parent ')).map(line=>line.slice(7));
           }catch{}
+          try{
+            const headers=execFileSync('git',['cat-file','-p','d1c4da2e932a36ce2d019c09ac9004fc80246aa6'],{encoding:'utf8'}).split('\n\n',1)[0].split('\n');
+            prior_attempt.head='d1c4da2e932a36ce2d019c09ac9004fc80246aa6';
+            const trees=headers.filter(line=>line.startsWith('tree '));
+            prior_attempt.tree=trees.length===1&&/^[a-f0-9]{40}$/.test(trees[0].slice(5))?trees[0].slice(5):null;
+            prior_attempt.parents=headers.filter(line=>line.startsWith('parent ')).slice(0,2).map(line=>/^[a-f0-9]{40}$/.test(line.slice(7))?line.slice(7):null);
+          }catch{}
           const identity_valid=process.version==='v22.23.3'&&process.platform==='win32'&&process.env.GITHUB_RUN_ATTEMPT==='1'&&
             /^[a-f0-9]{40}$/.test(checkout??'')&&checkout===process.env.GITHUB_SHA&&/^[a-f0-9]{40}$/.test(tree??'')&&
-            parents.length===1&&parents[0]==='c379604af7c12a7154ce02b902933e81c2b5a816';
+            parents.length===1&&parents[0]==='d1c4da2e932a36ce2d019c09ac9004fc80246aa6'&&
+            prior_attempt.head==='d1c4da2e932a36ce2d019c09ac9004fc80246aa6'&&
+            prior_attempt.tree==='5a9441e7041fad00de6bcec423fa7960f2eeb614'&&
+            prior_attempt.parents.length===1&&prior_attempt.parents[0]==='c379604af7c12a7154ce02b902933e81c2b5a816';
           const {complete,passed,interpretation}=contentionComparisonEvidence(arms,{identityValid:identity_valid,preflightOutcome:process.env.PREFLIGHT_OUTCOME});
           const report={format:'ultrabrain-capture-contention-comparison-v1',complete,passed,interpretation,
-            head:process.env.GITHUB_SHA,checkout,tree,parents,identity_valid,run_id:process.env.GITHUB_RUN_ID,run_attempt:process.env.GITHUB_RUN_ATTEMPT,
+            head:process.env.GITHUB_SHA,checkout,tree,parents,prior_attempt,identity_valid,run_id:process.env.GITHUB_RUN_ID,run_attempt:process.env.GITHUB_RUN_ATTEMPT,
             node:process.version,platform:process.platform,architecture:process.arch,available_parallelism:availableParallelism(),
             runner_image:{os:process.env.ImageOS??null,version:process.env.ImageVersion??null},
             preflight_outcome:process.env.PREFLIGHT_OUTCOME,arms,

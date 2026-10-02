@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {runInNewContext} from 'node:vm';
 import {createContentionDiagnostics, projectContentionDiagnostics, contentionRoundEvidence,
   contentionTapEvidence, contentionComparisonEvidence, CONTENTION_ROUND_FORMAT, CONTENTION_TEST_NAME} from './helpers/capture-contention-diagnostics.mjs';
 import {contentionWorkerReport} from './helpers/capture-contention-report.mjs';
@@ -287,9 +288,11 @@ test('contention source: retry decision precedes new observation and retains ori
   assert.ok(source.includes('deadline=performance.now()+10000'));
   assert.ok(source.includes('retries++;busyRetries++;await delay(25)'));
 });
-test('contention workflow: exact retained suite, one pinned pair, minimal permissions, no retries', () => {
-  const original = readFileSync(new URL('../.github/workflows/capture-locks.yml', import.meta.url), 'utf8');
-  const candidate = readFileSync(new URL('../.github/workflows/capture-contention-comparison.yml', import.meta.url), 'utf8');
+function assertContentionWorkflow(originalText, candidateText) {
+  const original = originalText.replaceAll('\r\n', '\n');
+  const candidate = candidateText.replaceAll('\r\n', '\n');
+  assert.ok(!original.includes('\r'));
+  assert.ok(!candidate.includes('\r'));
   const files = original.match(/run: node --test (.*?) > /)[1];
   assert.equal(files.split(' ').length, 16);
   assert.ok(candidate.includes('        ' + files + '\n'));
@@ -300,8 +303,161 @@ test('contention workflow: exact retained suite, one pinned pair, minimal permis
   assert.ok(candidate.includes("node-version: '22.23.3'"));
   assert.ok(candidate.includes('timeout-minutes: 8'));
   assert.ok(candidate.includes('contents: read')); assert.ok(candidate.includes('persist-credentials: false'));
+  assert.ok(candidate.includes('fetch-depth: 2'));
+  assert.ok(candidate.includes("parents.length===1&&parents[0]==='d1c4da2e932a36ce2d019c09ac9004fc80246aa6'"));
+  assert.ok(candidate.includes("execFileSync('git',['cat-file','-p','d1c4da2e932a36ce2d019c09ac9004fc80246aa6']"));
+  assert.ok(candidate.includes("prior_attempt.tree==='5a9441e7041fad00de6bcec423fa7960f2eeb614'"));
+  assert.ok(candidate.includes("prior_attempt.parents.length===1&&prior_attempt.parents[0]==='c379604af7c12a7154ce02b902933e81c2b5a816'"));
   assert.ok(candidate.includes("if: always() && !cancelled() && steps.preflight.outcome == 'success'"));
   assert.ok(candidate.includes('if(!passed)process.exitCode=1;'));
   assert.ok(!candidate.includes('continue-on-error:')); assert.ok(!candidate.includes('workflow_dispatch:'));
   assert.ok(!candidate.includes('pull_request:')); assert.ok(!candidate.includes('schedule:'));
+}
+const retainedWorkflow = readFileSync(new URL('../.github/workflows/capture-locks.yml', import.meta.url), 'utf8');
+const comparisonWorkflow = readFileSync(new URL('../.github/workflows/capture-contention-comparison.yml', import.meta.url), 'utf8');
+test('contention workflow: exact retained suite, one pinned pair, minimal permissions, no retries', () => {
+  assertContentionWorkflow(retainedWorkflow, comparisonWorkflow);
 });
+const withLineEndings = (text, ending) => text.replaceAll('\r\n', '\n').replaceAll('\n', ending);
+for (const [originalName, originalEnding] of [['LF', '\n'], ['CRLF', '\r\n']]) {
+  for (const [candidateName, candidateEnding] of [['LF', '\n'], ['CRLF', '\r\n']]) {
+    test(`contention workflow: exact contract accepts ${originalName}/${candidateName}`, () => {
+      assertContentionWorkflow(withLineEndings(retainedWorkflow, originalEnding), withLineEndings(comparisonWorkflow, candidateEnding));
+    });
+  }
+}
+const retainedFiles = retainedWorkflow.match(/run: node --test (.*?) > /)[1];
+const suiteFiles = retainedFiles.split(' ');
+const changedWorkflows = {
+  omitted_file: text => text.replace(retainedFiles, suiteFiles.slice(1).join(' ')),
+  added_file: text => text.replace(retainedFiles, retainedFiles + ' test/extra-contract.test.mjs'),
+  reordered_files: text => text.replace(retainedFiles, [suiteFiles[1], suiteFiles[0], ...suiteFiles.slice(2)].join(' ')),
+  grouped_command: text => text.replace('node --test ${CAPTURE_TEST_FILES}', 'node --test --test-concurrency=2 ${CAPTURE_TEST_FILES}'),
+  serialized_command: text => text.replace('node --test --test-concurrency=1 ${CAPTURE_TEST_FILES}', 'node --test --test-concurrency=2 ${CAPTURE_TEST_FILES}'),
+  node_pin: text => text.replace("node-version: '22.23.3'", "node-version: '22.16.0'"),
+  suite_indentation: text => text.replace('        ' + retainedFiles, '       ' + retainedFiles),
+  command_whitespace: text => text.replace('node --test ${CAPTURE_TEST_FILES}', 'node  --test ${CAPTURE_TEST_FILES}')
+};
+for (const [name, mutate] of Object.entries(changedWorkflows)) {
+  for (const [endingName, ending] of [['LF', '\n'], ['CRLF', '\r\n']]) {
+    test(`contention workflow: reject ${name} with ${endingName}`, () => {
+      const changed = mutate(comparisonWorkflow);
+      assert.notEqual(changed, comparisonWorkflow);
+      assert.throws(() => assertContentionWorkflow(withLineEndings(retainedWorkflow, ending), withLineEndings(changed, ending)));
+    });
+  }
+}
+for (const source of ['retained', 'comparison']) {
+  test(`contention workflow: reject lone CR in ${source} source`, () => {
+    assert.throws(() => assertContentionWorkflow(
+      withLineEndings(retainedWorkflow, source === 'retained' ? '\r' : '\n'),
+      withLineEndings(comparisonWorkflow, source === 'comparison' ? '\r' : '\n')));
+  });
+}
+
+function runComparisonSummary(overrides = {}) {
+  const source = comparisonWorkflow.replaceAll('\r\n', '\n');
+  const blocks = [...source.matchAll(/          node --input-type=module <<'NODE'\n([\s\S]*?)          NODE\n/g)];
+  assert.equal(blocks.length, 1);
+  const lines = blocks[0][1].trimEnd().split('\n');
+  assert.ok(lines.every(line => line.startsWith('          ')));
+  const script = lines.map(line => line.slice(10)).join('\n');
+  assert.ok(script.length < 10000);
+  const imports = [
+    "import {readFileSync,statSync,writeFileSync} from 'node:fs';",
+    "import {join} from 'node:path';",
+    "import {availableParallelism} from 'node:os';",
+    "import {execFileSync} from 'node:child_process';",
+    "import {contentionTapEvidence,contentionComparisonEvidence} from './test/helpers/capture-contention-diagnostics.mjs';"
+  ];
+  assert.equal(script.split('\n').slice(0, imports.length).join('\n'), imports.join('\n'));
+  const body = script.split('\n').slice(imports.length).join('\n');
+  assert.ok(!body.includes('import '));
+  const head = 'a'.repeat(40), tree = 'b'.repeat(40);
+  const prior = 'd1c4da2e932a36ce2d019c09ac9004fc80246aa6';
+  const priorTree = '5a9441e7041fad00de6bcec423fa7960f2eeb614';
+  const baseline = 'c379604af7c12a7154ce02b902933e81c2b5a816';
+  const fixture = {head, headHeader: `tree ${tree}\nparent ${prior}\n\nsynthetic child`,
+    priorHeader: `tree ${priorTree}\nparent ${baseline}\n\nsynthetic prior`, ...overrides};
+  const resultTap = ['TAP version 13', 'ok 1 - ' + CONTENTION_TEST_NAME, '# ' + JSON.stringify(round()),
+    ...Array.from({length: 197}, (_, index) => `ok ${index + 2} - other capture contract ${index + 2}`),
+    '1..198', '# tests 198', '# suites 0', '# pass 198', '# fail 0', '# cancelled 0', '# skipped 0', '# todo 0', '# duration_ms 100', ''].join('\n');
+  const files = new Map(['grouped', 'serialized'].flatMap(name => [
+    ['/synthetic/contention-' + name + '.tap', resultTap], ['/synthetic/contention-' + name + '.exit', '0\n']
+  ]));
+  const processStub = {version: 'v22.23.3', platform: 'win32', arch: 'x64',
+    ...fixture.process, env: {RUNNER_TEMP: '/synthetic', CAPTURE_TEST_FILES: retainedFiles,
+      PREFLIGHT_OUTCOME: 'success', GROUPED_OUTCOME: 'success', SERIALIZED_OUTCOME: 'success',
+      GITHUB_SHA: head, GITHUB_RUN_ATTEMPT: '1', GITHUB_RUN_ID: 'synthetic', ...fixture.env}};
+  const requests = [], writes = [], logs = [];
+  const allowedRequests = ['rev-parse HEAD', 'cat-file -p HEAD', 'cat-file -p ' + prior];
+  const get = path => { assert.ok(files.has(path)); return files.get(path); };
+  runInNewContext(body, {
+    process: processStub, console: {log: value => logs.push(value)},
+    readFileSync: (path, encoding) => { assert.equal(encoding, 'utf8'); return get(path); },
+    statSync: path => ({size: Buffer.byteLength(get(path))}),
+    writeFileSync: (path, text) => { assert.equal(path, '/synthetic/contention-comparison.json'); assert.ok(Buffer.byteLength(text) < 16384); writes.push(text); },
+    join: (directory, name) => { assert.equal(directory, '/synthetic'); assert.ok(!name.includes('/')); return directory + '/' + name; },
+    availableParallelism: () => 8,
+    execFileSync: (command, args, options) => {
+      assert.equal(command, 'git'); assert.equal(options.encoding, 'utf8');
+      const request = args.join(' '); requests.push(request); assert.ok(allowedRequests.includes(request));
+      if (request === allowedRequests[0]) return fixture.head;
+      if (request === allowedRequests[1]) { if (fixture.headReadFails) throw Error('synthetic unavailable'); return fixture.headHeader; }
+      if (fixture.priorReadFails) throw Error('synthetic unavailable');
+      return fixture.priorHeader;
+    },
+    contentionTapEvidence, contentionComparisonEvidence
+  }, {timeout: 1000});
+  assert.deepEqual(requests, allowedRequests);
+  assert.equal(writes.length, 1); assert.equal(logs.length, 1);
+  const report = JSON.parse(writes[0]); assert.deepEqual(JSON.parse(logs[0]), report);
+  assert.deepEqual(Object.keys(report.prior_attempt), ['head', 'tree', 'parents']);
+  assert.ok(report.prior_attempt.parents.length <= 2);
+  assert.ok([report.prior_attempt.head, report.prior_attempt.tree, ...report.prior_attempt.parents]
+    .every(value => value === null || /^[a-f0-9]{40}$/.test(value)));
+  return {report, exitCode: processStub.exitCode};
+}
+test('contention ancestry: actual summary accepts the exact fixed forward chain', () => {
+  const {report, exitCode} = runComparisonSummary();
+  assert.equal(report.identity_valid, true); assert.equal(report.complete, true); assert.equal(report.passed, true);
+  assert.equal(report.interpretation, 'historical_failure_unexplained'); assert.equal(exitCode, undefined);
+  assert.deepEqual(report.prior_attempt, {head: 'd1c4da2e932a36ce2d019c09ac9004fc80246aa6',
+    tree: '5a9441e7041fad00de6bcec423fa7960f2eeb614', parents: ['c379604af7c12a7154ce02b902933e81c2b5a816']});
+});
+const childTreeLine = 'tree ' + 'b'.repeat(40);
+const childParentLine = 'parent d1c4da2e932a36ce2d019c09ac9004fc80246aa6';
+const priorTreeLine = 'tree 5a9441e7041fad00de6bcec423fa7960f2eeb614';
+const priorParentLine = 'parent c379604af7c12a7154ce02b902933e81c2b5a816';
+const extraParentLine = 'parent ' + 'c'.repeat(40);
+for (const [name, overrides] of Object.entries({
+  wrong_child_parent: {headHeader: childTreeLine + '\n' + extraParentLine},
+  missing_child_parent: {headHeader: childTreeLine},
+  extra_child_parent: {headHeader: childTreeLine + '\n' + childParentLine + '\n' + extraParentLine},
+  missing_child_tree: {headHeader: childParentLine},
+  malformed_child_tree: {headHeader: 'tree malformed\n' + childParentLine},
+  child_read_failure: {headReadFails: true},
+  wrong_prior_tree: {priorHeader: childTreeLine + '\n' + priorParentLine},
+  missing_prior_tree: {priorHeader: priorParentLine},
+  malformed_prior_tree: {priorHeader: 'tree malformed\n' + priorParentLine},
+  duplicate_prior_tree: {priorHeader: priorTreeLine + '\n' + priorTreeLine + '\n' + priorParentLine},
+  wrong_prior_parent: {priorHeader: priorTreeLine + '\n' + extraParentLine},
+  missing_prior_parent: {priorHeader: priorTreeLine},
+  malformed_prior_parent: {priorHeader: priorTreeLine + '\nparent malformed'},
+  extra_prior_parent: {priorHeader: priorTreeLine + '\n' + priorParentLine + '\n' + extraParentLine},
+  many_prior_parents: {priorHeader: priorTreeLine + '\n' + priorParentLine + '\n' + extraParentLine + '\n' + extraParentLine},
+  prior_read_failure: {priorReadFails: true},
+  wrong_checkout: {head: 'c'.repeat(40)},
+  malformed_checkout: {head: 'malformed'},
+  wrong_node: {process: {version: 'v22.16.0'}},
+  wrong_platform: {process: {platform: 'linux'}},
+  second_attempt: {env: {GITHUB_RUN_ATTEMPT: '2'}},
+  wrong_github_sha: {env: {GITHUB_SHA: 'c'.repeat(40)}}
+})) {
+  test('contention ancestry: actual summary rejects ' + name, () => {
+    const {report, exitCode} = runComparisonSummary(overrides);
+    assert.equal(report.identity_valid, false); assert.equal(report.complete, false); assert.equal(report.passed, false);
+    assert.equal(report.interpretation, 'inconclusive'); assert.equal(exitCode, 1);
+    if (name === 'prior_read_failure') assert.deepEqual(report.prior_attempt, {head: null, tree: null, parents: []});
+  });
+}
