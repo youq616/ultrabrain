@@ -5,6 +5,7 @@ Route interception below delays/fails actual responses only; it never invents re
 import json
 import os
 import re
+import time
 import traceback
 from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
@@ -256,19 +257,23 @@ def run_context(browser, timezone, width):
 
         # Hold actual read responses at transport delivery. Abort is deliberately part
         # of browser evidence; VM barriers separately exercise cancellation-loses-race.
+        # After cancellation, fulfill/abort below do not deliver a stale body to the UI.
         for outcome in ['success', 'error']:
             for action in ['edit', 'navigate', 'refresh', 'lock']:
                 submit('candidate', 'TIME_NEEDLE', LOWER, UPPER)
-                fired = []
+                held, fired = [], []
 
                 def delayed(route):
                     body = route.request.post_data_json
-                    if body.get('operation') != 'search':
+                    if body.get('operation') != 'search' or held:
                         route.continue_()
                         return
+                    held.append(route.request)
                     response = route.fetch()
                     assert response.ok and response.json()['ok']
-                    page.unroute('**/api/call', delayed)
+                    # Removing this handler while it owns the paused request can
+                    # auto-continue that route. Keep it installed until exactly one
+                    # terminal operation; the held guard passes refresh reads through.
                     if action == 'edit':
                         page.locator('#query').fill('UNAPPLIED_DELAYED_EDIT')
                     elif action == 'navigate':
@@ -279,17 +284,27 @@ def run_context(browser, timezone, width):
                         expect(page.locator('#search-applied')).to_contain_text('已应用：')
                     else:
                         page.locator('#logout').click()
-                    fired.append({'message': page.locator('#message').inner_text(), 'summary': page.locator('#search-applied').inner_text()})
+                    newer = {'message': page.locator('#message').inner_text(), 'summary': page.locator('#search-applied').inner_text()}
                     if outcome == 'error':
                         route.abort('failed')
                     else:
                         route.fulfill(response=response)
+                    fired.append(newer)  # Signal only after the held route is handled.
 
                 page.route('**/api/call', delayed)
-                page.locator('#search-form button[type="submit"]').click()
+                with page.expect_event('requestfailed', predicate=lambda request: bool(held) and request is held[0]) as cancelled:
+                    page.locator('#search-form button[type="submit"]').click()
+                deadline = time.monotonic() + 10
+                while not fired and time.monotonic() < deadline:
+                    page.wait_for_timeout(20)
+                assert len(held) == len(fired) == 1, 'Held route did not complete exactly once'
+                page.unroute('**/api/call', delayed)
+                assert cancelled.value.failure == 'net::ERR_ABORTED', 'The UI must cancel the exact held fetch'
                 page.wait_for_timeout(100)
-                assert len(fired) == 1
                 assert page.locator('#message').inner_text() == fired[0]['message'], 'Late response/error overwrote newer state'
+                assert page.locator('#search-applied').inner_text() == fired[0]['summary'], 'Late response/error overwrote newer criteria'
+                record.setdefault('delayed_cases', []).append({'late_terminal_operation': 'fulfill' if outcome == 'success' else 'abort',
+                    'action': action, 'cancellation': cancelled.value.failure, 'terminal_operations': len(fired)})
                 if action == 'refresh':
                     assert_results('candidate', 'TIME_NEEDLE', LOWER, UPPER)
                 else:
@@ -303,7 +318,7 @@ def run_context(browser, timezone, width):
                     expect(page.locator('#lookup-panel')).to_be_visible()
                     page.locator('[data-view="candidate"]').click()
                     expect(page.locator('#search-applied')).to_contain_text('已应用：')
-        passed('actual delayed success/error ignored after edit, navigation, replacement refresh and lock')
+        passed('exact held fetch cancelled after edit/navigation/refresh/lock; later fulfill/abort leaves newer UI intact; VM covers delivered stale results')
 
         submit('active', 'TIME_NEEDLE', LOWER, UPPER)
         for screenshot_width, label in [(1320, 'desktop'), (390, 'narrow')]:
