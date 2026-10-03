@@ -13,7 +13,7 @@ function run(mode){
 }
 test('control diagnostic: native EPERM before staged preserves worker and authentic lock phase',()=>{
  const r=run('enqueue-eperm');assert.equal(r.stage,'enqueue');const failed=r.outcomes.find(x=>x.worker===4);
- assert.equal(failed.valid,false);assert.equal(failed.exit,1);assert.equal(failed.result.code,'outbox_lock_io');
+ assert.equal(failed.valid,false);assert.equal(failed.exit,1,JSON.stringify(r));assert.equal(failed.result.code,'outbox_lock_io');
  assert.deepEqual(failed.result.lock,{kind:'queue',phase:'create',system_code:'EPERM'});
 });
 test('control diagnostic: failures after resume barrier retain authentic control publication diagnostic',()=>{
