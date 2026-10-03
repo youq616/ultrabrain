@@ -21,9 +21,11 @@
 <label for="query">搜索文字<input id="query" placeholder="文字搜索（不是语义搜索）" maxlength="4096"></label>
 <label for="search-project">搜索项目（精确标识，可留空）<input id="search-project" type="text" maxlength="96" spellcheck="false" aria-describedby="search-project-help" placeholder="例如 Project_A"></label>
 <p class="note" id="search-project-help">留空查询全部可见项目和全局记录；填写后只查该项目，不含全局。项目标识区分大小写，限 1–96 位 ASCII 字母、数字、下划线或连字符，不忽略空白。不更改右侧记忆编辑器的项目。</p>
+<label for="search-agent" id="search-agent-label">搜索 Agent 标签（精确标识，可留空）</label><input id="search-agent" type="text" maxlength="96" spellcheck="false" aria-labelledby="search-agent-label" aria-describedby="search-agent-help" placeholder="例如 Agent_A">
+<p class="note" id="search-agent-help">留空查询全部可见标签；填写后只匹配完全相同的 Agent 标签，区分大小写，限 1–96 位 ASCII 字母、数字、下划线或连字符，不忽略空白。标签由客户端自述，不是认证身份或软件来源证明；相同标签可属于不同主体，仍只显示当前权限可见的记录。不查询或更改 Agent 登记。</p>
 <div class="search-times"><label for="updated-from">修改时间起点 UTC（包含）<input id="updated-from" type="text" spellcheck="false" placeholder="2024-03-10T07:00:00.000001Z" aria-describedby="search-time-help"></label><label for="updated-before">修改时间终点 UTC（不包含）<input id="updated-before" type="text" spellcheck="false" placeholder="2024-03-10T07:00:00.000002Z" aria-describedby="search-time-help"></label></div>
 <p class="note" id="search-time-help">任一端留空表示该端不限。格式 YYYY-MM-DDTHH:mm:ss[.ffffff]Z，可含 1–6 位小数，须为 UTC；不转换本地时区，也不忽略空白。按当前记录的修改时间筛选，不是事件发生时间、历史状态或时间点快照。</p>
-<button type="submit">搜索</button><p class="note" id="search-applied" role="status">尚未读取；空项目条件包含全部可见项目和全局，空时间条件表示不限。</p></form><div id="recall-panel" hidden><form id="recall-form" autocomplete="off">
+<button type="submit">搜索</button><p class="note" id="search-applied" role="status">尚未读取；空项目条件包含全部可见项目和全局，空 Agent 条件包含全部可见标签，空时间条件表示不限。</p></form><div id="recall-panel" hidden><form id="recall-form" autocomplete="off">
 <p class="note">只查询本机所有者可见且已启用的记忆，不调用模型、不保存任务为记忆。其他 MCP 身份的结果可能不同。字面匹配不是语义搜索；可用空格分隔关键词。</p>
 <label>本次任务或关键词<textarea id="recall-task" rows="3" maxlength="4096" placeholder="例如：Docker 配置 备份" spellcheck="false"></textarea></label>
 <label>召回项目（留空只查全局；填写后包含全局与该项目）<input id="recall-project" maxlength="96" pattern="[A-Za-z0-9_-]+" placeholder="ultrabrain" autocomplete="off"></label>

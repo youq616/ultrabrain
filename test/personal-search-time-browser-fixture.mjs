@@ -6,11 +6,11 @@ import {randomBytes} from 'node:crypto';
 import {connect} from '../src/runtime.mjs';
 import {startPersonalConsole} from '../src/personal-console.mjs';
 import {PersonalMemoryStore} from '../src/personal-memory-store.mjs';
-import {specifications,runBrowser,saveReport} from './personal-search-time-http-browser.mjs';
+import {agentLabels,specifications,runBrowser,saveReport} from './personal-search-time-http-browser.mjs';
 
 assert.equal(process.env.ULTRABRAIN_TEST_ALLOW_WRITE,'1','Use only the isolated synthetic test database');
 const engine=await connect(),source='search-time-'+randomBytes(5).toString('hex'),foreign=source+'-foreign';
-const token=randomBytes(32).toString('hex');let ui,error,before,after,tables=[],reads=0,seeded=[];
+const token=randomBytes(32).toString('hex');let ui,error,before,after,metadata,tables=[],reads=0,seeded=[];
 async function snapshot(){
   const out={};
   for(const table of tables){
@@ -28,10 +28,10 @@ try{
     scopes:['admin'],allowedSources:[source],hasSourceGrant:true,principal:{kind:'synthetic',id:'search-time-peer'}}});
   const other=new PersonalMemoryStore({engine,sourceId:foreign,remote:false,transport:'stdio'});
   const stores={'owner':owner,'peer':peer,'foreign-source':other};
-  for(const store of Object.values(stores))await store.register({agent_id:'search-time-fixture',agent_type:'general_agent'});
+  for(const store of Object.values(stores))for(const agent_id of agentLabels)await store.register({agent_id,agent_type:'general_agent'});
   for(const spec of specifications()){
     const store=stores[spec.owner];
-    const result=await store.commit({agent_id:'search-time-fixture',event_id:spec.key,consent:true,memories:[{
+    const result=await store.commit({agent_id:spec.agent_id,event_id:spec.key,consent:true,memories:[{
       type:'preference',content:spec.content,confidence:0.625,importance:'normal',visibility:spec.visibility,project_id:spec.project_id,
       provenance:'Synthetic search-time browser fixture; no personal data'}]});
     assert.equal(result.model_calls,0);const id=result.entries[0].id;
@@ -39,10 +39,10 @@ try{
     // Do not let the driver serialize Date/timestamptz and discard microseconds.
     await engine.executeRaw('UPDATE ultrabrain.personal_memories SET updated_at=$4::text::timestamptz WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid',
       [store.source,store.actor,id,spec.updated_at]);
-    const [readback]=await engine.executeRaw(`SELECT id::text,status,project_id,
+    const [readback]=await engine.executeRaw(`SELECT id::text,status,agent_id,project_id,
       to_char(updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS exact_time
       FROM ultrabrain.personal_memories WHERE source_id=$1 AND actor_key=$2 AND id=$3::uuid`,[store.source,store.actor,id]);
-    assert.deepEqual({...readback},{id,status:spec.status,project_id:spec.project_id,exact_time:spec.updated_at});
+    assert.deepEqual({...readback},{id,status:spec.status,agent_id:spec.agent_id,project_id:spec.project_id,exact_time:spec.updated_at});
     seeded.push({...spec,id});
   }
   // Discover every personal source-scoped table, including empty document/fragment/job
@@ -59,7 +59,7 @@ try{
     reads++;return engine.executeRaw(sql,args);
   }};
   ui=await startPersonalConsole({engine:browserEngine,source,token,port:0,configureModel:()=>assert.fail('Browser invoked a model')});
-  await runBrowser(ui,token,seeded,'native-postgresql');
+  metadata=await runBrowser(ui,token,seeded,'native-postgresql');
   assert.ok(reads>30,'Exercise the full browser matrix');
 }catch(e){error=e;}
 finally{
@@ -67,9 +67,11 @@ finally{
     await ui?.close();
     if(before){after=await snapshot();assert.deepEqual(after,before,'All source-scoped personal tables must remain unchanged');}
   }catch(e){error??=e;}
-  saveReport('database-report.json',{mode:'native-postgresql',passed:!error,seeded_rows:seeded.length,
+  saveReport('database-report.json',{mode:'native-postgresql',passed:!error,fixture_metadata:metadata??null,seeded_rows:seeded.length,
     exact_microsecond_readback:seeded.length===specifications().length,
     exact_project_readback:seeded.length===specifications().length,
+    exact_agent_readback:seeded.length===specifications().length,
+    agent_rows:Object.fromEntries(agentLabels.map(agent=>[agent,seeded.filter(row=>row.agent_id===agent).length])),
     project_rows:Object.fromEntries([null,'Project_A','project_a'].map(project=>[project??'(global)',seeded.filter(row=>row.project_id===project).length])),tables,before,after,
     unchanged:!!before&&JSON.stringify(before)===JSON.stringify(after),browser_read_queries:reads,
     browser_write_queries:0,model_calls:0,error:error?.stack??null});
