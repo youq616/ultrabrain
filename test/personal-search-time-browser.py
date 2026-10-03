@@ -182,6 +182,7 @@ def run_context(browser, timezone, width):
             expect(page.get_by_label(label, exact=True)).to_be_visible()
             assert page.locator(selector).get_attribute('type') == 'text'
         expect(page.get_by_label('记忆类型（已存类型）', exact=True)).to_be_visible()
+        expect(page.get_by_role('combobox', name='记忆类型（已存类型）', exact=True)).to_have_attribute('id', 'search-type')
         assert page.locator('#search-type option').evaluate_all('(options)=>options.map(option=>option.value)') == ['', *MEMORY_TYPES]
         page.locator('#search-type').focus()
         page.keyboard.press('Tab')

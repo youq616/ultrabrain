@@ -19,7 +19,7 @@
 </section>
 <div class="columns"><section class="panel"><div class="section-head"><h2 id="view-title">待确认记忆</h2><button id="refresh">刷新</button></div><form id="search-form" autocomplete="off">
 <label for="query">搜索文字<input id="query" placeholder="文字搜索（不是语义搜索）" maxlength="4096"></label>
-<label for="search-type">记忆类型（已存类型）<select id="search-type" aria-describedby="search-type-help"><option value="">全部已存类型</option><option value="identity">身份</option><option value="preference">偏好</option><option value="environment">环境</option><option value="project">项目</option><option value="decision">决策</option><option value="skill">技能</option><option value="error">错误经验</option><option value="goal">目标</option><option value="experience">经验</option></select></label>
+<label for="search-type"><span id="search-type-label">记忆类型（已存类型）</span><select id="search-type" aria-describedby="search-type-help" aria-labelledby="search-type-label"><option value="">全部已存类型</option><option value="identity">身份</option><option value="preference">偏好</option><option value="environment">环境</option><option value="project">项目</option><option value="decision">决策</option><option value="skill">技能</option><option value="error">错误经验</option><option value="goal">目标</option><option value="experience">经验</option></select></label>
 <p class="note" id="search-type-help">按记录当前已存的一种类型筛选；“全部”不限制类型。不自动分类，也不更改右侧编辑器的类型。修改后请点击“搜索”应用。</p>
 <label for="search-project">搜索项目（精确标识，可留空）<input id="search-project" type="text" maxlength="96" spellcheck="false" aria-describedby="search-project-help" placeholder="例如 Project_A"></label>
 <p class="note" id="search-project-help">留空查询全部可见项目和全局记录；填写后只查该项目，不含全局。项目标识区分大小写，限 1–96 位 ASCII 字母、数字、下划线或连字符，不忽略空白。不更改右侧记忆编辑器的项目。</p>

@@ -199,6 +199,8 @@ test('search selector offers All and exactly the canonical stored types independ
  const select=/<select id="search-type"[^>]*>([\s\S]*?)<\/select>/.exec(html);assert.ok(select);
  assert.deepEqual([...select[1].matchAll(/<option value="([^"]*)"/g)].map(match=>match[1]),['',...PERSONAL_MEMORY_TYPES]);
  assert.match(html,/<label for="search-type">/);assert.match(html,/id="search-type" aria-describedby="search-type-help"/);
+ assert.match(html,/<span id="search-type-label">记忆类型（已存类型）<\/span>/);
+ assert.match(select[0],/aria-labelledby="search-type-label"/);
  assert.match(html,/<select id="type">/);
 });
 for(const type of ['',...PERSONAL_MEMORY_TYPES])test('stored type exact canonical payload and nested frozen authority '+JSON.stringify(type),async()=>{
