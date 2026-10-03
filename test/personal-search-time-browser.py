@@ -3,6 +3,7 @@ Native mode proves PostgreSQL results. Synthetic HTTP mode is explicitly NOT DB 
 Route interception below delays/fails actual responses only; it never invents result rows.
 """
 import json
+import hashlib
 import os
 import re
 import time
@@ -12,13 +13,19 @@ from playwright.sync_api import sync_playwright, expect
 
 ORIGIN = os.environ['ULTRABRAIN_BROWSER_ORIGIN']
 TOKEN = os.environ['ULTRABRAIN_BROWSER_TOKEN']
-ROWS = json.loads(os.environ['ULTRABRAIN_SEARCH_TIME_EXPECTED'])
+ROWS_PATH = Path(os.environ['ULTRABRAIN_SEARCH_TIME_EXPECTED_FILE'])
+ROWS_BYTES = ROWS_PATH.read_bytes()
+assert len(ROWS_BYTES) <= 1048576, 'Bound synthetic fixture metadata'
+ROWS = json.loads(ROWS_BYTES)
+assert isinstance(ROWS, list) and len(ROWS) == 1512
+MEMORY_TYPES = ['identity', 'preference', 'environment', 'project', 'decision', 'skill', 'error', 'goal', 'experience']
 MODE = os.environ['ULTRABRAIN_SEARCH_TIME_MODE']
 ARTIFACTS = Path(os.environ['ULTRABRAIN_SEARCH_TIME_ARTIFACT_DIR'])
 ARTIFACTS.mkdir(parents=True, exist_ok=True)
 LOWER = '2024-11-03T06:30:00.123456Z'
 UPPER = '2024-11-03T06:30:00.123458Z'
-REPORT = {'mode': MODE, 'passed': False, 'contexts': [], 'model_calls': 0, 'write_requests': 0}
+REPORT = {'mode': MODE, 'passed': False, 'contexts': [], 'model_calls': 0, 'write_requests': 0,
+          'fixture_metadata': {'file': ROWS_PATH.name, 'rows': len(ROWS), 'sha256': hashlib.sha256(ROWS_BYTES).hexdigest()}}
 
 
 def canonical(value):
@@ -29,10 +36,11 @@ def canonical(value):
     return whole + '.' + fraction.ljust(6, '0') + 'Z'
 
 
-def expected_rows(status, query='', lower='', upper='', offset=0, project=''):
+def expected_rows(status, query='', lower='', upper='', offset=0, project='', memory_type=''):
     # Independent oracle: declarative seed metadata and Python sorting, never server output.
     rows = [row for row in ROWS if row['visible'] and row['status'] == status
             and (not project or row['project_id'] == project)
+            and (not memory_type or row['type'] == memory_type)
             and query.lower() in row['content'].lower()
             and (not lower or row['updated_at'] >= canonical(lower))
             and (not upper or row['updated_at'] < canonical(upper))]
@@ -78,12 +86,14 @@ def run_context(browser, timezone, width):
             ids.append(match.group(0))
         return ids
 
-    def assert_results(status, query='', lower='', upper='', offset=0, project=''):
-        wanted = expected_rows(status, query, lower, upper, offset, project)
+    def assert_results(status, query='', lower='', upper='', offset=0, project='', memory_type=''):
+        wanted = expected_rows(status, query, lower, upper, offset, project, memory_type)
         expect(page.locator('#export')).to_be_enabled()
         expect(page.locator('#results article')).to_have_count(len(wanted))
         assert read_ids() == [row['id'] for row in wanted], 'Result IDs/order differ from independent fixture oracle'
         assert page.locator('#results .memory-content').all_text_contents() == [row['content'] for row in wanted]
+        actual = page.evaluate('current.memories.map(row=>({id:row.id,type:row.type,project_id:row.project_id,content:row.content}))')
+        assert actual == [{key: row[key] for key in ['id', 'type', 'project_id', 'content']} for row in wanted]
         # Hidden foreign source/identity records must never appear, even with identical bounds/content.
         assert not set(read_ids()) & {row['id'] for row in ROWS if not row['visible']}
         if offset == 0:
@@ -92,8 +102,10 @@ def run_context(browser, timezone, width):
             expect(page.locator('#prev')).to_be_enabled()
         return wanted
 
-    def expected_input(status, query='', lower='', upper='', offset=0, project=''):
+    def expected_input(status, query='', lower='', upper='', offset=0, project='', memory_type=''):
         value = {'query': query, 'status': status, 'offset': offset, 'limit': 20, 'budget_bytes': 131072}
+        if memory_type:
+            value['types'] = [memory_type]
         if project:
             value['project_id'] = project
         if lower:
@@ -102,10 +114,11 @@ def run_context(browser, timezone, width):
             value['updated_before'] = canonical(upper)
         return value
 
-    def submit(status='candidate', query='', lower='', upper='', keyboard=False, project=''):
+    def submit(status='candidate', query='', lower='', upper='', keyboard=False, project='', memory_type=''):
         # Make criteria dirty before status navigation so drafts cannot auto-apply.
         for selector, value in [('#query', query), ('#updated-from', lower), ('#updated-before', upper), ('#search-project', project)]:
             page.locator(selector).fill(value)
+        page.locator('#search-type').select_option(memory_type)
         current_status = page.locator('[data-view][aria-current="page"]').get_attribute('data-view')
         if current_status != status:
             page.locator('[data-view="' + status + '"]').click()
@@ -119,21 +132,23 @@ def run_context(browser, timezone, width):
         assert response.value.ok and response.value.json()['ok']
         expect(page.locator('#search-applied')).to_contain_text('已应用：')
         assert len(requests()) == before + 1
-        assert requests()[-1] == expected_input(status, query, lower, upper, project=project)
-        assert_results(status, query, lower, upper, project=project)
+        assert requests()[-1] == expected_input(status, query, lower, upper, project=project, memory_type=memory_type)
+        assert_results(status, query, lower, upper, project=project, memory_type=memory_type)
+        expect(page.locator('#search-type')).to_have_value(memory_type)
+        expect(page.locator('#search-applied')).to_contain_text('（' + memory_type + '）' if memory_type else '全部已存类型')
         expect(page.locator('#search-project')).to_have_value(project)
         expect(page.locator('#search-applied')).to_contain_text(project + '（仅该项目，不含全局）' if project else '全部可见（含全局）')
         expect(page.locator('#updated-from')).to_have_value(lower)
         expect(page.locator('#updated-before')).to_have_value(upper)
         return requests()[-1]
 
-    def export_page(expected, status, query='', lower='', upper='', offset=0, project=''):
+    def export_page(expected, status, query='', lower='', upper='', offset=0, project='', memory_type=''):
         with page.expect_download() as download:
             page.locator('#export').click()
         data = json.loads(Path(download.value.path()).read_text(encoding='utf8'))
         assert data['search'] == expected
         assert data['complete'] is False and data['view'] == status
-        assert [row['id'] for row in data['result']['memories']] == [row['id'] for row in expected_rows(status, query, lower, upper, offset, project)]
+        assert [row['id'] for row in data['result']['memories']] == [row['id'] for row in expected_rows(status, query, lower, upper, offset, project, memory_type)]
         assert TOKEN not in json.dumps(data), 'Console token must never enter page exports'
         assert 'history' not in data and 'events' not in data
         for row in data['result']['memories']:
@@ -141,6 +156,9 @@ def run_context(browser, timezone, width):
             assert 'updated_at' in row and 'created_at' in row
             spec = next(spec for spec in ROWS if spec['id'] == row['id'])
             assert row['project_id'] == spec['project_id']
+            assert row['type'] == spec['type']
+            if memory_type:
+                assert row['type'] == memory_type
             if project:
                 assert row['project_id'] == project
         return data
@@ -163,6 +181,11 @@ def run_context(browser, timezone, width):
         for selector, label in [('#updated-from', '修改时间起点 UTC（包含）'), ('#updated-before', '修改时间终点 UTC（不包含）')]:
             expect(page.get_by_label(label, exact=True)).to_be_visible()
             assert page.locator(selector).get_attribute('type') == 'text'
+        expect(page.get_by_label('记忆类型（已存类型）', exact=True)).to_be_visible()
+        assert page.locator('#search-type option').evaluate_all('(options)=>options.map(option=>option.value)') == ['', *MEMORY_TYPES]
+        page.locator('#search-type').focus()
+        page.keyboard.press('Tab')
+        expect(page.locator('#search-project')).to_be_focused()
         expect(page.get_by_label('搜索项目（精确标识，可留空）', exact=True)).to_be_visible()
         assert page.locator('#search-project').get_attribute('type') == 'text'
         page.locator('#search-project').focus()
@@ -192,10 +215,66 @@ def run_context(browser, timezone, width):
             assert read_ids() == []
         submit('active', 'TIME_NEEDLE', LOWER, UPPER, project='Project_A')
         export_page(requests()[-1], 'active', 'TIME_NEEDLE', LOWER, UPPER, project='Project_A')
-        submit('active', 'TIME_NEEDLE', LOWER, UPPER)
-        all_projects = {row['project_id'] for row in expected_rows('active', 'TIME_NEEDLE', LOWER, UPPER)}
+        submit('active', 'TIME_NEEDLE', LOWER, UPPER, memory_type='preference')
+        all_projects = {row['project_id'] for row in expected_rows('active', 'TIME_NEEDLE', LOWER, UPPER, memory_type='preference')}
         assert all_projects == {None, 'Project_A', 'project_a'}
         passed('valid empty exact-project result, literal IDs, filtered export and clearing to all including global')
+
+        # Stored types are declarative fixture data, not classifications or response-derived expectations.
+        for memory_type in ['', *MEMORY_TYPES]:
+            for status in ['candidate', 'active', 'archived']:
+                for project in ['', 'Project_A', 'project_a']:
+                    submit(status, 'TIME_NEEDLE', LOWER, UPPER, project=project, memory_type=memory_type)
+        passed('All plus nine stored types x three statuses x all/exact-case projects; exact singleton versus omitted types')
+        for memory_type in MEMORY_TYPES:
+            for query in ['', 'TIME_NEEDLE']:
+                for lower, upper in [('', ''), (LOWER, ''), ('', UPPER), (LOWER, UPPER)]:
+                    submit('candidate', query, lower, upper, project='Project_A', memory_type=memory_type)
+        passed('each stored type x literal text x four UTC bound choices against independent IDs/type/project oracle')
+        one_microsecond = '2024-11-03T06:30:00.123457Z'
+        submit('archived', 'TIME_NEEDLE', LOWER, one_microsecond, project='Project_A')
+        mixed = export_page(requests()[-1], 'archived', 'TIME_NEEDLE', LOWER, one_microsecond, project='Project_A')
+        assert len(mixed['result']['memories']) == 18
+        assert {row['type'] for row in mixed['result']['memories']} == set(MEMORY_TYPES)
+        submit('active', 'TIME_NEEDLE', LOWER, UPPER, project='Project_A', memory_type='decision')
+        export_page(requests()[-1], 'active', 'TIME_NEEDLE', LOWER, UPPER, project='Project_A', memory_type='decision')
+        passed('deterministic eighteen-row All-types export contains all nine types; selected-type export remains exact')
+
+        for value in ['unknown', 'Preference', ' preference', 'preference ', 'preference\n', 'constructor', 'toString', 'hasOwnProperty', '__proto__']:
+            submit(memory_type='preference')
+            # Inject a selected invalid option; assigning an unknown native-select value alone would become All.
+            page.evaluate("value => {const select=document.getElementById('search-type'),option=new Option(value,value);option.dataset.fixtureInvalid='true';select.add(option);select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));}", value)
+            count = len(requests())
+            page.locator('#search-form button[type="submit"]').click()
+            expect(page.locator('#search-applied')).to_contain_text('条件无效')
+            cleared()
+            no_request_since(count)
+            page.locator('#search-type option[data-fixture-invalid]').evaluate_all('(options)=>options.forEach(option=>option.remove())')
+        submit(memory_type='goal')
+        count = len(requests())
+        page.locator('#search-type').select_option('decision')
+        page.locator('#search-type').select_option('goal')
+        page.locator('#refresh').click()
+        cleared()
+        no_request_since(count)
+        # Keyboard changes the native select; only explicit form submission sends a query.
+        page.locator('#search-type').focus()
+        page.keyboard.press('Home')
+        page.keyboard.press('ArrowDown')
+        expect(page.locator('#search-type')).to_have_value('identity')
+        no_request_since(count)
+        submit(memory_type='goal', keyboard=True)
+        for status in ['active', 'archived', 'candidate']:
+            with page.expect_response(lambda response: response.url.endswith('/api/call') and response.request.post_data_json.get('operation') == 'search'):
+                page.locator('[data-view="' + status + '"]').click()
+            assert requests()[-1] == expected_input(status, memory_type='goal')
+            assert_results(status, memory_type='goal')
+        with page.expect_response(lambda response: response.url.endswith('/api/call') and response.request.post_data_json.get('operation') == 'search'):
+            page.locator('#refresh').click()
+        assert requests()[-1] == expected_input('candidate', memory_type='goal')
+        submit(memory_type='')
+        assert 'types' not in requests()[-1]
+        passed('tampered invalid type options never widen; dirty/reverted native select, keyboard and status/refresh/clear semantics')
 
         for lower, upper in [
             ('2024-11-03T06:30:00.123456Z', '2024-11-03T06:30:00.123457Z'),
@@ -207,23 +286,23 @@ def run_context(browser, timezone, width):
         passed('adjacent microseconds, spring DST date, fall DST date, six-digit canonical payloads')
 
         page_lower, page_upper = '2024-11-03T06:30:00.1Z', '2024-11-03T06:30:01Z'
-        for page_project in ['', 'Project_A']:
-            submit('candidate', 'TIME_NEEDLE', page_lower, page_upper, project=page_project)
+        for page_project, page_type in [('', ''), ('Project_A', ''), ('Project_A', 'decision')]:
+            submit('candidate', 'TIME_NEEDLE', page_lower, page_upper, project=page_project, memory_type=page_type)
             first_ids = read_ids()
             assert len(first_ids) == 20
             expect(page.locator('#next')).to_be_enabled()
             with page.expect_response(lambda response: response.url.endswith('/api/call') and response.request.post_data_json.get('operation') == 'search'):
                 page.locator('#next').click()
             expect(page.locator('#search-applied')).to_contain_text('实时第 2 页')
-            assert requests()[-1] == expected_input('candidate', 'TIME_NEEDLE', page_lower, page_upper, offset=20, project=page_project)
-            assert_results('candidate', 'TIME_NEEDLE', page_lower, page_upper, offset=20, project=page_project)
+            assert requests()[-1] == expected_input('candidate', 'TIME_NEEDLE', page_lower, page_upper, offset=20, project=page_project, memory_type=page_type)
+            assert_results('candidate', 'TIME_NEEDLE', page_lower, page_upper, offset=20, project=page_project, memory_type=page_type)
             assert not set(first_ids) & set(read_ids())
-            export_page(requests()[-1], 'candidate', 'TIME_NEEDLE', page_lower, page_upper, offset=20, project=page_project)
+            export_page(requests()[-1], 'candidate', 'TIME_NEEDLE', page_lower, page_upper, offset=20, project=page_project, memory_type=page_type)
             with page.expect_response(lambda response: response.url.endswith('/api/call') and response.request.post_data_json.get('operation') == 'search'):
                 page.locator('#prev').click()
             expect(page.locator('#search-applied')).to_contain_text('实时第 1 页')
-            assert_results('candidate', 'TIME_NEEDLE', page_lower, page_upper, project=page_project)
-        passed('more than twenty exact-project rows, global/other-project distractors, tie-break order, next/previous and page-two export')
+            assert_results('candidate', 'TIME_NEEDLE', page_lower, page_upper, project=page_project, memory_type=page_type)
+        passed('more than twenty selected-type/exact-project rows, other-type/global/other-project distractors, tie-break order, next/previous and page-two export')
 
         for value in [' Project_A', 'Project_A ', 'a.b', 'a/b', '项目', 'a' * 97]:
             submit(project='Project_A')
@@ -282,8 +361,9 @@ def run_context(browser, timezone, width):
         page.locator('#provenance').fill('UNSAVED_PROVENANCE')
         page.locator('#importance').select_option('high')
         page.locator('#project').fill('Independent_Editor')
+        page.locator('#type').select_option('environment')
         page.locator('#consent').check()
-        editor = page.evaluate("JSON.stringify({editing,draftConfidence,pending,fields:['content','provenance','importance','visibility','project'].map(id=>document.getElementById(id).value),consent:document.getElementById('consent').checked})")
+        editor = page.evaluate("JSON.stringify({editing,draftConfidence,pending,fields:['content','type','provenance','importance','visibility','project'].map(id=>document.getElementById(id).value),consent:document.getElementById('consent').checked})")
         for selector, value in [('#query', 'OTHER'), ('#updated-from', '2024-01-01T00:00:00Z'), ('#updated-before', ''), ('#search-project', 'project_a')]:
             count = len(requests())
             page.locator(selector).fill(value)
@@ -293,13 +373,21 @@ def run_context(browser, timezone, width):
             page.locator('[data-view="active"]').click()
             page.locator('[data-view="candidate"]').click()
             no_request_since(count)
-            assert page.evaluate("JSON.stringify({editing,draftConfidence,pending,fields:['content','provenance','importance','visibility','project'].map(id=>document.getElementById(id).value),consent:document.getElementById('consent').checked})") == editor
-        submit('candidate', 'OTHER', LOWER, UPPER)
+            assert page.evaluate("JSON.stringify({editing,draftConfidence,pending,fields:['content','type','provenance','importance','visibility','project'].map(id=>document.getElementById(id).value),consent:document.getElementById('consent').checked})") == editor
+        count = len(requests())
+        page.locator('#search-type').select_option('goal')
+        cleared()
+        page.locator('#refresh').click()
+        page.locator('[data-view="active"]').click()
+        page.locator('[data-view="candidate"]').click()
+        no_request_since(count)
+        assert page.evaluate("JSON.stringify({editing,draftConfidence,pending,fields:['content','type','provenance','importance','visibility','project'].map(id=>document.getElementById(id).value),consent:document.getElementById('consent').checked})") == editor
+        submit('candidate', 'OTHER', LOWER, UPPER, memory_type='goal')
         assert requests()[-1]['offset'] == 0
         passed('all draft edits invalidate results/paging/export; refresh/navigation never apply drafts; editor/revision/confidence/consent preserved')
 
         # Unsignalled DOM replacements must be rechecked before page or export use.
-        for field, value in [('updated-from', '2024-01-01T00:00:00Z'), ('search-project', 'Project_A')]:
+        for field, value in [('updated-from', '2024-01-01T00:00:00Z'), ('search-project', 'Project_A'), ('search-type', 'goal')]:
             for action in ['#next', '#export']:
                 submit('candidate', 'TIME_NEEDLE')
                 count, download_count = len(requests()), len(downloads)
@@ -314,7 +402,7 @@ def run_context(browser, timezone, width):
         # of browser evidence; VM barriers separately exercise cancellation-loses-race.
         # After cancellation, fulfill/abort below do not deliver a stale body to the UI.
         for outcome in ['success', 'error']:
-            for action in ['edit', 'project', 'project-revert', 'navigate', 'refresh', 'lock']:
+            for action in ['edit', 'project', 'project-revert', 'type', 'type-revert', 'navigate', 'refresh', 'lock']:
                 submit('candidate', 'TIME_NEEDLE', LOWER, UPPER)
                 held, fired = [], []
 
@@ -335,6 +423,10 @@ def run_context(browser, timezone, width):
                         page.locator('#search-project').fill('Project_A')
                         if action == 'project-revert':
                             page.locator('#search-project').fill('')
+                    elif action in ['type', 'type-revert']:
+                        page.locator('#search-type').select_option('goal')
+                        if action == 'type-revert':
+                            page.locator('#search-type').select_option('')
                     elif action == 'navigate':
                         page.locator('[data-view="lookup"]').click()
                     elif action == 'refresh':
@@ -379,17 +471,19 @@ def run_context(browser, timezone, width):
                     expect(page.locator('#search-applied')).to_contain_text('已应用：')
         passed('exact held fetch cancelled after edit/navigation/refresh/lock; later fulfill/abort leaves newer UI intact; VM covers delivered stale results')
 
-        submit('active', 'TIME_NEEDLE', LOWER, UPPER, project='Project_A')
+        submit('active', 'TIME_NEEDLE', LOWER, UPPER, project='Project_A', memory_type='decision')
+        record['timezone_values'].append(requests()[-1])
         for screenshot_width, label in [(1320, 'desktop'), (390, 'narrow')]:
             page.set_viewport_size({'width': screenshot_width, 'height': 1000})
             page.locator('#search-form').scroll_into_view_if_needed()
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), 'Horizontal overflow at ' + label
-            for selector in ['#search-project', '#updated-from', '#updated-before']:
+            for selector in ['#search-type', '#search-project', '#updated-from', '#updated-before']:
                 box = page.locator(selector).bounding_box()
                 assert box['x'] >= 0 and box['x'] + box['width'] <= screenshot_width + 1
             page.screenshot(path=str(ARTIFACTS / (tag + '-' + label + '-success.png')), full_page=True)
         passed('1320 desktop and 390 narrow control layout screenshots')
         assert all(request['operation'] in ['info', 'search'] for request in record['requests']), 'A browser write/model or unrelated read was attempted'
+        assert len(requests()) < 400, 'Stay within the reviewed per-context search budget'
         assert not errors, errors
         record['passed'] = True
     except Exception:
