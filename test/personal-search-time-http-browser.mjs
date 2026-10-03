@@ -11,6 +11,7 @@ import {startPersonalConsole} from '../src/personal-console.mjs';
 import {personalPrincipal} from '../src/personal-memory-store.mjs';
 
 export const root=fileURLToPath(new URL('../',import.meta.url));
+export const memoryTypes=Object.freeze(['identity','preference','environment','project','decision','skill','error','goal','experience']);
 export const lower='2024-11-03T06:30:00.123456Z',upper='2024-11-03T06:30:00.123458Z';
 /** Expectations originate here, never from search results or the SQL under test. */
 export function specifications(){
@@ -32,9 +33,9 @@ export function specifications(){
   }
   add('peer-shared-upper','active',upper,{owner:'peer',visibility:'source'});
   for(const status of ['candidate','active','archived'])add('owner-shared-'+status,status,lower,{visibility:'source'});
-  // Identical content and times across global/case-distinct projects are deliberate distractors.
-  return [null,'Project_A','project_a'].flatMap(project_id=>rows.map(row=>({...row,
-    key:(project_id??'global')+'-'+row.key,project_id})));
+  // Identical content and times across types/global/case-distinct projects are deliberate distractors.
+  return memoryTypes.flatMap(type=>[null,'Project_A','project_a'].flatMap(project_id=>rows.map(row=>({...row,
+    key:type+'-'+(project_id??'global')+'-'+row.key,type,project_id}))));
 }
 export function artifactDirectory(){
   const directory=resolve(process.env.ULTRABRAIN_SEARCH_TIME_ARTIFACT_DIR??'/tmp/ultrabrain-search-time-browser');
@@ -42,10 +43,14 @@ export function artifactDirectory(){
 }
 export function saveReport(name,value){writeFileSync(join(artifactDirectory(),name),JSON.stringify(value,null,2)+'\n');}
 export async function runBrowser(service,token,rows,mode){
+  // Synthetic oracle metadata exceeds the OS single-environment-string limit.
+  const metadata=JSON.stringify(rows,null,2)+'\n',expected=join(artifactDirectory(),'fixture-rows.json');
+  assert.ok(Array.isArray(rows)&&rows.length<=2000&&Buffer.byteLength(metadata)<=1048576,'Bound synthetic fixture metadata');
+  writeFileSync(expected,metadata);
   const child=spawn(process.env.ULTRABRAIN_BROWSER_PYTHON??'python3',[join(root,'test/personal-search-time-browser.py')],{
     cwd:root,env:{...process.env,ULTRABRAIN_BROWSER_ORIGIN:service.origin,ULTRABRAIN_BROWSER_TOKEN:token,
       ULTRABRAIN_SEARCH_TIME_ARTIFACT_DIR:artifactDirectory(),ULTRABRAIN_SEARCH_TIME_MODE:mode,
-      ULTRABRAIN_SEARCH_TIME_EXPECTED:JSON.stringify(rows)},stdio:['ignore','inherit','inherit']});
+      ULTRABRAIN_SEARCH_TIME_EXPECTED_FILE:expected},stdio:['ignore','inherit','inherit']});
   const timer=setTimeout(()=>child.kill('SIGKILL'),240000);
   try{assert.equal(await new Promise((done,fail)=>{child.once('error',fail);child.once('close',done);}),0,'Search-time Chromium validation failed');}
   finally{clearTimeout(timer);}
@@ -64,10 +69,13 @@ export function syntheticFixture(){
     const [, ,status,types,project,agent,query,limit,offset,from,before]=args;
     assert.ok(project===null||typeof project==='string'&&/^[A-Za-z0-9_-]{1,96}$/.test(project));
     assert.ok(sql.includes('($5::text IS NULL OR project_id=$5)'));assert.equal(agent,null);assert.equal(limit,20);
-    return rows.filter(row=>row.visible&&row.status===status&&types.includes('preference')&&(project===null||row.project_id===project)&&
+    assert.ok(sql.includes('type=ANY($4::text[])'));
+    assert.ok(Array.isArray(types)&&types.every(type=>memoryTypes.includes(type)));
+    assert.ok(types.length===1||JSON.stringify(types)===JSON.stringify([...memoryTypes].sort()),'All canonical types or one selected stored type');
+    return rows.filter(row=>row.visible&&row.status===status&&types.includes(row.type)&&(project===null||row.project_id===project)&&
       row.content.toLowerCase().includes(query.toLowerCase())&&(!from||row.updated_at>=from)&&(!before||row.updated_at<before))
       .sort((a,b)=>a.updated_at>b.updated_at?-1:a.updated_at<b.updated_at?1:a.id<b.id?-1:1)
-      .slice(offset,offset+limit).map(row=>({id:row.id,type:'preference',origin_kind:'agent',content:row.content,
+      .slice(offset,offset+limit).map(row=>({id:row.id,type:row.type,origin_kind:'agent',content:row.content,
         content_hash:createHash('sha256').update(row.content).digest('hex'),confidence:0.625,importance:'normal',
         provenance:'Synthetic browser fixture only',agent_id:'search-time-fixture',project_id:row.project_id,status:row.status,
         visibility:row.visibility,revision:row.status==='candidate'?1:2,created_at:'2026-01-01T00:00:00.000Z',
