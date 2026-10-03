@@ -20,7 +20,7 @@ export async function captureContentionRound(){
  const input={format:1,source:'synthetic',workspace,outbox_directory:join(root,'outbox'),allow_capture:true,
   expected_actor:'a'.repeat(64),expected_instance:'11111111-1111-4111-8111-111111111111',
   server:{transport:'stdio',command:'never-executed',args:[]}};
-  batch=captureWorkerBatch({parseReport:contentionWorkerReport,
+  batch=captureWorkerBatch({parseReport:contentionWorkerReport,contentionProgress:true,
    spawnWorker:()=>spawn(process.execPath,[workerPath],{stdio:['ignore','pipe','pipe','ipc']})});
   stage='ready';await batch.ready();
   stage='writers';batch.start(worker=>({input,worker}));
@@ -40,6 +40,9 @@ export async function captureContentionRound(){
   }
  }catch(error){result={passed:false,stage,timed_out:batch?.timedOut??false,error:captureProcessDiagnostic(error)};}
  finally{
+  // Freeze already-received history before the unchanged shutdown; never wait
+  // for progress. Instrumented passes cannot clear the historical failure.
+  if(result?.passed===false&&stage==='writers'&&batch)result.progress=batch.freezeProgress();
   const closed=batch?await batch.shutdown():{outcomes:[],all_closed:true,timed_out:false};
   if(result?.passed===false&&!result.outcomes)result.outcomes=closed.outcomes;
   if(!closed.all_closed)result={...result,passed:false,workers_closed:false,cleanup_skipped:true};

@@ -2,6 +2,7 @@
  * IPC acknowledgement is not process completion. Only close plus a validated
  * final report can pass. No retries, arbitrary commands or user paths here. */
 import {performance} from 'node:perf_hooks';
+import {projectContentionProgressSummary, readContentionProgress} from './capture-contention-progress.mjs';
 const SIGNALS = new Set(['SIGKILL', 'SIGTERM', 'SIGINT', 'SIGABRT', 'SIGSEGV']);
 const unavailable = () => Error('worker_unavailable');
 const deferred = () => {
@@ -17,17 +18,30 @@ const invalid = () => ({ok: false, code: 'invalid_worker_report'});
  * The timeout bounds work; shutdown allows up to two more seconds for close.
  * Unconfirmed shutdown never permits removal of the scratch directory. */
 export function captureWorkerBatch({spawnWorker, parseReport, count = 8,
-  staged = false, timeoutMs = 15000} = {}) {
+  staged = false, timeoutMs = 15000, contentionProgress = false} = {}) {
   if (typeof spawnWorker !== 'function' || typeof parseReport !== 'function' ||
       !Number.isSafeInteger(count) || count < 1 || count > 8 ||
-      typeof staged !== 'boolean' || !Number.isSafeInteger(timeoutMs) ||
+      typeof staged !== 'boolean' || typeof contentionProgress !== 'boolean' ||
+      (contentionProgress && staged) || !Number.isSafeInteger(timeoutMs) ||
       timeoutMs < 1 || timeoutMs > 15000) throw Error('invalid_worker_batch');
   const records = [];
+  // The sole bounded protocol state remains authoritative even if optional
+  // summary projection fails. No optional observer owns sequence validation.
+  const progressSlots = contentionProgress ? Array.from({length: 8}, (_, worker) =>
+    ({worker, received: 0, gap: false, last: null, receipt: 0})) : null;
+  let progressOrdinal = 0, progressSnapshot;
+  const freezeProgress = cutoff => {
+    if (!contentionProgress) return undefined;
+    if (progressSnapshot) return progressSnapshot;
+    try { return progressSnapshot = projectContentionProgressSummary(progressSlots, cutoff); }
+    catch { return progressSnapshot = Object.freeze({version: 1, cutoff: 'unavailable', best_effort: true, reason: 'diagnostic_unavailable'}); }
+  };
   const deadline = performance.now() + timeoutMs;
   let timedOut = false, stopping = false, shutdownPromise;
   const phaseError = deferred();
   const fail = (r, code) => {
     r.issue ??= code;
+    freezeProgress('first_failure');
     r.ready.reject(unavailable());
     r.staged.reject(unavailable());
     phaseError.reject(unavailable());
@@ -58,7 +72,7 @@ export function captureWorkerBatch({spawnWorker, parseReport, count = 8,
       signal: SIGNALS.has(r.signal) ? r.signal : null,
       valid: r.closed && r.exited && r.finalSent && !r.issue && !r.stderr && !r.overflow &&
         r.exit === 0 && r.signal === null && r.pendingSends === 0 && report.ok === true,
-      result: report, stderr_seen: r.stderr, output_truncated: r.overflow,
+      result: report, ...(contentionProgress ? {progress_transport: report.progress_transport ?? {status: 'unavailable'}} : {}), stderr_seen: r.stderr, output_truncated: r.overflow,
       lifecycle: {ready: r.readySeen, staged: r.stagedSeen, closed: r.closed,
         issue: r.issue, termination_requested: r.killRequested,
         termination_unconfirmed: r.killUnconfirmed, send_callbacks_pending: r.pendingSends}};
@@ -79,6 +93,19 @@ export function captureWorkerBatch({spawnWorker, parseReport, count = 8,
     child.on('message', message => {
       if (r.closed || r.issue || stopping) return;
       const keys = message && typeof message === 'object' && !Array.isArray(message) ? Object.keys(message) : [];
+      if (contentionProgress && r.readySeen && r.finalSent && r.expected === null &&
+          keys.length === 1 && keys[0] === 'contention_progress') {
+        const slot = progressSlots[r.worker];
+        let frame;
+        try { frame = readContentionProgress(message, slot.last); } catch {}
+        // Unverifiable IPC follows the existing rejection path, never success.
+        if (!frame || slot.received >= 48 || progressOrdinal >= 384) { fail(r, 'unexpected_message'); stopRecord(r); return; }
+        slot.gap ||= frame[1] !== (slot.last?.[1] ?? 0) + 1;
+        slot.received++; slot.last = frame; slot.receipt = ++progressOrdinal;
+        // These bounded live slots keep validating active peers after cutoff;
+        // they cannot alter the already-frozen primitive snapshot.
+        return;
+      }
       if (keys.length !== 1 || keys[0] !== r.expected || message[r.expected] !== true) {
         fail(r, 'unexpected_message'); stopRecord(r); return;
       }
@@ -191,6 +218,7 @@ export function captureWorkerBatch({spawnWorker, parseReport, count = 8,
     resume: makeMessage => { if (!staged) throw Error('invalid_worker_barrier'); send(makeMessage, true); },
     outcomes: async () => { await Promise.race([allDone, phaseError.promise]); check(); return records.map(project); },
     shutdown,
+    freezeProgress: () => freezeProgress('failed_outcomes'),
     get timedOut() { return timedOut; }
   };
 }
