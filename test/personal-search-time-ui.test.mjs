@@ -11,7 +11,7 @@ const from='2024-03-10T07:00:00.000001Z',before='2024-03-10T07:00:00.000002Z';
 const id='11111111-1111-4111-8111-111111111111';
 const row=(content='SYNTHETIC')=>({id,content,type:'preference',origin_kind:'agent',revision:3,status:'candidate',owned_by_caller:true,
   visibility:'private',confidence:0.4,provenance:'Synthetic fixture',project_id:null,updated_at:from});
-const result=(body,content='SYNTHETIC',next=null)=>({source_id:'selected',status:body.input.status,memories:[{...row(content),project_id:body.input.project_id??null}],next_offset:next});
+const result=(body,content='SYNTHETIC',next=null)=>({source_id:'selected',status:body.input.status,memories:[{...row(content),project_id:body.input.project_id??null,agent_id:body.input.agent_id??'search-time-fixture'}],next_offset:next});
 function fixture(route=async body=>result(body)){
  const nodes=new Map(),calls=[],exports=[],signals=[];
  function element(){return {value:'',checked:false,dataset:{},hidden:false,disabled:false,textContent:'',children:[],handlers:new Map(),
@@ -28,7 +28,7 @@ function fixture(route=async body=>result(body)){
  const event=(id,name='click')=>get(id).handlers.get(name)({preventDefault(){}});
  return {get,run,calls,exports,signals,event,load:()=>run('load()'),search:()=>event('search-form','submit'),
   set(id,value,notify=true){get(id).value=value;if(notify)event(id,'input');},
-  criteria(query,lo,hi,project=''){ctx.args=[query,lo,hi,project];return run('searchCriteria(...args)');},
+  criteria(query,lo,hi,project='',agent=''){ctx.args=[query,lo,hi,project,agent];return run('searchCriteria(...args)');},
   async settled(){for(let i=0;i<100&&run('busy');i++)await tick();assert.equal(run('busy'),false);}};
 }
 function plain(value){return JSON.parse(JSON.stringify(value));}
@@ -73,8 +73,8 @@ test('canonical summary and transmission never rewrite raw inputs',async()=>{
  assert.equal(f.exports[0].search.updated_from,f.calls[0].input.updated_from);assert.equal(f.exports[0].complete,false);
  assert.ok(!JSON.stringify(f.exports).includes('SYNTHETIC_SESSION'));
 });
-for(const field of ['query','updated-from','updated-before','search-project'])test('editing '+field+' clears results/paging/export without request and requires explicit search',async()=>{
- const f=fixture(async b=>result(b,'OLD',20));await f.load();f.set(field,field==='query'?'new':field==='search-project'?'Project_A':'2024-01-01T00:00:00Z');
+for(const field of ['query','updated-from','updated-before','search-project','search-agent'])test('editing '+field+' clears results/paging/export without request and requires explicit search',async()=>{
+ const f=fixture(async b=>result(b,'OLD',20));await f.load();f.set(field,field==='query'?'new':field==='search-project'?'Project_A':field==='search-agent'?'Agent_A':'2024-01-01T00:00:00Z');
  assert.equal(f.calls.length,1);assert.equal(f.run('current'),null);assert.equal(f.get('results').children.length,0);
  for(const control of ['prev','next','export'])assert.equal(f.get(control).disabled,true);
  await f.event('refresh');f.run("view='active';offset=0");await f.load();assert.equal(f.calls.length,1);
@@ -95,7 +95,7 @@ test('paging uses immutable applied criteria, search resets page zero, status na
  await f.event('next');await f.search();assert.equal(f.calls.at(-1).input.offset,0);
  f.run("view='archived';offset=0");await f.load();assert.deepEqual(f.calls.at(-1).input,{...first,status:'archived'});
 });
-for(const action of ['next','prev','export'])for(const field of ['query','search-project'])test('unsignalled '+field+' draft edit cannot reuse old '+action,async()=>{
+for(const action of ['next','prev','export'])for(const field of ['query','search-project','search-agent'])test('unsignalled '+field+' draft edit cannot reuse old '+action,async()=>{
  const f=fixture(async b=>result(b,'PAGE',20));await f.load();f.set(field,'UNAPPLIED',false);await f.event(action);
  assert.equal(f.calls.length,1);assert.equal(f.exports.length,0);assert.equal(f.run('current'),null);assert.equal(f.get('export').disabled,true);
 });
@@ -105,7 +105,7 @@ test('hidden search edit preserves unrelated current data, export and pagination
  f.event('export');assert.equal(f.exports.length,1);assert.equal(Object.hasOwn(f.exports[0],'search'),false);
  f.run("view='candidate'");await f.load();assert.equal(f.calls.length,0);
 });
-for(const outcome of ['success','error'])for(const change of ['query','time','project','project-reverted','project-unsignalled','reverted','unsignalled','navigation','refresh','replacement','logout','token','source','offset','write','pending'])
+for(const outcome of ['success','error'])for(const change of ['query','time','project','project-reverted','project-unsignalled','agent','agent-reverted','agent-unsignalled','reverted','unsignalled','navigation','status','refresh','replacement','logout','token','source','offset','write','pending'])
  test('late '+outcome+' ignored after '+change,async()=>{
   let release,first=true;const f=fixture(async body=>{if(body.operation==='search'&&first){first=false;await new Promise(resolve=>release=resolve);if(outcome==='error')throw Error('OLD_FAILURE');return result(body,'OLD');}return result(body,'NEW');});
   const waiting=f.load();await tick();assert.ok(release);
@@ -114,9 +114,13 @@ for(const outcome of ['success','error'])for(const change of ['query','time','pr
   if(change==='project')f.set('search-project','Project_A');
   if(change==='project-reverted'){f.set('search-project','Project_A');f.set('search-project','');}
   if(change==='project-unsignalled')f.set('search-project','Project_A',false);
+  if(change==='agent')f.set('search-agent','Agent_A');
+  if(change==='agent-reverted'){f.set('search-agent','Agent_A');f.set('search-agent','');}
+  if(change==='agent-unsignalled')f.set('search-agent','Agent_A',false);
   if(change==='reverted'){f.set('query','new');f.set('query','');}
   if(change==='unsignalled')f.set('query','new',false);
   if(change==='navigation'){f.run("view='lookup'");await f.load();}
+  if(change==='status'){f.run("view='active';offset=0");await f.load();}
   if(change==='refresh')await f.load();
   if(change==='replacement')await f.search();
   if(change==='logout')f.event('logout');
@@ -127,16 +131,16 @@ for(const outcome of ['success','error'])for(const change of ['query','time','pr
   if(change==='pending')f.run("pending={operation:'update',input:{event_id:'existing'}}");
   f.get('message').textContent='NEW MESSAGE';release();await waiting;await tick();
   assert.doesNotMatch(JSON.stringify(f.run('current')),/OLD/);assert.equal(f.get('message').textContent,'NEW MESSAGE');
-  if(['query','time','project','project-reverted','reverted','navigation','refresh','replacement','logout','write'].includes(change))assert.equal(f.signals[0].aborted,true);
+  if(['query','time','project','project-reverted','agent','agent-reverted','reverted','navigation','status','refresh','replacement','logout','write'].includes(change))assert.equal(f.signals[0].aborted,true);
  });
 test('ordinary criteria edits preserve draft, confidence, expected revision and consent',async()=>{
  const f=fixture();f.run("editing={id:'"+id+"',revision:9};draftConfidence=.41");const draft=f.run('editorReceiptSelection()');
- await f.load();f.set('query','new');f.set('search-project','Project_A');f.set('updated-from',from);await f.search();assert.equal(f.run('editorReceiptSelection()'),draft);
+ await f.load();f.set('query','new');f.set('search-project','Project_A');f.set('search-agent','Agent_A');f.set('updated-from',from);await f.search();assert.equal(f.run('editorReceiptSelection()'),draft);
  assert.equal(f.run('memoryDraft().project_id'),'unsaved-project');assert.equal(f.calls.at(-1).input.project_id,'Project_A');
 });
 test('pending immutable write blocks search and survives criteria edits',async()=>{
  const f=fixture();f.run("pending=Object.freeze({operation:'update',input:Object.freeze({event_id:'ORIGINAL',expected_revision:9}),delivery_unconfirmed:true})");
- const original=f.run('pending');f.set('updated-from',from);f.set('search-project','Project_A');await f.search();await f.load();
+ const original=f.run('pending');f.set('updated-from',from);f.set('search-project','Project_A');f.set('search-agent','Agent_A');await f.search();await f.load();
  assert.equal(f.calls.length,0);assert.equal(f.run('pending'),original);assert.equal(f.run('pending.input.event_id'),'ORIGINAL');assert.equal(f.get('content').value,'UNSAVED');
 });
 test('post-ack busy=true with pending=null reload remains allowed',async()=>{
@@ -147,9 +151,9 @@ test('post-ack reload cannot silently apply dirty criteria',async()=>{
 });
 test('explicit retry aborts outstanding ordinary search but keeps the original event',async()=>{
  let release;const f=fixture(async body=>{if(body.operation==='search')await new Promise(resolve=>release=resolve);else throw Error('synthetic unconfirmed');return result(body);});
- const waiting=f.load();await tick();f.run("pending={operation:'review',input:{event_id:'ORIGINAL',memory_id:'"+id+"',expected_revision:9,status:'archived'},source_id:'selected',sessionCurrent:()=>true,editorUnchanged:()=>false}");
+ f.set('search-agent','Agent_A');const waiting=f.search();await tick();f.run("pending={operation:'review',input:{event_id:'ORIGINAL',memory_id:'"+id+"',expected_revision:9,status:'archived'},source_id:'selected',sessionCurrent:()=>true,editorUnchanged:()=>false}");
  await f.run('submitPending()');assert.equal(f.signals[0].aborted,true);assert.equal(f.run('pending.input.event_id'),'ORIGINAL');release();await waiting;
- assert.equal(f.run('current'),null);assert.equal(f.run('pending.delivery_unconfirmed'),true);
+ assert.equal(f.run('current'),null);assert.equal(f.run('pending.delivery_unconfirmed'),true);assert.equal(f.run('searchApplied.agent_id'),'Agent_A');
 });
 
 for(const value of ['', 'A', 'Project_A', 'project_a', '0-x_Y', 'a'.repeat(96), 'null', 'undefined'])test('search project preserves canonical identifier '+JSON.stringify(value),async()=>{
@@ -187,4 +191,71 @@ test('hidden project draft preserves unrelated current page authority and post-a
  const f=fixture();f.run("view='agents';current={agents:[{agent_id:'synthetic'}]};nextOffset=20");f.get('export').disabled=false;f.get('next').disabled=false;
  f.set('search-project','Project_A');assert.equal(f.run('current.agents[0].agent_id'),'synthetic');assert.equal(f.get('export').disabled,false);assert.equal(f.get('next').disabled,false);
  f.event('export');assert.equal(Object.hasOwn(f.exports[0],'search'),false);f.run("view='candidate';busy=true;pending=null");await f.load();assert.equal(f.calls.length,0);
+});
+
+for(const value of ['', 'A', 'Agent_A', 'agent_a', '0-x_Y', 'a'.repeat(96), 'null', 'undefined', 'constructor', '__proto__'])test('search Agent label preserves exact identifier '+JSON.stringify(value),async()=>{
+ const f=fixture();const actual=f.criteria('literal',from,before,'Project_A',value);
+ assert.ok(Object.isFrozen(actual));assert.equal(actual.agent_id,value||null);
+ assert.equal(actual.agent_id,searchQuery({...value?{agent_id:value}:{},query:'literal'}).agent_id);
+ f.set('search-agent',value);await f.search();assert.equal(f.get('search-agent').value,value);
+ if(value){assert.equal(f.calls[0].input.agent_id,value);assert.ok(f.get('search-applied').textContent.includes(value+'（精确匹配）'));}
+ else{assert.equal(Object.hasOwn(f.calls[0].input,'agent_id'),false);assert.match(f.get('search-applied').textContent,/全部可见标签/);}
+ f.event('export');assert.deepEqual(plain(f.exports[0].search),f.calls[0].input);assert.equal(f.exports[0].complete,false);
+ assert.equal(f.exports[0].result.memories[0].agent_id,value||'search-time-fixture');
+});
+for(const value of [' ', '\t', '\n', 'Agent_A\n', 'Agent_A\r', 'Agent_A\r\n', 'Agent_A\u2028', 'Agent_A\u2029', ' Agent_A', 'Agent_A ',
+ 'a.b', 'a/b', 'a\\b', 'a\0b', 'Agent 标签', 'é', 'a'.repeat(97), 0, false, [], {}, new String('Agent_A'), null])test('invalid Agent label never sends or retains old export '+JSON.stringify(value),async()=>{
+ const f=fixture();await f.load();f.set('search-agent',value);await f.search();
+ assert.equal(f.calls.length,1);assert.equal(f.run('current'),null);assert.match(f.get('search-applied').textContent,/条件无效/);
+ assert.throws(()=>searchQuery({agent_id:value}),{code:'invalid_params'});f.event('export');assert.equal(f.exports.length,0);
+});
+test('Agent UI rejects undefined while backend omitted label remains unconstrained',async()=>{
+ const f=fixture();await f.load();f.set('search-agent',undefined);await f.search();assert.equal(f.calls.length,1);
+ assert.match(f.get('search-applied').textContent,/条件无效/);assert.equal(searchQuery({agent_id:undefined}).agent_id,null);
+ assert.throws(()=>searchQuery({agent_id:''}),{code:'invalid_params'});
+});
+for(const event of ['input','change'])test('Agent '+event+' invalidates immediately and revert still needs explicit search',async()=>{
+ const f=fixture(async b=>result(b,'PAGE',20));await f.load();f.get('search-agent').value='Agent_A';f.event('search-agent',event);
+ assert.equal(f.run('current'),null);for(const id of ['prev','next','export'])assert.equal(f.get(id).disabled,true);
+ f.get('search-agent').value='';f.event('search-agent',event);await f.load();assert.equal(f.calls.length,1);
+ await f.search();assert.equal(f.calls.length,2);assert.equal(Object.hasOwn(f.calls.at(-1).input,'agent_id'),false);
+});
+test('frozen Agent/project/time criteria and page input bind paging/export/status/refresh',async()=>{
+ const f=fixture(async b=>result(b,'PAGE',b.input.offset===0?20:null));
+ f.set('search-agent','Agent_A');f.set('search-project','Project_A');f.set('query','literal');f.set('updated-from',from);f.set('updated-before',before);await f.search();
+ const first=plain(f.calls[0].input);assert.ok(f.run('Object.isFrozen(searchApplied)&&Object.isFrozen(searchPage.input)'));
+ assert.equal(f.run("Reflect.set(searchApplied,'agent_id','changed')"),false);assert.equal(f.run("Reflect.set(searchPage.input,'agent_id','changed')"),false);
+ assert.equal(f.run('searchApplied.agent_id'),'Agent_A');await f.event('next');assert.deepEqual(f.calls[1].input,{...first,offset:20});
+ f.event('export');assert.deepEqual(plain(f.exports[0].search),{...first,offset:20});assert.equal(f.exports[0].complete,false);
+ await f.event('prev');assert.deepEqual(f.calls[2].input,first);await f.event('next');await f.search();assert.deepEqual(f.calls.at(-1).input,first);
+ for(const status of ['active','archived','candidate']){f.run("view='"+status+"';offset=0");await f.load();assert.deepEqual(f.calls.at(-1).input,{...first,status});}
+ await f.event('refresh');assert.deepEqual(f.calls.at(-1).input,first);
+ f.get('project').value='editor-only';f.get('type').value='environment';f.event('memory-form','input');
+ assert.equal(f.run('current.memories.length'),1);assert.equal(f.get('export').disabled,false);await f.event('refresh');assert.deepEqual(f.calls.at(-1).input,first);
+ f.set('search-agent','');await f.search();assert.equal(Object.hasOwn(f.calls.at(-1).input,'agent_id'),false);
+ assert.equal(f.get('project').value,'editor-only');assert.equal(f.get('type').value,'environment');assert.equal(f.calls.at(-1).input.project_id,'Project_A');
+});
+test('hidden Agent draft preserves unrelated page and post-ack cannot apply it',async()=>{
+ const f=fixture();f.run("view='agents';current={agents:[{agent_id:'synthetic'}]};nextOffset=20");f.get('export').disabled=false;f.get('next').disabled=false;
+ f.set('search-agent','Agent_A');assert.equal(f.run('current.agents[0].agent_id'),'synthetic');assert.equal(f.get('export').disabled,false);assert.equal(f.get('next').disabled,false);
+ f.event('export');assert.equal(Object.hasOwn(f.exports[0],'search'),false);f.run("view='candidate';busy=true;pending=null");await f.load();assert.equal(f.calls.length,0);
+});
+test('Agent criteria preserve complete editor and immutable pending request while blocked',async()=>{
+ const f=fixture(async body=>{if(body.operation==='search')return result(body);throw Error('synthetic unconfirmed');});
+ f.run("editing={id:'"+id+"',revision:9};draftConfidence=.41");const draft=f.run('editorReceiptSelection()');
+ f.set('search-agent','Agent_A');await f.search();assert.equal(f.run('editorReceiptSelection()'),draft);
+ f.run("pending=Object.freeze({operation:'review',input:Object.freeze({event_id:'ORIGINAL',memory_id:'"+id+"',expected_revision:9,status:'archived'}),source_id:'selected',sessionCurrent:()=>true,editorUnchanged:()=>false,delivery_unconfirmed:true})");
+ const original=f.run('pending');f.set('search-agent','agent_a');await f.search();await f.load();assert.equal(f.calls.length,1);assert.equal(f.run('pending'),original);
+ assert.equal(f.run('editorReceiptSelection()'),draft);assert.equal(f.run('pending.input.event_id'),'ORIGINAL');assert.equal(f.run('pending.input.expected_revision'),9);
+});
+test('Agent visible label is separate text-only markup with explicit textbox association',()=>{
+ const html=readFileSync(new URL('../web/personal/index.html',import.meta.url),'utf8');
+ assert.match(html,/<label for="search-agent" id="search-agent-label">搜索 Agent 标签（精确标识，可留空）<\/label><input id="search-agent"[^>]*type="text"[^>]*aria-labelledby="search-agent-label"[^>]*aria-describedby="search-agent-help"/);
+ assert.match(html,/id="search-agent"[^>]*maxlength="96"/);assert.match(html,/标签由客户端自述，不是认证身份或软件来源证明/);
+ // Native browser role/name checks supply actual accessibility semantics; this is markup-only regression evidence.
+});
+test('post-ack reload reuses applied Agent but cannot apply a dirty label',async()=>{
+ const f=fixture();f.set('search-agent','Agent_A');await f.search();f.run('busy=true;pending=null');await f.load();
+ assert.equal(f.calls.length,2);assert.equal(f.calls[1].input.agent_id,'Agent_A');assert.equal(f.get('export').disabled,false);
+ f.set('search-agent','agent_a');await f.load();assert.equal(f.calls.length,2);assert.equal(f.run('current'),null);
 });

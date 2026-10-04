@@ -11,11 +11,18 @@ function run(mode){
  const report=JSON.parse(r.stdout);assert.equal(report.passed,false);assert.equal(report.rounds_requested,2);assert.equal(report.rounds.length,1);
  assert.equal(report.rounds[0].passed,false);assert.equal(report.rounds[0].outcomes.length,8);return report.rounds[0];
 }
-test('control diagnostic: native EPERM before staged preserves worker and authentic lock phase',()=>{
- const r=run('enqueue-eperm');assert.equal(r.stage,'enqueue');const failed=r.outcomes.find(x=>x.worker===4);
+for(const mode of ['enqueue-eperm','enqueue-eperm-delayed'])test('control diagnostic: native EPERM before staged preserves worker and authentic lock phase: '+mode,()=>{
+ const r=run(mode);assert.equal(r.stage,'enqueue');const failed=r.outcomes.find(x=>x.worker===4);
  assert.equal(failed.valid,false);assert.equal(failed.exit,1);assert.equal(failed.result.code,'outbox_lock_io');
  assert.deepEqual(failed.result.lock,{kind:'queue',phase:'create',system_code:'EPERM'});
 });
+for(const mode of ['final-write-throw','final-write-callback-error','final-write-stdout-error','final-serialize-throw','final-serialize-oversize'])
+ test('control diagnostic: '+mode+' cannot pass or expose raw output failure',()=>{
+  const r=run(mode);assert.equal(r.stage,'resume');const failed=r.outcomes.find(x=>x.worker===4);
+  assert.equal(failed.valid,false);assert.equal(failed.exit,1);assert.equal(failed.signal,null);
+  assert.equal(failed.stderr_seen,false);assert.equal(failed.output_truncated,false);
+  assert.deepEqual(failed.result,{ok:false,code:'invalid_worker_report'});
+ });
 test('control diagnostic: failures after resume barrier retain authentic control publication diagnostic',()=>{
  const r=run('resume-enospc');assert.equal(r.stage,'resume',JSON.stringify(r));const failed=r.outcomes.find(x=>x.result.code==='outbox_journal_io');
  assert.ok(failed);assert.equal(failed.result.journal.target,'control');assert.equal(failed.result.journal.phase,'publish');assert.equal(failed.result.journal.system_code,'ENOSPC');
