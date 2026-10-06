@@ -35,6 +35,8 @@ with sync_playwright() as p:
         page.evaluate("""() => {
           const originalFetch = window.fetch.bind(window), originalConnect = connectConsole;
           const state = window.__loginTest = {held: [], calls: [], settled: 0};
+          document.documentElement.dataset.loginTestHeld = '0';
+          document.documentElement.dataset.loginTestSettled = '0';
           window.fetch = async (...args) => {
             const body = JSON.parse(args[1].body); state.calls.push(body.operation);
             const response = await originalFetch(...args);
@@ -42,13 +44,21 @@ with sync_playwright() as p:
             // Consume the actual authenticated HTTP body before holding it. A new
             // Response is detached from the old request's later AbortSignal.
             const completed = new Response(await response.arrayBuffer(), {status: response.status, headers: response.headers});
-            return new Promise(resolve => state.held.push({response: completed, resolve}));
+            return new Promise(resolve => {
+              state.held.push({response: completed, resolve});
+              document.documentElement.dataset.loginTestHeld = String(state.held.length);
+            });
           };
-          connectConsole = async () => { try { return await originalConnect(); } finally { state.settled++; } };
+          connectConsole = async () => {
+            try { return await originalConnect(); } finally {
+              state.settled++;
+              document.documentElement.dataset.loginTestSettled = String(state.settled);
+            }
+          };
         }""")
         page.locator('#token').fill(wrong_token if scenario == 'old_failure' else token)
         page.locator('#login-form button').click()
-        page.wait_for_function('window.__loginTest.held.length === 1')
+        expect(page.locator('html')).to_have_attribute('data-login-test-held', '1', timeout=30000)
         expect(page.locator('#workspace')).to_be_hidden()
         expect(page.locator('#logout')).to_be_visible()
         if scenario == 'lock_pending':
@@ -57,9 +67,9 @@ with sync_playwright() as p:
         else:
             page.locator('#token').fill(wrong_token if scenario == 'old_success_latest_failure' else token)
             page.locator('#login-form button').click()
-            page.wait_for_function('window.__loginTest.held.length === 2')
+            expect(page.locator('html')).to_have_attribute('data-login-test-held', '2', timeout=30000)
             page.evaluate('window.__loginTest.held[1].resolve(window.__loginTest.held[1].response)')
-            page.wait_for_function('window.__loginTest.settled === 1')
+            expect(page.locator('html')).to_have_attribute('data-login-test-settled', '1', timeout=30000)
             if scenario == 'old_success_latest_failure':
                 expect(page.locator('#message')).to_contain_text('连接失败')
             else:
@@ -68,7 +78,7 @@ with sync_playwright() as p:
                     page.locator('#logout').click()
             expected_message = page.locator('#message').inner_text()
         page.evaluate('window.__loginTest.held[0].resolve(window.__loginTest.held[0].response)')
-        page.wait_for_function('window.__loginTest.settled === ' + ('1' if scenario == 'lock_pending' else '2'))
+        expect(page.locator('html')).to_have_attribute('data-login-test-settled', '1' if scenario == 'lock_pending' else '2', timeout=30000)
         expect(page.locator('#message')).to_have_text(expected_message)
         is_connected = scenario in ['old_failure', 'both_success']
         assert page.locator('#workspace').is_visible() == is_connected
