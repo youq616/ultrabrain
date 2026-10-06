@@ -4,6 +4,7 @@ const $=id=>document.getElementById(id);
 const labels={identity:'身份',preference:'偏好',environment:'环境',project:'项目',decision:'决策',skill:'技能',error:'错误经验',goal:'目标',experience:'经验'};
 const views={candidate:'待确认记忆',active:'当前记忆',archived:'已归档',profile:'个人偏好',recall:'任务召回预览',lookup:'按 ID 核对',pair:'人工双记录核对',documents:'导入文档',agents:'已登记 Agent',jobs:'整理任务'};
 let sourceId='',token='',view='candidate',offset=0,nextOffset=null,current=null,editing=null,pending=null,busy=false,loadVersion=0,documentEpoch=0;
+let loginEpoch=0,loginController=null;
 let documentReadEpoch=0,documentReadController=null;
 let recallEpoch=0,recallController=null;
 let lookupEpoch=0,lookupController=null;
@@ -1056,8 +1057,25 @@ async function load(){
     message('读取失败：'+e.message,true);
   }}
 }
-$('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('token').value.trim();$('token').value='';try{const info=await api('info');sourceId=info.source_id;$('scope').textContent='数据源：'+info.source_id+' · Linux 本机所有者（与同账号 stdio 共享）';$('login').hidden=true;$('workspace').hidden=false;$('logout').hidden=false;message('已连接。');await load();}catch(e){token='';message('连接失败：'+e.message,true);}});
-$('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateSearch(true);invalidateMemoryPair(true);invalidateJobPage(true);invalidateRecall(true);invalidateLookup(true);invalidateComparison();draftConfidence=null;token='';sourceId='';documentEpoch++;invalidateDocumentRead();$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
+// Fence late authentication replies even when the transport has already completed.
+function invalidateLogin(){loginEpoch++;loginController?.abort();loginController=null;}
+async function connectConsole(){
+  if(busy||pending||$('login').hidden)return;
+  invalidateLogin();const epoch=loginEpoch,controller=new AbortController(),session=$('token').value.trim();
+  loginController=controller;token=session;sourceId='';$('token').value='';$('logout').hidden=false;
+  const current=()=>epoch===loginEpoch&&loginController===controller&&!controller.signal.aborted&&token===session;
+  message('正在连接；可重新提交令牌或锁定管理台取消。');
+  try{
+    const info=await api('info',{},controller.signal);if(!current())return;
+    sourceId=info.source_id;$('scope').textContent='数据源：'+info.source_id+' · Linux 本机所有者（与同账号 stdio 共享）';
+    $('login').hidden=true;$('workspace').hidden=false;$('logout').hidden=false;message('已连接。');await load();
+  }catch(error){
+    if(!current())return;
+    token='';sourceId='';$('logout').hidden=true;message('连接失败：'+error.message,true);
+  }finally{if(loginController===controller)loginController=null;}
+}
+$('login-form').addEventListener('submit',e=>{e.preventDefault();return connectConsole();});
+$('logout').addEventListener('click',()=>{if(pending||busy)return;invalidateLogin();invalidateSearch(true);invalidateMemoryPair(true);invalidateJobPage(true);invalidateRecall(true);invalidateLookup(true);invalidateComparison();draftConfidence=null;token='';sourceId='';$('token').value='';documentEpoch++;invalidateDocumentRead();$('document-file').value='';$('document-consent').checked=false;loadVersion++;current=null;editing=null;$('content').value='';$('results').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;$('logout').hidden=true;message('管理台已锁定。');});
 for(const b of document.querySelectorAll('[data-view]'))b.addEventListener('click',()=>{view=b.dataset.view;offset=0;load();});
 $('refresh').addEventListener('click',()=>load());$('search-form').addEventListener('submit',e=>{e.preventDefault();return applySearch();});
 for(const id of ['query','updated-from','updated-before','search-project','search-agent'])for(const event of ['input','change'])$(id).addEventListener(event,editSearch);
