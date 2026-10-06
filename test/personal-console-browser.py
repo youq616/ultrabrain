@@ -27,6 +27,69 @@ with sync_playwright() as p:
     expect(page.locator('#workspace')).to_be_hidden()
     assert page.evaluate("fetch('/api/call',{method:'POST',headers:{'Content-Type':'application/json'},body:'{\"operation\":\"info\"}'}).then(r=>r.status)") == 401
     passed()
+    # Hold completed real HTTP authentication replies inside the browser. Cancellation
+    # cannot discard an already-delivered reply here, so generation fencing is exercised
+    # independently of the AbortController. No token is exported or written to storage.
+    wrong_token = ('0' if token[0] != '0' else '1') + token[1:]
+    for scenario in ['old_failure', 'old_success_latest_failure', 'lock_pending', 'lock_after_latest', 'both_success']:
+        page.evaluate("""() => {
+          const originalFetch = window.fetch.bind(window), originalConnect = connectConsole;
+          const state = window.__loginTest = {held: [], calls: [], settled: 0};
+          document.documentElement.dataset.loginTestHeld = '0';
+          document.documentElement.dataset.loginTestSettled = '0';
+          window.fetch = async (...args) => {
+            const body = JSON.parse(args[1].body); state.calls.push(body.operation);
+            const response = await originalFetch(...args);
+            if (body.operation !== 'info') return response;
+            // Consume the actual authenticated HTTP body before holding it. A new
+            // Response is detached from the old request's later AbortSignal.
+            const completed = new Response(await response.arrayBuffer(), {status: response.status, headers: response.headers});
+            return new Promise(resolve => {
+              state.held.push({response: completed, resolve});
+              document.documentElement.dataset.loginTestHeld = String(state.held.length);
+            });
+          };
+          connectConsole = async () => {
+            try { return await originalConnect(); } finally {
+              state.settled++;
+              document.documentElement.dataset.loginTestSettled = String(state.settled);
+            }
+          };
+        }""")
+        page.locator('#token').fill(wrong_token if scenario == 'old_failure' else token)
+        page.locator('#login-form button').click()
+        expect(page.locator('html')).to_have_attribute('data-login-test-held', '1', timeout=30000)
+        expect(page.locator('#workspace')).to_be_hidden()
+        expect(page.locator('#logout')).to_be_visible()
+        if scenario == 'lock_pending':
+            page.locator('#logout').click()
+            expected_message = '管理台已锁定。'
+        else:
+            page.locator('#token').fill(wrong_token if scenario == 'old_success_latest_failure' else token)
+            page.locator('#login-form button').click()
+            expect(page.locator('html')).to_have_attribute('data-login-test-held', '2', timeout=30000)
+            page.evaluate('window.__loginTest.held[1].resolve(window.__loginTest.held[1].response)')
+            expect(page.locator('html')).to_have_attribute('data-login-test-settled', '1', timeout=30000)
+            if scenario == 'old_success_latest_failure':
+                expect(page.locator('#message')).to_contain_text('连接失败')
+            else:
+                expect(page.locator('#workspace')).to_be_visible()
+                if scenario == 'lock_after_latest':
+                    page.locator('#logout').click()
+            expected_message = page.locator('#message').inner_text()
+        page.evaluate('window.__loginTest.held[0].resolve(window.__loginTest.held[0].response)')
+        expect(page.locator('html')).to_have_attribute('data-login-test-settled', '1' if scenario == 'lock_pending' else '2', timeout=30000)
+        expect(page.locator('#message')).to_have_text(expected_message)
+        is_connected = scenario in ['old_failure', 'both_success']
+        assert page.locator('#workspace').is_visible() == is_connected
+        assert page.locator('#login').is_visible() != is_connected
+        assert page.evaluate("token !== '' && sourceId !== ''") == is_connected
+        operations = page.evaluate('window.__loginTest.calls')
+        assert operations.count('search') == (1 if scenario in ['old_failure', 'lock_after_latest', 'both_success'] else 0)
+        assert all(operation in ['info', 'search'] for operation in operations)
+        assert page.evaluate('localStorage.length + sessionStorage.length') == 0
+        passed()
+        page.reload(wait_until='networkidle')
     page.locator('#token').fill(token)
     page.locator('#login-form button').click()
     expect(page.locator('#workspace')).to_be_visible()

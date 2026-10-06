@@ -95,7 +95,11 @@ with sync_playwright() as p:
     checks += 1
     page.locator('#job-id').fill(f['queued'][0])
     for damage in ['date', 'source']:
-        def corrupt(route):
+        page.evaluate("""() => {
+            document.getElementById('message').textContent = '';
+            document.documentElement.dataset.jobDamageHandled = '';
+        }""")
+        def corrupt(route, _request, damage=damage):
             if route.request.post_data_json['operation'] != 'jobs':
                 route.continue_(); return
             response = route.fetch()
@@ -106,8 +110,12 @@ with sync_playwright() as p:
             else:
                 data['result']['source_id'] = 'foreign'
             route.fulfill(status=200, content_type='application/json', body=json.dumps(data))
+            page.evaluate("damage => document.documentElement.dataset.jobDamageHandled = damage", damage)
         page.route('**/api/call', corrupt)
         page.locator('#job-form button[type="submit"]').click()
+        # A previous rejection and load's empty UI cannot complete this case.
+        # Wait until this callback has returned from fulfill before unroute.
+        expect(page.locator('html')).to_have_attribute('data-job-damage-handled', damage, timeout=5000)
         expect(page.locator('#message')).to_contain_text('job_page_unconfirmed')
         expect(page.locator('#results article')).to_have_count(0)
         expect(page.locator('#export')).to_be_disabled()
