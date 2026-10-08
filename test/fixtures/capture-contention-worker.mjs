@@ -19,7 +19,14 @@ process.once('message',async({input,worker})=>{
      const reason=error?.code!=='outbox_busy'?'non_busy_error':retries>=7?'retry_limit':performance.now()>=deadline?'deadline':null;
      diagnostics.finish(error?.code==='outbox_busy'?'busy':'error');
      if(reason){terminal=reason;throw error;}
-     retries++;busyRetries++;await delay(25);
+     retries++;busyRetries++;
+     // Windows file-fsync/lock-retirement can keep one queue lock for the
+     // whole bounded acquisition window. A fixed retry delay lets all
+     // contenders wake together and repeatedly collide with the same owner.
+     // Keep the fixture deterministic while spreading retries by worker,
+     // event and attempt; this changes no production retry policy.
+     const backoff=25+((worker*37+event*17+retries*29)%96);
+     await delay(backoff);
     }
    }
   }
