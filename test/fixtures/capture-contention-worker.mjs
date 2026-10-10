@@ -4,6 +4,7 @@ import {captureProcessDiagnostic} from '../helpers/capture-process-diagnostic.mj
 import {setTimeout as delay} from 'node:timers/promises';
 import {performance} from 'node:perf_hooks';
 import {createContentionDiagnostics} from '../helpers/capture-contention-diagnostics.mjs';
+import {contentionBackoff} from '../helpers/capture-contention-backoff.mjs';
 process.once('message',async({input,worker})=>{
  let busyRetries=0,replays=0,terminal='setup_error';
  const diagnostics=createContentionDiagnostics();
@@ -25,7 +26,7 @@ process.once('message',async({input,worker})=>{
      // contenders wake together and repeatedly collide with the same owner.
      // Keep the fixture deterministic while spreading retries by worker,
      // event and attempt; this changes no production retry policy.
-     const backoff=25+((worker*37+event*17+retries*29)%96);
+     const backoff=contentionBackoff(worker,event,retries);
      await delay(backoff);
     }
    }
