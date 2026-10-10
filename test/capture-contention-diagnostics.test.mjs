@@ -5,6 +5,7 @@ import {runInNewContext} from 'node:vm';
 import {createContentionDiagnostics, projectContentionDiagnostics, contentionRoundEvidence,
   contentionTapEvidence, contentionComparisonEvidence, CONTENTION_ROUND_FORMAT, CONTENTION_TEST_NAME} from './helpers/capture-contention-diagnostics.mjs';
 import {contentionWorkerReport} from './helpers/capture-contention-report.mjs';
+import {contentionBackoff, CONTENTION_BACKOFF_MIN_MS, CONTENTION_BACKOFF_MAX_MS} from './helpers/capture-contention-backoff.mjs';
 
 const clone = value => structuredClone(value);
 function sample({terminal = 'complete', retries = 0, replay = true} = {}) {
@@ -286,7 +287,30 @@ test('contention source: retry decision precedes new observation and retains ori
   assert.ok(source.includes(decision));
   assert.ok(source.indexOf(decision) < source.indexOf("diagnostics.finish(error?.code==='outbox_busy'"));
   assert.ok(source.includes('deadline=performance.now()+10000'));
-  assert.ok(source.includes('retries++;busyRetries++;await delay(25)'));
+  assert.ok(source.includes("import {contentionBackoff} from '../helpers/capture-contention-backoff.mjs';"));
+  assert.ok(source.includes('const backoff=contentionBackoff(worker,event,retries);'));
+  assert.ok(source.includes('await delay(backoff);'));
+  assert.ok(!source.includes('await delay(25)'));
+});
+test('contention backoff: deterministic worker/event/attempt schedule stays bounded', () => {
+  const values = [];
+  for (let worker = 0; worker < 8; worker++) {
+    const first = [];
+    for (let event = 0; event < 3; event++) {
+      for (let retries = 1; retries <= 7; retries++) {
+        const value = contentionBackoff(worker, event, retries);
+        assert.equal(value, contentionBackoff(worker, event, retries));
+        assert.ok(value >= CONTENTION_BACKOFF_MIN_MS && value <= CONTENTION_BACKOFF_MAX_MS);
+        first.push(value); values.push(value);
+      }
+    }
+    assert.ok(new Set(first).size >= 7);
+  }
+  assert.ok(new Set(values).size >= 32);
+});
+test('contention backoff: invalid fixture coordinates fail closed', () => {
+  for (const [worker, event, retries] of [[-1, 0, 1], [8, 0, 1], [0, -1, 1], [0, 3, 1], [0, 0, 0], [0, 0, 8], [0.5, 0, 1], [0, 0, 1.5]])
+    assert.throws(() => contentionBackoff(worker, event, retries), RangeError);
 });
 function assertContentionWorkflow(originalText, candidateText) {
   const original = originalText.replaceAll('\r\n', '\n');

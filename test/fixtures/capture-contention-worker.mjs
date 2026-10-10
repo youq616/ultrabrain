@@ -4,6 +4,7 @@ import {captureProcessDiagnostic} from '../helpers/capture-process-diagnostic.mj
 import {setTimeout as delay} from 'node:timers/promises';
 import {performance} from 'node:perf_hooks';
 import {createContentionDiagnostics} from '../helpers/capture-contention-diagnostics.mjs';
+import {contentionBackoff} from '../helpers/capture-contention-backoff.mjs';
 process.once('message',async({input,worker})=>{
  let busyRetries=0,replays=0,terminal='setup_error';
  const diagnostics=createContentionDiagnostics();
@@ -19,7 +20,14 @@ process.once('message',async({input,worker})=>{
      const reason=error?.code!=='outbox_busy'?'non_busy_error':retries>=7?'retry_limit':performance.now()>=deadline?'deadline':null;
      diagnostics.finish(error?.code==='outbox_busy'?'busy':'error');
      if(reason){terminal=reason;throw error;}
-     retries++;busyRetries++;await delay(25);
+     retries++;busyRetries++;
+     // Windows file-fsync/lock-retirement can keep one queue lock for the
+     // whole bounded acquisition window. A fixed retry delay lets all
+     // contenders wake together and repeatedly collide with the same owner.
+     // Keep the fixture deterministic while spreading retries by worker,
+     // event and attempt; this changes no production retry policy.
+     const backoff=contentionBackoff(worker,event,retries);
+     await delay(backoff);
     }
    }
   }
