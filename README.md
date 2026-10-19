@@ -2,7 +2,15 @@
 
 Linux-first agent memory, built around GBrain's PostgreSQL-native business engine and OpenViking-inspired hierarchical context retrieval.
 
-## 当前接手状态（2026-09-19）
+## 当前接手状态（2026-10-19）
+
+当前文档绑定 [PR #61](https://github.com/youq616/ultrabrain/pull/61) 候选 `c5829bacc9f2a1b57ac1e075d5a7084cfbbacc74`，仍为 draft/open，未合并或部署。该 head 的 43 个 Actions workflow runs 全成功（21 PR + 22 push），不等于独立审核或个人 V1 整体验收。精确候选独立审核原文待核实；Windows capture-locks 产物虽各通过 25/25 轮，busy_retries 均为 0，不能作为 Windows 重试运行分支覆盖证明。PR #60 的登录生命周期修复仍在另一条分叉中，未自动包含到 #61。
+
+[当前状态](docs/PROJECT-STATUS.md) · [完整接手与下一步](docs/TAKEOVER-2026-10-19.md) · [开发蓝图](docs/ROADMAP.md) · [文档索引](docs/README.md) · [精确 CI/分支/产物快照](docs/reviews/status-snapshot-20261019.json)
+
+本次只补齐可核验的项目文档和证据索引。历史记录保留；不声称其他电脑的未推材料已全部同步，亦不将开发分支当作 main。
+
+## 历史接手状态（2026-09-19）
 
 本轮接手审核与授权修复已通过 [PR #14](https://github.com/youq616/ultrabrain/pull/14) 合入 `6aae8a01f0d5f27dedf64e0687af9cb3b02e29ea`。修复 SDK/队列忽略显式授权拒绝、管理台等待期间撤回授权后仍发送，以及模型准入等待期间配置或租约过期的问题。未确认请求保留原事件，已发送内容不可由撤回授权取消。最终候选 `a9678135d28c6f3094db4e2d42f4077206fcd49b` 获两个独立代理 PASS；候选 47 个 CI jobs 全成功，612 Node / 542 Python、15 条历史升级、25 项真实 Chromium 管理台交互，以及真实 PostgreSQL/MCP/n8n 检查通过。详见 [本轮验收与首次失败](docs/reviews/consent-takeover/README.md)。
 

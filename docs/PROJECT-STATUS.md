@@ -1,6 +1,20 @@
 # Ultrabrain 当前项目状态与接手记录
 
-记录日期：2026-09-19。本记录以 GitHub 实际提交、已执行 CI 和独立代理审核为依据。历史会话、候选 README、接收报告中的 pending/frozen 字样描述的是当时状态；继续开发前应复查远程 main 和开放 PR。
+## 当前候选快照（2026-10-19 UTC）
+
+本次为文档归档，不改变应用代码，不合并、不部署。当前核验候选为 [PR #61](https://github.com/youq616/ultrabrain/pull/61) 的 `c5829bacc9f2a1b57ac1e075d5a7084cfbbacc74`，分支 `dev/personal-console-type-filter-contention-20261007`；PR 仍为 draft/open。远程 main 为 `491bf6fd702d8b88d30d65acb23b259a99242fcb`，候选领先 main 86 个提交，不能把开发分支写成已发布主线。
+
+- 当前 head 的 43 个 Actions workflow runs 全部成功：21 个 pull_request + 22 个 push。这里计的是工作流运行，不是 jobs 或测试用例数量；完整清单见 [机器快照](reviews/status-snapshot-20261019.json)。
+- PR 合成合并提交 `af53f2a58ac1a4f994c20da025322349d2efcd56` 与候选的树均为 `6b458b975d7f918575b8aabf072b606daa5dc867`。push 与 PR 的 capture-locks 共 8 份原始产物已经下载、按 GitHub digest 校验并读取：每份 25/25 轮通过；4 份 PR 产物 busy_retries 均为 0，push 的 Linux/Node 22.16.0 为 3，其余 3 份为 0。所有 Windows 产物均未观察到 busy retry，不能据此宣称 Windows 重试分支已动态覆盖。
+- 当前精确候选的独立审核原文仍待核实：PR #61 正文记录当时仅完成实现者自审，正式 reviews 与 Conversation comments 均为空。历史 PASS 或绿色 CI 不能替代带完整 SHA、实际 reviewer 身份、文件/行发现和执行证据的独立审核。
+- 既有修复记录中的本地 Node 4,476/4,476、focused 126/126、supervisor/batch 161/161、regression 288/288 是原阶段记录，本次未重新执行应用测试；Python 683 项发现中的 UNIX-socket/systemd/ownership 环境限制继续保留，不记为本地全通过。
+- 41 个开放 PR 均为 draft。32 个当前 head 位于该候选祖先链内，另 9 个 head 不在链内；祖先关系不是逐阶段验收。[PR #60](https://github.com/youq616/ultrabrain/pull/60) 是独立登录生命周期分支，与 #61 分叉，双方各有 5 个独有提交。不得把它或 Agent 标签筛选自动宣称已包含。
+
+先读 [最新完整交接](TAKEOVER-2026-10-19.md)、[路线增量](ROADMAP.md)、[文档索引](README.md) 与 [证据说明](reviews/STATUS-SNAPSHOT-2026-10-19.md)。个人 V1、真实用户主机部署、真实客户端/模型质量和完整多模态仍未整体验收。
+
+## 历史记录：2026-09-19 及之前
+
+历史记录日期：2026-09-19。以下原记录以 GitHub 实际提交、已执行 CI 和独立代理审核为依据。历史会话、候选 README、接收报告中的 pending/frozen 字样描述的是当时状态；继续开发前应复查远程 main 和开放 PR。
 
 ## 已完成阶段：接手审核与授权撤回修复
 
